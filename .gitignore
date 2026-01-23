@@ -1,0 +1,105 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+# -----------------------------
+# Node / logs
+# -----------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# PID files
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temp files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+
+# -----------------------------
+# TypeScript
+# -----------------------------
+*.tsbuildinfo
+
+# -----------------------------
+# Build / coverage
+# -----------------------------
+dist/
+build/
+coverage/
+.eslintcache
+.stylelintcache
+
+# -----------------------------
+# Yarn Berry (v2/v3+) & PnP
+# -----------------------------
+# Ignore everything in .yarn except the things that should be committed
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Cache:
+# - If you're NOT using zero-installs, ignore the cache (default):
+.yarn/cache/
+# - If you ARE using zero-installs, comment out the line above and uncomment:
+# !.yarn/cache
+
+# PnP files:
+# By default, ignore generated PnP files.
+.pnp.*
+# If you prefer committing the main mapping file, uncomment the next line:
+# !.pnp.cjs
+
+# -----------------------------
+# Editors / IDE
+# -----------------------------
+# VS Code: ignore all, but keep recommended project settings
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# -----------------------------
+# OS files
+# -----------------------------
+.DS_Store
+Thumbs.db
