@@ -181,7 +181,7 @@ export function SplashScreen() {
           layout
           initial={{ marginTop: "30dvh", scale: 1.1 }}
           animate={{
-            marginTop: phase === "reveal" ? "8dvh" : "30dvh",
+            marginTop: phase === "reveal" ? "4dvh" : "30dvh",
             scale: phase === "reveal" ? 1 : 1.1,
           }}
           transition={{
