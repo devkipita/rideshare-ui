@@ -1,32 +1,27 @@
-'use client'
+"use client";
 
-import React from "react"
+import * as React from "react";
 
-import { createContext, useContext, useState } from 'react'
+export type AppMode = "splash" | "home" | "passenger" | "driver";
 
-type UserMode = 'splash' | 'passenger' | 'driver'
+type AppModeContextValue = {
+  mode: AppMode;
+  setMode: (mode: AppMode) => void;
+};
 
-interface AppContextType {
-  mode: UserMode
-  setMode: (mode: UserMode) => void
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined)
+const AppModeContext = React.createContext<AppModeContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<UserMode>('splash')
-
+  const [mode, setMode] = React.useState<AppMode>("splash");
   return (
-    <AppContext.Provider value={{ mode, setMode }}>
+    <AppModeContext.Provider value={{ mode, setMode }}>
       {children}
-    </AppContext.Provider>
-  )
+    </AppModeContext.Provider>
+  );
 }
 
 export function useAppMode() {
-  const context = useContext(AppContext)
-  if (!context) {
-    throw new Error('useAppMode must be used within AppProvider')
-  }
-  return context
+  const ctx = React.useContext(AppModeContext);
+  if (!ctx) throw new Error("useAppMode must be used within AppProvider");
+  return ctx;
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { AppProvider, useAppMode } from '@/app/context'
-import { SplashGate } from '@/components/splash-gate'
 import { TopNav } from '@/components/top-nav'
 import { BottomNav } from '@/components/bottom-nav'
 import { PassengerSearch } from '@/components/passenger-search'
@@ -13,7 +12,7 @@ import { DriverEarnings } from '@/components/driver-earnings'
 import { MessagesScreen } from '@/components/messages-screen'
 import { ProfileScreen } from '@/components/profile-screen'
 import { MyRides } from '@/components/my-rides'
-import { SplashScreen } from '@/components/splash-screen' // Import SplashScreen
+import { SplashScreen } from '@/components/KipitaSplash'
 
 // Mock ride data
 const mockRides = [
@@ -59,7 +58,7 @@ function AppContent() {
     setSearchResults(false)
   }, [mode])
 
-  if (mode === 'splash') return <SplashGate />
+  if (mode === 'splash') return <SplashScreen />
 
   const isPassenger = mode === 'passenger'
 
@@ -104,7 +103,6 @@ function AppContent() {
                 {activeTab === 'search' && (
                   <>
                     <PassengerSearch
-                      showResults={searchResults}
                       onSearch={() => setSearchResults(true)}
                     />
                     {searchResults && (
