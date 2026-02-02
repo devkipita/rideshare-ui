@@ -295,7 +295,7 @@ export function SplashScreen() {
                 className="space-y-8 pb-12"
               >
                 {/* HEADLINE BLOCK */}
-                <div className="space-y-4 text-center sm:text-left">
+                <div className="space-y-4 text-center">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
