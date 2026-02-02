@@ -1,14 +1,9 @@
 "use client";
 
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, ChevronRight, ShieldCheck, Navigation } from "lucide-react";
 import { useAppMode } from "@/app/context";
-
 
 // --- ANIMATION UTILS ---
 
@@ -308,13 +303,15 @@ export function SplashScreen() {
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100/80 text-emerald-800 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border border-emerald-200/50"
                   >
                     <ShieldCheck size={12} strokeWidth={2.5} />
-                    <span>Eco-Friendly Commute</span>
+                    <span>Ride-Share-Connect</span>
                   </motion.div>
 
                   <div>
                     <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-emerald-950 leading-[0.9]">
-                      Share the <span className="text-emerald-600">Road.</span>
+                      Share the <span className="text-emerald-600">Ride .</span>{" "}
+                      Save <span className="text-emerald-600">More</span>
                     </h1>
+
                     <p className="text-slate-500 font-medium text-sm sm:text-base mt-4 leading-relaxed max-w-[90%] mx-auto sm:mx-0">
                       Connect with neighbors heading your way and save on every
                       trip.
@@ -443,10 +440,6 @@ function KipitaWordmarkSvg() {
           className="cls-3"
           d="M179.38,199.67c-11.15,11.99-30.13-5.43-18.26-17.34,11.23-11.27,29.52,5.23,18.26,17.34Z"
         />
-
-        <text className="cls-1" transform="translate(190, 345) scale(0.6)">
-          Ride. Share. Connect
-        </text>
       </g>
     </svg>
   );
