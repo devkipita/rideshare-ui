@@ -13,8 +13,8 @@ const HEADER_SIZE = 44;
 export function HomeScreen({ bootStage }: { bootStage: BootStage }) {
   const { setMode } = useAppMode();
 
-  const showHeader = bootStage !== "splash";
-  const showContent = bootStage === "home";
+  const showHeader = bootStage === "home";
+  const showContent = bootStage !== "splash";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
@@ -28,7 +28,6 @@ export function HomeScreen({ bootStage }: { bootStage: BootStage }) {
         }}
       >
         <motion.svg
-          layoutId="kipita-icon"
           width={HEADER_SIZE}
           height={HEADER_SIZE}
           viewBox="0 0 500 500"
@@ -64,7 +63,7 @@ export function HomeScreen({ bootStage }: { bootStage: BootStage }) {
         </div>
       </div>
 
-      {/* Home content only after splash finishes */}
+      {/* Home content reveals as splash lifts */}
       <motion.div
         initial={false}
         animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}

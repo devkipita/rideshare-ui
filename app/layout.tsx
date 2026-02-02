@@ -1,4 +1,4 @@
-import React from "react"
+import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import { Poppins } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -50,9 +50,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={poppins.variable}>
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
       <head>
         <script
+          id="theme-init"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               try {
