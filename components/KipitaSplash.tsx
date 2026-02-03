@@ -191,15 +191,18 @@ export function SplashScreen() {
             mass: 1.2,
           }}
         >
-          {/* Logo Wrapper with Glow */}
+          {/* Logo Wrapper with Glow (keep effects) */}
           <div className="relative">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180px] h-[180px] bg-emerald-400/10 rounded-full blur-2xl" />
 
             <div className="w-32 h-32 sm:w-40 sm:h-40 relative">
               <svg
+                xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 500 500"
+                preserveAspectRatio="xMidYMid meet"
                 className="w-full h-full drop-shadow-lg"
               >
+                {/* Stem (same) */}
                 <motion.path
                   d="M125.35,26.53c38.88-4.44,70.3,25.14,72.86,63.3,4.26,63.33-49.67,189.9-103.5,225.83-9.08,6.06-21.56,12.39-25.8-2.02l.25-233.03c4.73-27.23,28.55-50.92,56.18-54.08Z"
                   fill="#064e3b"
@@ -207,20 +210,26 @@ export function SplashScreen() {
                   animate={pieces.stem.animate}
                   transition={enterTransition(0)}
                 />
+
+                {/* RIGHT road (use ORIGINAL full path + keep your animation) */}
                 <motion.path
-                  d="M261.16,254.51l-32.94,18.23c-51.27,33.64-60.02,82.29-41.52,138.91,4.69,14.36,17.05,31.16,13.06,45.29-3.68,3.75-51.5,5.61-56.75,3.11-9.07-4.32-6.57-43.12-13.59-51-22.63-7.93-5.08,44.69-12.25,50.37-3.4,2.69-38.06,3.49-44.33,3.07-11.37-.77-18.32-.09-18.16-13.46.3-25.54,18.4-65.95,32.84-87,40.97-59.68,104.53-91.3,173.62-107.52Z"
-                  fill="#064e3b"
-                  initial={pieces.roadLeft.initial}
-                  animate={pieces.roadLeft.animate}
-                  transition={enterTransition(0.08)}
-                />
-                <motion.path
-                  d="M317.89,243.48l-.78,3.17,3.91.76c-23.14,10.1-54.79,23.95-40.23,54.4,13.46,28.16,96.36,82.61,124.45,107.1,8.81,7.68,40.22,34.38,40.05,44.89-.19,11.78-24.78,15.05-33.91,16.3-31.79,4.34-75,5.07-106.88,1.75-10.46-1.09-18.49-4.3-26.01-11.8-19.45-19.39-57.82-76.91-65.72-102.82-21.55-70.68,48.97-100.85,105.11-113.74Z"
+                  d="M317.89,243.48l-.78,3.17,3.91.76c-23.14,10.1-54.79,23.95-40.23,54.4,13.46,28.16,96.36,82.61,124.45,107.1,8.81,7.68,40.22,34.38,40.05,44.89-.19,11.78-24.78,15.05-33.91,16.3-31.79,4.34-75,5.07-106.88,1.75-10.46-1.09-18.49-4.3-26.01-11.8-19.45-19.39-57.82-76.91-65.72-102.82-21.55-70.68,48.97-100.85,105.11-113.74ZM253.28,282.85c-2.56-2.77-10.46,10.68-11.02,12.58,5.97,4.28,12.19-11.32,11.02-12.58ZM246.98,304.89l-6.4,2.64c.98,8.65,1.04,20.32,12.7,17.84l-6.31-20.47ZM257.4,339.69c-4.55,1.28.22,6.47,1.83,8.9,4.52,6.79,19.78,27.45,28.77,21.73l.77-4.01c-5.91-3.18-21.91-25.36-25.55-26.45-1.81-.54-4-.67-5.82-.16ZM358.83,437.19l-1.5-5.58-41.06-37.69c-2.84-1.47-13.44-1.76-14.14,1.57l36.97,40.19c6.51,3.72,12.78,3.27,19.73,1.52Z"
                   fill="#064e3b"
                   initial={pieces.roadRight.initial}
                   animate={pieces.roadRight.animate}
                   transition={enterTransition(0.16)}
                 />
+
+                {/* LEFT road (use ORIGINAL full path + keep your animation) */}
+                <motion.path
+                  d="M261.16,254.51l-32.94,18.23c-51.27,33.64-60.02,82.29-41.52,138.91,4.69,14.36,17.05,31.16,13.06,45.29-3.68,3.75-51.5,5.61-56.75,3.11-9.07-4.32-6.57-43.12-13.59-51-22.63-7.93-5.08,44.69-12.25,50.37-3.4,2.69-38.06,3.49-44.33,3.07-11.37-.77-18.32-.09-18.16-13.46.3-25.54,18.4-65.95,32.84-87,40.97-59.68,104.53-91.3,173.62-107.52ZM183.98,295.46c-3.68-.67-21.17,13.48-18.89,15.73,7.83-2.18,13.96-9.67,18.89-15.73ZM160.36,319.09c-6.09-4.52-19.89,18.06-20.47,23.6,6.14,5.53,17.38-19.78,20.47-23.6ZM139.87,353.73c-14.68-.46-14.59,23.45-18.83,33.99.13,5.86,9.57,4.14,11.72.62.92-1.51,8.38-33.39,7.11-34.62Z"
+                  fill="#064e3b"
+                  initial={pieces.roadLeft.initial}
+                  animate={pieces.roadLeft.animate}
+                  transition={enterTransition(0.08)}
+                />
+
+                {/* Leaf (same + keep your float) */}
                 <motion.g
                   animate={phase === "reveal" ? { y: [0, -4, 0] } : {}}
                   transition={{
@@ -235,32 +244,6 @@ export function SplashScreen() {
                     initial={pieces.leaf.initial}
                     animate={pieces.leaf.animate}
                     transition={enterTransition(0.24)}
-                  />
-                </motion.g>
-
-                {/* Road Lines - Only appear in Reveal phase */}
-                <motion.g
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: phase === "reveal" ? 1 : 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <path
-                    d="M205 285 Q 165 310 150 400"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeDasharray="30 20"
-                    className={phase === "reveal" ? "kipita-roadDash" : ""}
-                  />
-                  <path
-                    d="M260 290 Q 285 330 365 410"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeDasharray="30 20"
-                    className={phase === "reveal" ? "kipita-roadDash" : ""}
                   />
                 </motion.g>
               </svg>
