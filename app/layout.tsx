@@ -2,6 +2,7 @@ import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import { Poppins } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AuthProvider } from '@/components/auth-provider'
 import './globals.css'
 
 const poppins = Poppins({
@@ -68,9 +69,11 @@ export default function RootLayout({
         />
       </head>
       <body className={`font-poppins antialiased min-h-screen bg-background text-foreground`}>
-        <div className="flex flex-col h-screen w-full max-w-md mx-auto relative">
-          {children}
-        </div>
+        <AuthProvider>
+          <div className="flex flex-col h-screen w-full max-w-md mx-auto relative">
+            {children}
+          </div>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

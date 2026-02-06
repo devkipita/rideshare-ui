@@ -294,11 +294,6 @@ export function SplashScreen() {
                       Share the <span className="text-emerald-600">Ride .</span>{" "}
                       Save <span className="text-emerald-600">More</span>
                     </h1>
-
-                    <p className="text-slate-500 font-medium text-sm sm:text-base mt-4 leading-relaxed max-w-[90%] mx-auto sm:mx-0">
-                      Connect with neighbors heading your way and save on every
-                      trip.
-                    </p>
                   </div>
                 </div>
 
@@ -306,14 +301,14 @@ export function SplashScreen() {
                 <div className="space-y-3">
                   <SelectionCard
                     icon={Search}
-                    title="I need a ride"
+                    title="find a ride"
                     subtitle="Find a seat nearby"
                     delay={0.4}
                     onClick={() => setMode("passenger")}
                   />
                   <SelectionCard
                     icon={Navigation}
-                    title="I'm driving"
+                    title="Offer a Ride"
                     subtitle="Post your empty seats"
                     delay={0.5}
                     onClick={() => setMode("driver")}
@@ -327,12 +322,10 @@ export function SplashScreen() {
                   transition={{ delay: 0.7 }}
                   className="text-center"
                 >
-                  <button className="text-xs sm:text-sm font-semibold text-emerald-900/50 hover:text-emerald-800 transition-colors py-2">
-                    Already have an account?{" "}
-                    <span className="underline decoration-emerald-900/20 underline-offset-2">
-                      Log in
-                    </span>
-                  </button>
+                    <p className="text-slate-500 font-medium text-sm sm:text-base mt-4 leading-relaxed max-w-[90%] mx-auto sm:mx-0">
+                      Connect with people heading your way and save on every
+                      trip.{" "}
+                    </p>
                 </motion.div>
               </motion.div>
             )}
