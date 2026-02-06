@@ -65,13 +65,13 @@ export default function SignInPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block space-y-2 text-sm font-semibold text-emerald-900">
-            Email
+            Email or phone
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-              autoComplete="email"
+              autoComplete="username"
               required
             />
           </label>
