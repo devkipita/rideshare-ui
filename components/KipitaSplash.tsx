@@ -8,8 +8,19 @@ import {
   ShieldCheck,
   Navigation,
   User,
+  X,
 } from "lucide-react";
+import { signIn, getProviders, type ClientSafeProvider } from "next-auth/react";
 import { useAppMode } from "@/app/context";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 
 // --- ANIMATION UTILS ---
 
@@ -98,6 +109,25 @@ export function SplashScreen() {
   }, []);
 
   const [phase, setPhase] = useState<"enter" | "reveal">(initialPhase);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authView, setAuthView] = useState<"signin" | "signup">("signin");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [signInValues, setSignInValues] = useState({
+    identifier: "",
+    password: "",
+  });
+  const [signUpValues, setSignUpValues] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+  const [providers, setProviders] = useState<Record<
+    string,
+    ClientSafeProvider
+  > | null>(null);
+  const googleProvider = providers?.google ?? null;
 
   // --- ANIMATION LOOP ---
   useEffect(() => {
@@ -120,6 +150,20 @@ export function SplashScreen() {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    let isMounted = true;
+    getProviders()
+      .then((result) => {
+        if (isMounted) setProviders(result);
+      })
+      .catch(() => {
+        if (isMounted) setProviders(null);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // --- MOTION VARIANTS ---
   const pieces = useMemo(
@@ -150,6 +194,113 @@ export function SplashScreen() {
     delay,
   });
 
+  const authTitle =
+    authView === "signin" ? "Welcome back" : "Create your account";
+  const authDescription =
+    authView === "signin"
+      ? "Sign in to continue your journey."
+      : "Create an account to unlock shared rides.";
+  const inputClassName =
+    "w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200";
+
+  const handleAuthOpenChange = (open: boolean) => {
+    setAuthOpen(open);
+    if (!open) {
+      setAuthError(null);
+      setAuthLoading(false);
+      setAuthView("signin");
+      setSignInValues({ identifier: "", password: "" });
+      setSignUpValues({ name: "", email: "", phone: "", password: "" });
+    }
+  };
+
+  const handleAuthViewChange = (view: "signin" | "signup") => {
+    setAuthView(view);
+    setAuthError(null);
+  };
+
+  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (authLoading) return;
+    setAuthError(null);
+    setAuthLoading(true);
+
+    try {
+      const identifier = signInValues.identifier.trim();
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: identifier,
+        password: signInValues.password,
+        callbackUrl: "/",
+      });
+
+      if (result?.error) {
+        setAuthError("Invalid credentials. Please try again.");
+        return;
+      }
+
+      setAuthOpen(false);
+    } catch (error) {
+      setAuthError("Unable to sign in right now.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (authLoading) return;
+    setAuthError(null);
+    setAuthLoading(true);
+
+    const payload = {
+      name: signUpValues.name.trim(),
+      email: signUpValues.email.trim(),
+      phone: signUpValues.phone.trim(),
+      password: signUpValues.password,
+    };
+
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setAuthError(data?.error ?? "Unable to create your account.");
+        return;
+      }
+
+      const identifier = payload.email || payload.phone;
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: identifier,
+        password: payload.password,
+        callbackUrl: "/",
+      });
+
+      if (result?.error) {
+        setAuthError("Account created. Please sign in to continue.");
+        setAuthView("signin");
+        setSignInValues({ identifier, password: "" });
+        return;
+      }
+
+      setAuthOpen(false);
+    } catch (error) {
+      setAuthError("Unable to create your account right now.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = () => {
+    if (!googleProvider) return;
+    signIn(googleProvider.id, { callbackUrl: "/" });
+  };
+
   return (
     <div className="relative min-h-[100dvh] w-full overflow-hidden bg-[#F8FAF8] flex flex-col items-center">
       {/* USER ICON (Top Right) - only after reveal */}
@@ -162,13 +313,229 @@ export function SplashScreen() {
             transition={{ duration: 0.45, ease: easeOutCubic, delay: 0.15 }}
             className="absolute top-4 right-4 z-20"
           >
-            <button
-              type="button"
-              aria-label="User"
-              className="h-11 w-11 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm flex items-center justify-center text-emerald-800 hover:bg-white transition-colors"
-            >
-              <User size={20} strokeWidth={2.25} />
-            </button>
+            <Drawer open={authOpen} onOpenChange={handleAuthOpenChange}>
+              <DrawerTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="User profile"
+                  aria-expanded={authOpen}
+                  className="h-11 w-11 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm flex items-center justify-center text-emerald-800 hover:bg-white transition-colors"
+                >
+                  <User size={20} strokeWidth={2.25} />
+                </button>
+              </DrawerTrigger>
+              <DrawerContent className="bg-white/95 backdrop-blur border-t border-emerald-100 max-h-[85vh] overflow-y-auto">
+                <div
+                  className="mx-auto w-full max-w-md px-5 pb-8"
+                  style={{
+                    paddingBottom: "calc(env(safe-area-inset-bottom) + 28px)",
+                  }}
+                >
+                  <div className="flex items-start justify-between pt-2">
+                    <DrawerHeader className="px-0 pb-2">
+                      <DrawerTitle className="text-2xl font-black text-emerald-950">
+                        {authTitle}
+                      </DrawerTitle>
+                      <DrawerDescription className="text-sm text-slate-500">
+                        {authDescription}
+                      </DrawerDescription>
+                    </DrawerHeader>
+                    <DrawerClose asChild>
+                      <button
+                        type="button"
+                        aria-label="Close"
+                        className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-emerald-200 hover:text-emerald-700"
+                      >
+                        <X size={16} strokeWidth={2} />
+                      </button>
+                    </DrawerClose>
+                  </div>
+
+                  <div className="mt-2 flex rounded-full bg-emerald-50 p-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    <button
+                      type="button"
+                      onClick={() => handleAuthViewChange("signin")}
+                      aria-pressed={authView === "signin"}
+                      className={`flex-1 rounded-full px-3 py-2 transition ${
+                        authView === "signin"
+                          ? "bg-white text-emerald-800 shadow-sm"
+                          : "text-emerald-700/80 hover:text-emerald-900"
+                      }`}
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAuthViewChange("signup")}
+                      aria-pressed={authView === "signup"}
+                      className={`flex-1 rounded-full px-3 py-2 transition ${
+                        authView === "signup"
+                          ? "bg-white text-emerald-800 shadow-sm"
+                          : "text-emerald-700/80 hover:text-emerald-900"
+                      }`}
+                    >
+                      Sign up
+                    </button>
+                  </div>
+
+                  {authError && (
+                    <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                      {authError}
+                    </div>
+                  )}
+
+                  {authView === "signin" ? (
+                    <form onSubmit={handleSignIn} className="mt-4 space-y-3">
+                      <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+                        Email or phone
+                        <input
+                          type="text"
+                          value={signInValues.identifier}
+                          onChange={(event) =>
+                            setSignInValues((prev) => ({
+                              ...prev,
+                              identifier: event.target.value,
+                            }))
+                          }
+                          className={inputClassName}
+                          autoComplete="username"
+                          required
+                        />
+                      </label>
+
+                      <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+                        Password
+                        <input
+                          type="password"
+                          value={signInValues.password}
+                          onChange={(event) =>
+                            setSignInValues((prev) => ({
+                              ...prev,
+                              password: event.target.value,
+                            }))
+                          }
+                          className={inputClassName}
+                          autoComplete="current-password"
+                          required
+                        />
+                      </label>
+
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {authLoading ? "Signing in..." : "Sign in"}
+                      </button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleSignUp} className="mt-4 space-y-3">
+                      <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+                        Full name
+                        <input
+                          type="text"
+                          value={signUpValues.name}
+                          onChange={(event) =>
+                            setSignUpValues((prev) => ({
+                              ...prev,
+                              name: event.target.value,
+                            }))
+                          }
+                          className={inputClassName}
+                          autoComplete="name"
+                          required
+                        />
+                      </label>
+
+                      <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+                        Email
+                        <input
+                          type="email"
+                          value={signUpValues.email}
+                          onChange={(event) =>
+                            setSignUpValues((prev) => ({
+                              ...prev,
+                              email: event.target.value,
+                            }))
+                          }
+                          className={inputClassName}
+                          autoComplete="email"
+                          required
+                        />
+                      </label>
+
+                      <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+                        Phone
+                        <input
+                          type="tel"
+                          value={signUpValues.phone}
+                          onChange={(event) =>
+                            setSignUpValues((prev) => ({
+                              ...prev,
+                              phone: event.target.value,
+                            }))
+                          }
+                          className={inputClassName}
+                          autoComplete="tel"
+                          required
+                        />
+                      </label>
+
+                      <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+                        Password
+                        <input
+                          type="password"
+                          value={signUpValues.password}
+                          onChange={(event) =>
+                            setSignUpValues((prev) => ({
+                              ...prev,
+                              password: event.target.value,
+                            }))
+                          }
+                          className={inputClassName}
+                          autoComplete="new-password"
+                          required
+                        />
+                      </label>
+
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {authLoading ? "Creating account..." : "Create account"}
+                      </button>
+                    </form>
+                  )}
+
+                  <div className="mt-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-emerald-100" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                      Or continue with
+                    </span>
+                    <div className="h-px flex-1 bg-emerald-100" />
+                  </div>
+
+                  {googleProvider ? (
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      className="mt-4 w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+                    >
+                      Continue with Google
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-400"
+                    >
+                      Google auth not configured
+                    </button>
+                  )}
+                </div>
+              </DrawerContent>
+            </Drawer>
           </motion.div>
         )}
       </AnimatePresence>
