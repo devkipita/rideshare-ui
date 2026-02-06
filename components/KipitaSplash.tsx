@@ -2,7 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Search, ChevronRight, ShieldCheck, Navigation } from "lucide-react";
+import {
+  Search,
+  ChevronRight,
+  ShieldCheck,
+  Navigation,
+  User,
+} from "lucide-react";
 import { useAppMode } from "@/app/context";
 
 // --- ANIMATION UTILS ---
@@ -146,6 +152,27 @@ export function SplashScreen() {
 
   return (
     <div className="relative min-h-[100dvh] w-full overflow-hidden bg-[#F8FAF8] flex flex-col items-center">
+      {/* USER ICON (Top Right) - only after reveal */}
+      <AnimatePresence>
+        {phase === "reveal" && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.45, ease: easeOutCubic, delay: 0.15 }}
+            className="absolute top-4 right-4 z-20"
+          >
+            <button
+              type="button"
+              aria-label="User"
+              className="h-11 w-11 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm flex items-center justify-center text-emerald-800 hover:bg-white transition-colors"
+            >
+              <User size={20} strokeWidth={2.25} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 1. GLOBAL STYLES (Performance Optimized) */}
       <style jsx global>{`
         @keyframes kipitaDash {
@@ -322,10 +349,10 @@ export function SplashScreen() {
                   transition={{ delay: 0.7 }}
                   className="text-center"
                 >
-                    <p className="text-slate-500 font-medium text-sm sm:text-base mt-4 leading-relaxed max-w-[90%] mx-auto sm:mx-0">
-                      Connect with people heading your way and save on every
-                      trip.{" "}
-                    </p>
+                  <p className="text-slate-500 font-medium text-sm sm:text-base mt-4 leading-relaxed max-w-[90%] mx-auto sm:mx-0">
+                    Connect with people heading your way and save on every
+                    trip.{" "}
+                  </p>
                 </motion.div>
               </motion.div>
             )}
