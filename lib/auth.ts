@@ -6,41 +6,10 @@ import bcrypt from 'bcryptjs'
 
 export type AppUserRole = 'passenger' | 'driver' | 'admin'
 
-type DemoUser = {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  password: string
-  role: AppUserRole
+type SupabaseUserRow = {
+  id: string | number
+  role: AppUserRole | null
 }
-
-const demoUsers: DemoUser[] = [
-  {
-    id: 'user-passenger',
-    name: 'Demo Passenger',
-    email: 'passenger@kipita.app',
-    phone: '+254700000001',
-    password: 'passenger',
-    role: 'passenger',
-  },
-  {
-    id: 'user-driver',
-    name: 'Demo Driver',
-    email: 'driver@kipita.app',
-    phone: '+254700000002',
-    password: 'driver',
-    role: 'driver',
-  },
-  {
-    id: 'user-admin',
-    name: 'Demo Admin',
-    email: 'admin@kipita.app',
-    phone: '+254700000003',
-    password: 'admin',
-    role: 'admin',
-  },
-]
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -52,15 +21,80 @@ const supabase =
 const googleClientId = process.env.GOOGLE_CLIENT_ID
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
 
+const normalizeEmail = (value?: string | null) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+const defaultRole: AppUserRole = 'passenger'
+
+const fetchUserByEmail = async (
+  email: string
+): Promise<SupabaseUserRow | null> => {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, role')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return {
+    id: data.id,
+    role: (data.role as AppUserRole) ?? defaultRole,
+  }
+}
+
+const upsertOAuthUser = async ({
+  email,
+  name,
+  provider,
+}: {
+  email: string
+  name?: string | null
+  provider: 'google'
+}): Promise<SupabaseUserRow | null> => {
+  if (!supabase) return null
+
+  const existing = await fetchUserByEmail(email)
+  if (existing) {
+    await supabase
+      .from('users')
+      .update({
+        name: name ?? null,
+        provider,
+      })
+      .eq('id', existing.id)
+    return existing
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .insert([
+      {
+        email,
+        name: name ?? null,
+        provider,
+        role: defaultRole,
+      },
+    ])
+    .select('id, role')
+    .single()
+
+  if (error || !data) return null
+  return {
+    id: data.id,
+    role: (data.role as AppUserRole) ?? defaultRole,
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: 'Demo Credentials',
+      name: 'Credentials',
       credentials: {
         email: {
           label: 'Email or phone',
           type: 'text',
-          placeholder: 'passenger@kipita.app',
+          placeholder: 'you@example.com',
         },
         password: { label: 'Password', type: 'password' },
       },
@@ -71,22 +105,6 @@ export const authOptions: NextAuthOptions = {
         if (!rawIdentifier || !password) return null
         const identifier = rawIdentifier.toLowerCase()
         const isEmail = rawIdentifier.includes('@')
-
-        const match = demoUsers.find(
-          (user) =>
-            (user.email.toLowerCase() === identifier ||
-              user.phone === rawIdentifier) &&
-            user.password === password
-        )
-
-        if (match) {
-          return {
-            id: match.id,
-            name: match.name,
-            email: match.email,
-            role: match.role,
-          }
-        }
 
         if (!supabase) return null
 
@@ -120,20 +138,64 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: '/auth/signin',
+    error: '/auth/signin',
   },
   session: {
     strategy: 'jwt',
   },
   callbacks: {
-    jwt({ token, user }) {
+    async signIn({ account, profile, user }) {
+      if (account?.provider !== 'google') return true
+      if (!supabase) return false
+
+      const email = normalizeEmail(
+        (profile as { email?: string | null })?.email ?? user?.email ?? null
+      )
+      if (!email) return false
+
+      const name =
+        (profile as { name?: string | null })?.name ??
+        user?.name ??
+        null
+
+      const result = await upsertOAuthUser({
+        email,
+        name,
+        provider: 'google',
+      })
+
+      return Boolean(result)
+    },
+    async jwt({ token, user, account, profile }) {
       if (user?.role) {
         token.role = user.role
       }
+      if (user?.id) {
+        token.uid = String(user.id)
+      }
+
+      if (account?.provider === 'google') {
+        const email = normalizeEmail(
+          (profile as { email?: string | null })?.email ?? token.email ?? null
+        )
+
+        if (email) {
+          const dbUser = await fetchUserByEmail(email)
+          if (dbUser) {
+            token.role = dbUser.role ?? defaultRole
+            token.uid = String(dbUser.id)
+          }
+        }
+      }
+
       return token
     },
     session({ session, token }) {
       if (session.user && token.role) {
         session.user.role = token.role as AppUserRole
+      }
+      if (session.user && token.uid) {
+        session.user.id = token.uid as string
       }
       return session
     },

@@ -362,7 +362,7 @@ export function SplashScreen() {
                           : "text-emerald-700/80 hover:text-emerald-900"
                       }`}
                     >
-                      Sign in
+                      log in
                     </button>
                     <button
                       type="button"
@@ -530,7 +530,7 @@ export function SplashScreen() {
                       disabled
                       className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-400"
                     >
-                      Google auth not configured
+                      Google sign-in unavailable
                     </button>
                   )}
                 </div>

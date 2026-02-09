@@ -29,6 +29,8 @@ interface DriverProfileModalProps {
   onMessage?: () => void
 }
 
+
+
 export function DriverProfileModal({ driver, isOpen, onClose, onMessage }: DriverProfileModalProps) {
   if (!isOpen) return null
 

@@ -1,24 +1,45 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useEffect, useState } from 'react'
+import { signIn, getProviders, type ClientSafeProvider } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-
-const demoAccounts = [
-  { label: 'Passenger', email: 'passenger@kipita.app', password: 'passenger' },
-  { label: 'Driver', email: 'driver@kipita.app', password: 'driver' },
-  { label: 'Admin', email: 'admin@kipita.app', password: 'admin' },
-]
 
 export function SignInClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [email, setEmail] = useState(demoAccounts[0].email)
-  const [password, setPassword] = useState(demoAccounts[0].password)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [providers, setProviders] = useState<Record<
+    string,
+    ClientSafeProvider
+  > | null>(null)
 
   const authError = searchParams.get('error')
+  const authErrorMessage =
+    authError === 'AccessDenied'
+      ? 'Google sign-in is not configured.'
+      : authError === 'OAuthAccountNotLinked'
+      ? 'This email is linked to another sign-in method.'
+      : authError
+      ? 'Authentication failed. Please try again.'
+      : null
+  const googleProvider = providers?.google ?? null
+
+  useEffect(() => {
+    let isMounted = true
+    getProviders()
+      .then((result) => {
+        if (isMounted) setProviders(result)
+      })
+      .catch(() => {
+        if (isMounted) setProviders(null)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -35,16 +56,16 @@ export function SignInClient() {
     setIsLoading(false)
 
     if (result?.error) {
-      setError('Invalid credentials. Try a demo account below.')
+      setError('Invalid credentials. Please try again.')
       return
     }
 
     router.push(result?.url ?? '/')
   }
 
-  const handleDemoFill = (account: (typeof demoAccounts)[number]) => {
-    setEmail(account.email)
-    setPassword(account.password)
+  const handleGoogleSignIn = () => {
+    if (!googleProvider) return
+    signIn(googleProvider.id, { callbackUrl: '/' })
   }
 
   return (
@@ -53,13 +74,13 @@ export function SignInClient() {
         <div className="mb-6 space-y-2 text-center">
           <h1 className="text-2xl font-black text-emerald-950">Welcome back</h1>
           <p className="text-sm font-medium text-slate-500">
-            Sign in with a demo account to explore the app.
+            Sign in to continue your journey.
           </p>
         </div>
 
-        {(error || authError) && (
+        {(error || authErrorMessage) && (
           <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            {error ?? 'Authentication failed. Please try again.'}
+            {error ?? authErrorMessage}
           </div>
         )}
 
@@ -97,26 +118,31 @@ export function SignInClient() {
           </button>
         </form>
 
-        <div className="mt-6 space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-            Demo accounts
-          </p>
-          <div className="grid gap-2">
-            {demoAccounts.map((account) => (
-              <button
-                key={account.label}
-                type="button"
-                onClick={() => handleDemoFill(account)}
-                className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-left text-sm font-semibold text-emerald-900 transition hover:border-emerald-300 hover:bg-emerald-100"
-              >
-                <span>{account.label}</span>
-                <span className="text-xs font-medium text-emerald-700">
-                  {account.email}
-                </span>
-              </button>
-            ))}
-          </div>
+        <div className="mt-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-emerald-100" />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+            Or continue with
+          </span>
+          <div className="h-px flex-1 bg-emerald-100" />
         </div>
+
+        {googleProvider ? (
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="mt-4 w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+          >
+            Continue with Google
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-400"
+          >
+            Google sign-in unavailable
+          </button>
+        )}
       </div>
     </div>
   )
