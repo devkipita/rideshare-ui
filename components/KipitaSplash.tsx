@@ -695,7 +695,7 @@ export function SplashScreen() {
                 <div className="space-y-3">
                   <SelectionCard
                     icon={Search}
-                    title="find a ride"
+                    title="Find a ride"
                     subtitle="Find a seat nearby"
                     delay={0.4}
                     onClick={() => setMode("passenger")}
@@ -703,7 +703,7 @@ export function SplashScreen() {
                   <SelectionCard
                     icon={Navigation}
                     title="Offer a Ride"
-                    subtitle="Post your empty seats"
+                    subtitle="Share your empty seats"
                     delay={0.5}
                     onClick={() => setMode("driver")}
                   />
