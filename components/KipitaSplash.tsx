@@ -219,6 +219,15 @@ export function SplashScreen() {
     setAuthError(null);
   };
 
+  const handleFieldFocus = (
+    event: React.FocusEvent<HTMLInputElement>,
+  ) => {
+    const target = event.currentTarget;
+    window.setTimeout(() => {
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 80);
+  };
+
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (authLoading) return;
@@ -324,11 +333,16 @@ export function SplashScreen() {
                   <User size={20} strokeWidth={2.25} />
                 </button>
               </DrawerTrigger>
-              <DrawerContent className="bg-white/95 backdrop-blur border-t border-emerald-100 max-h-[85vh] overflow-y-auto">
+              <DrawerContent className="bg-white/95 backdrop-blur border-t border-emerald-100 max-h-[92dvh] overflow-hidden">
                 <div
-                  className="mx-auto w-full max-w-md px-5 pb-8"
+                  className="mx-auto w-full max-w-md px-5 pb-8 overflow-y-auto overscroll-contain"
                   style={{
-                    paddingBottom: "calc(env(safe-area-inset-bottom) + 28px)",
+                    maxHeight:
+                      "calc(92dvh - env(safe-area-inset-top))",
+                    paddingBottom:
+                      "calc(env(safe-area-inset-bottom) + 28px)",
+                    scrollPaddingBottom:
+                      "calc(env(safe-area-inset-bottom) + 72px)",
                   }}
                 >
                   <div className="flex items-start justify-between pt-2">
@@ -388,36 +402,38 @@ export function SplashScreen() {
                     <form onSubmit={handleSignIn} className="mt-4 space-y-3">
                       <label className="block space-y-2 text-sm font-semibold text-emerald-900">
                         Email or phone
-                        <input
-                          type="text"
-                          value={signInValues.identifier}
-                          onChange={(event) =>
-                            setSignInValues((prev) => ({
-                              ...prev,
-                              identifier: event.target.value,
-                            }))
-                          }
-                          className={inputClassName}
-                          autoComplete="username"
-                          required
-                        />
+                          <input
+                            type="text"
+                            value={signInValues.identifier}
+                            onChange={(event) =>
+                              setSignInValues((prev) => ({
+                                ...prev,
+                                identifier: event.target.value,
+                              }))
+                            }
+                            onFocus={handleFieldFocus}
+                            className={inputClassName}
+                            autoComplete="username"
+                            required
+                          />
                       </label>
 
                       <label className="block space-y-2 text-sm font-semibold text-emerald-900">
                         Password
-                        <input
-                          type="password"
-                          value={signInValues.password}
-                          onChange={(event) =>
-                            setSignInValues((prev) => ({
-                              ...prev,
-                              password: event.target.value,
-                            }))
-                          }
-                          className={inputClassName}
-                          autoComplete="current-password"
-                          required
-                        />
+                          <input
+                            type="password"
+                            value={signInValues.password}
+                            onChange={(event) =>
+                              setSignInValues((prev) => ({
+                                ...prev,
+                                password: event.target.value,
+                              }))
+                            }
+                            onFocus={handleFieldFocus}
+                            className={inputClassName}
+                            autoComplete="current-password"
+                            required
+                          />
                       </label>
 
                       <button
@@ -432,70 +448,74 @@ export function SplashScreen() {
                     <form onSubmit={handleSignUp} className="mt-4 space-y-3">
                       <label className="block space-y-2 text-sm font-semibold text-emerald-900">
                         Full name
-                        <input
-                          type="text"
-                          value={signUpValues.name}
-                          onChange={(event) =>
-                            setSignUpValues((prev) => ({
-                              ...prev,
-                              name: event.target.value,
-                            }))
-                          }
-                          className={inputClassName}
-                          autoComplete="name"
-                          required
-                        />
+                          <input
+                            type="text"
+                            value={signUpValues.name}
+                            onChange={(event) =>
+                              setSignUpValues((prev) => ({
+                                ...prev,
+                                name: event.target.value,
+                              }))
+                            }
+                            onFocus={handleFieldFocus}
+                            className={inputClassName}
+                            autoComplete="name"
+                            required
+                          />
                       </label>
 
                       <label className="block space-y-2 text-sm font-semibold text-emerald-900">
                         Email
-                        <input
-                          type="email"
-                          value={signUpValues.email}
-                          onChange={(event) =>
-                            setSignUpValues((prev) => ({
-                              ...prev,
-                              email: event.target.value,
-                            }))
-                          }
-                          className={inputClassName}
-                          autoComplete="email"
-                          required
-                        />
+                          <input
+                            type="email"
+                            value={signUpValues.email}
+                            onChange={(event) =>
+                              setSignUpValues((prev) => ({
+                                ...prev,
+                                email: event.target.value,
+                              }))
+                            }
+                            onFocus={handleFieldFocus}
+                            className={inputClassName}
+                            autoComplete="email"
+                            required
+                          />
                       </label>
 
                       <label className="block space-y-2 text-sm font-semibold text-emerald-900">
                         Phone
-                        <input
-                          type="tel"
-                          value={signUpValues.phone}
-                          onChange={(event) =>
-                            setSignUpValues((prev) => ({
-                              ...prev,
-                              phone: event.target.value,
-                            }))
-                          }
-                          className={inputClassName}
-                          autoComplete="tel"
-                          required
-                        />
+                          <input
+                            type="tel"
+                            value={signUpValues.phone}
+                            onChange={(event) =>
+                              setSignUpValues((prev) => ({
+                                ...prev,
+                                phone: event.target.value,
+                              }))
+                            }
+                            onFocus={handleFieldFocus}
+                            className={inputClassName}
+                            autoComplete="tel"
+                            required
+                          />
                       </label>
 
                       <label className="block space-y-2 text-sm font-semibold text-emerald-900">
                         Password
-                        <input
-                          type="password"
-                          value={signUpValues.password}
-                          onChange={(event) =>
-                            setSignUpValues((prev) => ({
-                              ...prev,
-                              password: event.target.value,
-                            }))
-                          }
-                          className={inputClassName}
-                          autoComplete="new-password"
-                          required
-                        />
+                          <input
+                            type="password"
+                            value={signUpValues.password}
+                            onChange={(event) =>
+                              setSignUpValues((prev) => ({
+                                ...prev,
+                                password: event.target.value,
+                              }))
+                            }
+                            onFocus={handleFieldFocus}
+                            className={inputClassName}
+                            autoComplete="new-password"
+                            required
+                          />
                       </label>
 
                       <button
