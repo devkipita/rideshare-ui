@@ -1,3 +1,4 @@
+// lib/kenyan-towns
 export const KENYAN_TOWNS = [
   'Nairobi',
   'Mombasa',

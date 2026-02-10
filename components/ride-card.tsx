@@ -1,160 +1,99 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Star, MapPin, Clock, Users, Check } from 'lucide-react'
-import { DriverProfileDrawer } from './driver-profile-drawer'
-import { DriverProfileModal } from './driver-profile-modal' // Import DriverProfileModal
+import { Star, MapPin, Clock, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Surface } from "@/components/ui-parts";
 
-interface RideCardProps {
-  driverName: string
-  rating: number
-  from: string
-  to: string
-  startTime: string
-  endTime: string
-  price: number
-  seatsLeft: number
-  onJoin?: () => void
-  onMessage?: () => void
-}
+export type RideCardData = {
+  driverName: string;
+  rating: number;
+  from: string;
+  to: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+  seatsLeft: number;
+};
 
 export function RideCard({
-  driverName,
-  rating,
-  from,
-  to,
-  startTime,
-  endTime,
-  price,
-  seatsLeft,
-  onJoin,
-  onMessage,
-}: RideCardProps) {
-  const [joined, setJoined] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
-
-  const handleJoin = () => {
-    setJoined(!joined)
-    onJoin?.()
-  }
-
-  const mockDriver = {
-    id: '1',
-    name: driverName,
-    rating,
-    trips: 142,
-    responseTime: '< 2 min',
-    carType: 'Toyota Camry',
-    carColor: 'Silver',
-    platNumber: 'KCP 456A',
-    joinDate: 'Jan 2022',
-    bio: 'Safe, friendly driver. Regular route between Nanyuki and Nairobi.',
-    reviews: [
-      {
-        author: 'Alice M.',
-        rating: 5,
-        text: 'Excellent driver, very punctual and friendly!',
-      },
-      {
-        author: 'James K.',
-        rating: 4,
-        text: 'Good experience, comfortable ride.',
-      },
-    ],
-  }
-
+  ride,
+  onSelect,
+}: {
+  ride: RideCardData;
+  onSelect?: () => void;
+}) {
   return (
-    <div className="glass-card rounded-3xl overflow-hidden hover:shadow-xl smooth-transition animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* Driver Info - Clickable */}
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
-        <button
-          onClick={() => setShowProfile(true)}
-          className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity"
-        >
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold">{driverName.charAt(0)}</span>
+    <button
+      type="button"
+      onClick={onSelect}
+      className="w-full text-left"
+      aria-label={`View ride with ${ride.driverName}`}
+    >
+      <Surface interactive tone="panel" className="p-3 sm:p-4">
+        <div className="flex items-start gap-3">
+          <div
+            className={cn(
+              "h-11 w-11 rounded-2xl grid place-items-center font-extrabold",
+              "border border-border/70 bg-card/70 text-foreground/80",
+            )}
+          >
+            {ride.driverName.trim()[0]?.toUpperCase() ?? "D"}
           </div>
-          <div className="text-left">
-            <h3 className="font-semibold text-foreground hover:text-primary transition-colors">{driverName}</h3>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Star className="w-4 h-4 fill-accent text-accent" />
-              <span className="font-medium">{rating.toFixed(1)}</span>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[15px] font-extrabold tracking-tight truncate">
+                {ride.driverName}
+              </p>
+
+              <div className="text-right">
+                <p className="text-[15px] font-extrabold text-primary">
+                  KES {ride.price.toLocaleString()}
+                </p>
+                <p className="text-[11px] text-muted-foreground -mt-0.5">
+                  per seat
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-1 flex items-center gap-1 text-[12px] text-muted-foreground">
+              <Star className="h-3.5 w-3.5 text-yellow-500" />
+              <span className="font-semibold text-foreground/80">
+                {ride.rating}
+              </span>
+              <span className="opacity-60">·</span>
+              <span className="inline-flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" />
+                <span>
+                  {ride.seatsLeft} seat{ride.seatsLeft === 1 ? "" : "s"} left
+                </span>
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-2xl border border-border/70 bg-card/60 px-3 py-2">
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  Route
+                </p>
+                <p className="mt-0.5 text-[13px] font-extrabold tracking-tight truncate">
+                  <MapPin className="inline h-3.5 w-3.5 mr-1 text-primary" />
+                  {ride.from} → {ride.to}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border/70 bg-card/60 px-3 py-2">
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  Time
+                </p>
+                <p className="mt-0.5 text-[13px] font-extrabold tracking-tight truncate">
+                  <Clock className="inline h-3.5 w-3.5 mr-1 text-primary" />
+                  {ride.startTime} – {ride.endTime}
+                </p>
+              </div>
             </div>
           </div>
-        </button>
-      </div>
-
-      {/* Route Info */}
-      <div className="mb-4">
-        <div className="flex items-start gap-3">
-          <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">Route</p>
-            <p className="font-semibold text-foreground">{from} → {to}</p>
-          </div>
         </div>
-      </div>
-
-      {/* Time Info */}
-      <div className="mb-4">
-        <div className="flex items-center gap-3">
-          <Clock className="w-5 h-5 text-primary" />
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">Time</p>
-            <p className="text-2xl font-bold text-foreground">
-              {startTime} – {endTime}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Price & Seats */}
-      <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-border">
-        <div className="bg-primary/10 rounded-xl p-3">
-          <p className="text-xs text-muted-foreground mb-1">Price per seat</p>
-          <p className="text-2xl font-bold text-primary">
-            KES <span className="text-xl">{price}</span>
-          </p>
-        </div>
-        <div className="bg-muted rounded-xl p-3">
-          <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            Seats Left
-          </p>
-          <p className="text-2xl font-bold text-foreground">{seatsLeft}</p>
-        </div>
-      </div>
-
-      {/* Join Button */}
-      <Button
-        onClick={handleJoin}
-        className={`w-full h-12 rounded-2xl font-semibold smooth-transition active:scale-95 ${
-          joined
-            ? 'bg-green-500 hover:bg-green-600 text-white'
-            : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-        }`}
-      >
-        {joined ? (
-          <>
-            <Check className="w-4 h-4 mr-2" />
-            Joined!
-          </>
-        ) : (
-          'Join Ride'
-        )}
-      </Button>
-
-      {/* Driver Profile Drawer */}
-      <DriverProfileDrawer
-        driver={mockDriver}
-        isOpen={showProfile}
-        onClose={() => setShowProfile(false)}
-        onMessage={() => {
-          setShowProfile(false)
-          onMessage?.()
-        }}
-      />
-    </div>
-  )
+      </Surface>
+    </button>
+  );
 }
