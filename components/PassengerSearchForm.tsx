@@ -8,7 +8,6 @@ import {
   PawPrint,
   PlaneTakeoff,
   LuggageIcon,
-  PlaneIcon,
 } from "lucide-react";
 import { filterTowns } from "@/lib/kenyan-towns";
 import { cn } from "@/lib/utils";
@@ -51,13 +50,14 @@ function todayISO() {
   return `${y}-${m}-${day}`;
 }
 
-/** Outside focus ring (primary) */
-const OUTSIDE_FOCUS_RING = cn(
-  "focus-within:ring-2 focus-within:ring-primary",
-  "focus-within:ring-offset-2 focus-within:ring-offset-background",
-  "focus-within:border-primary/40",
+const CARD_FOCUS = cn(
+  "focus-within:border-transparent",
+  "focus-within:ring-2 focus-within:ring-primary/55",
   "transition-[box-shadow,border-color] duration-200 ease-app",
 );
+
+// ✅ start suggesting after user types at least 2 chars
+const MIN_TOWN_CHARS = 2;
 
 export function PassengerSearchForm({
   filters,
@@ -68,8 +68,6 @@ export function PassengerSearchForm({
   const [fromSuggestions, setFromSuggestions] = useState<string[]>([]);
   const [toSuggestions, setToSuggestions] = useState<string[]>([]);
   const minDate = useMemo(() => todayISO(), []);
-
-  // controlled open for date drawer (so icon can open it too)
   const [dateOpen, setDateOpen] = useState(false);
 
   const canSearch = useMemo(
@@ -86,7 +84,14 @@ export function PassengerSearchForm({
     setSug: SetSug,
   ) => {
     update(field, v);
-    setSug(v ? filterTowns(v).slice(0, 8) : []);
+
+    const q = v.trim();
+    if (q.length < MIN_TOWN_CHARS) {
+      setSug([]); // ✅ wait for input
+      return;
+    }
+
+    setSug(filterTowns(q)); // ✅ uses your towns utils
   };
 
   const handleLocationSelect =
@@ -114,7 +119,7 @@ export function PassengerSearchForm({
   return (
     <div className="space-y-3">
       <div className="p-4">
-        <p className="text-[12px] font-semibold text-muted-foreground">Hi 👋</p>
+        <p className="text-[12px] font-medium text-muted-foreground">Hi 👋</p>
         <p className="mt-1 text-[18px] font-semibold leading-tight tracking-tight">
           Let’s find you great rides <span className="text-primary">today</span>
           .
@@ -124,40 +129,38 @@ export function PassengerSearchForm({
       <Surface elevated className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[12px] font-semibold text-muted-foreground">
+            <p className="text-[12px] font-medium text-muted-foreground">
               Route
             </p>
-            <p className="mt-1 text-[15px] sm:text-[16px] font-extrabold tracking-tight truncate">
+            <p className="mt-1 text-[15px] sm:text-[16px] font-semibold tracking-tight truncate">
               {routeLine}
             </p>
           </div>
         </div>
 
-        {/* ✅ Focus ring now wraps the WHOLE route card (outside border) */}
+        {/* overflow-visible so popup can float; swap z-index lowered so popup stays on top */}
         <div
           className={cn(
-            "mt-3 relative overflow-hidden rounded-3xl border border-border/70 bg-card/60",
-            OUTSIDE_FOCUS_RING,
+            "mt-3 relative rounded-3xl border border-border/70 bg-card/60 overflow-visible",
+            CARD_FOCUS,
           )}
         >
           <button
             type="button"
             onClick={swap}
             className={cn(
-              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30",
+              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20",
               "h-11 w-11 rounded-2xl grid place-items-center",
               "bg-primary text-primary-foreground",
               "shadow-[0_18px_44px_-30px_rgba(6,78,59,0.55)]",
               "transition-all duration-300 ease-app active:scale-[0.98]",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-              "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
             )}
             aria-label="Swap from and to"
           >
             <ArrowUpDown className="h-4 w-4" />
           </button>
 
-          {/* ✅ Removed inner focus-within rings; outer card now owns focus */}
           <div className="p-3 sm:p-3.5">
             <LocationInput
               id="from"
@@ -165,6 +168,7 @@ export function PassengerSearchForm({
               value={filters.from}
               placeholder="Nanyuki"
               suggestions={fromSuggestions}
+              minChars={MIN_TOWN_CHARS}
               onChange={(v) =>
                 handleLocationChange("from", v, setFromSuggestions)
               }
@@ -183,6 +187,7 @@ export function PassengerSearchForm({
               value={filters.to}
               placeholder="Nairobi"
               suggestions={toSuggestions}
+              minChars={MIN_TOWN_CHARS}
               onChange={(v) => handleLocationChange("to", v, setToSuggestions)}
               onSelect={handleLocationSelect("to", setToSuggestions)}
               onClear={handleLocationClear("to", setToSuggestions)}
@@ -193,13 +198,11 @@ export function PassengerSearchForm({
       </Surface>
 
       <div className="grid grid-cols-2 gap-2">
-        {/* ✅ Surface focusRing now produces OUTSIDE primary ring */}
         <Surface elevated className="p-4" focusRing>
           <div className="flex items-center justify-between">
-            <p className="text-[13px] font-extrabold tracking-tight">
+            <p className="text-[13px] font-semibold tracking-tight">
               Travel date
             </p>
-
             <button
               type="button"
               onClick={() => setDateOpen(true)}
@@ -207,8 +210,7 @@ export function PassengerSearchForm({
                 "h-10 w-10 rounded-2xl grid place-items-center",
                 "hover:bg-primary/10 active:scale-[0.98]",
                 "transition-all duration-300 ease-app",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
               )}
               aria-label="Open travel date picker"
             >
@@ -230,19 +232,17 @@ export function PassengerSearchForm({
         </Surface>
 
         <Surface elevated className="p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15">
-                <Users className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-[12px] font-semibold text-muted-foreground">
-                  Seats
-                </p>
-                <p className="mt-0.5 text-[15px] font-extrabold tracking-tight">
-                  {filters.seats}
-                </p>
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-[12px] font-medium text-muted-foreground">
+                Seats
+              </p>
+              <p className="mt-0.5 text-[15px] font-semibold tracking-tight">
+                {filters.seats}
+              </p>
             </div>
           </div>
 
@@ -252,7 +252,7 @@ export function PassengerSearchForm({
                 key={n}
                 active={filters.seats === n}
                 onClick={setSeats(n)}
-                className="h-10 rounded-2xl px-0 text-[13px]"
+                className="h-10 rounded-2xl px-0 text-[13px] font-semibold"
               >
                 {n}
               </PillButton>
@@ -278,7 +278,7 @@ export function PassengerSearchForm({
             size="sm"
           />
           <ChipToggle
-            icon={PlaneIcon}
+            icon={PlaneTakeoff}
             label="Airport"
             active={filters.airport}
             onClick={toggle("airport")}
@@ -290,7 +290,7 @@ export function PassengerSearchForm({
           onClick={onSearch}
           disabled={!canSearch || !!loading}
           className={cn(
-            "mt-3 h-12 w-full rounded-2xl font-extrabold tracking-tight",
+            "mt-3 h-12 w-full rounded-2xl font-semibold tracking-tight",
             "transition-all duration-300 ease-app active:scale-[0.99]",
             "bg-primary text-primary-foreground shadow-[0_18px_44px_-34px_rgba(6,78,59,0.55)]",
             "hover:brightness-[0.99]",

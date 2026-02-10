@@ -8,7 +8,7 @@ import React, {
   type HTMLAttributes,
 } from "react";
 import type { LucideIcon } from "lucide-react";
-import { MapPin, X } from "lucide-react";
+import { CornerDownLeft, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AppBackdrop({
@@ -248,6 +248,26 @@ export function ChipToggle({
     </button>
   );
 }
+function highlightMatch(text: string, query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return <>{text}</>;
+
+  const i = text.toLowerCase().indexOf(q);
+  if (i < 0) return <>{text}</>;
+
+  const a = text.slice(0, i);
+  const b = text.slice(i, i + q.length);
+  const c = text.slice(i + q.length);
+
+  return (
+    <>
+      {a}
+      <span className="text-primary font-semibold">{b}</span>
+      {c}
+    </>
+  );
+}
+
 export function LocationInput({
   id,
   label,
@@ -258,6 +278,7 @@ export function LocationInput({
   onSelect,
   onClear,
   compact,
+  minChars = 2,
 }: {
   id: string;
   label: string;
@@ -268,12 +289,19 @@ export function LocationInput({
   onSelect: (v: string) => void;
   onClear: () => void;
   compact?: boolean;
+  minChars?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [mounted, setMounted] = useState(false);
+
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listId = useMemo(() => `${id}-list`, [id]);
+
+  const q = value.trim();
+  const canSearch = q.length >= minChars;
+  const hasResults = suggestions.length > 0;
 
   useEffect(() => {
     function close(e: MouseEvent) {
@@ -283,7 +311,30 @@ export function LocationInput({
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const has = suggestions.length > 0;
+  // ✅ Mount for smooth close
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      return;
+    }
+    if (!open && mounted) {
+      const t = window.setTimeout(() => setMounted(false), 160);
+      return () => window.clearTimeout(t);
+    }
+  }, [open, mounted]);
+
+  // ✅ Visual hierarchy rule:
+  // only open popup AFTER user types at least 1 char (and keep it calm until minChars)
+  useEffect(() => {
+    if (!q) {
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+    setOpen(true);
+  }, [q]);
+
+  const state = open ? "open" : "closed";
 
   return (
     <div ref={wrapRef} className="relative">
@@ -291,31 +342,31 @@ export function LocationInput({
         <div
           className={cn(
             compact ? "h-10 w-10" : "h-11 w-11",
-            "rounded-2xl grid place-items-center bg-primary/10 border border-primary/15",
+            "rounded-2xl grid place-items-center",
+            "bg-primary/10 border border-primary/15",
           )}
         >
           <MapPin className="h-4 w-4 text-primary" />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            {label}
-          </p>
+          <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+
+          {/* input has NO ring — card owns focus styling */}
           <input
             ref={inputRef}
             value={value}
             placeholder={placeholder}
-            onFocus={() => setOpen(true)}
             onChange={(e) => {
               onChange(e.target.value);
-              setOpen(true);
               setActiveIndex(-1);
             }}
             onKeyDown={(e) => {
-              if (!has) return;
+              if (!canSearch) return;
+              if (!hasResults) return;
+
               if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setOpen(true);
                 setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1));
               }
               if (e.key === "ArrowUp") {
@@ -338,7 +389,7 @@ export function LocationInput({
             className={cn(
               compact ? "h-7" : "h-8",
               "w-full bg-transparent outline-none",
-              "text-[15px] font-extrabold tracking-tight text-foreground",
+              "text-[15px] font-semibold tracking-tight text-foreground",
               "placeholder:text-muted-foreground/80",
             )}
           />
@@ -347,42 +398,92 @@ export function LocationInput({
         {value ? <ClearBtn onClick={onClear} /> : <div className="w-11" />}
       </div>
 
-      {open && has ? (
-        <div className="absolute z-40 w-full mt-2">
-          <Surface elevated className="p-2 max-h-64 overflow-auto">
-            <div id={listId} role="listbox" className="space-y-1">
-              {suggestions.map((town, idx) => (
-                <button
-                  key={town}
-                  type="button"
-                  role="option"
-                  aria-selected={idx === activeIndex}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                  onClick={() => {
-                    onSelect(town);
-                    setOpen(false);
-                    inputRef.current?.blur();
-                  }}
-                  className={cn(
-                    "w-full rounded-2xl px-3 py-3 text-left",
-                    "transition-all duration-200 ease-app active:scale-[0.99]",
-                    idx === activeIndex
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-primary/8",
-                  )}
-                >
-                  <span className="text-sm font-extrabold tracking-tight">
-                    {town}
-                  </span>
-                </button>
-              ))}
+      {/* ✅ Popup: only when user typed something (mounted for animation) */}
+      {mounted ? (
+        <div className="absolute z-50 w-full mt-2">
+          <div
+            data-state={state}
+            className={cn(
+              // stronger structure, less “fog” (better hierarchy)
+              "glass rounded-3xl p-2 border border-border/70",
+              "shadow-[0_28px_80px_-60px_rgba(6,78,59,0.55)] dark:shadow-[0_34px_110px_-80px_rgba(0,0,0,0.90)]",
+              "backdrop-blur-xl",
+              "overflow-hidden",
+              // animation
+              "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1",
+              "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-1",
+            )}
+          >
+            {/* Header row (calm, M3-ish) */}
+            <div className="px-2 pt-1 pb-2 flex items-center justify-between">
+              <p className="text-[11px] font-medium text-muted-foreground">
+                {canSearch ? "Matches" : `Type ${minChars}+ letters to search`}
+              </p>
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground/80">
+                <CornerDownLeft className="h-3.5 w-3.5" />
+                <span>Select</span>
+              </div>
             </div>
-          </Surface>
+
+            {/* Content */}
+            <div className="max-h-60 overflow-auto px-1 pb-1">
+              {!canSearch ? (
+                <div className="rounded-2xl px-3 py-3 bg-primary/5 border border-primary/10">
+                  <p className="text-[13px] font-medium text-foreground/85">
+                    Start typing…
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    We’ll show the best matches as you type.
+                  </p>
+                </div>
+              ) : !hasResults ? (
+                <div className="rounded-2xl px-3 py-3 bg-primary/5 border border-primary/10">
+                  <p className="text-[13px] font-medium text-foreground/85">
+                    No matches
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    Try a different keyword.
+                  </p>
+                </div>
+              ) : (
+                <div id={listId} role="listbox" className="space-y-1">
+                  {suggestions.map((town, idx) => (
+                    <button
+                      key={`${town}-${idx}`}
+                      type="button"
+                      role="option"
+                      aria-selected={idx === activeIndex}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onClick={() => {
+                        onSelect(town);
+                        setOpen(false);
+                        inputRef.current?.blur();
+                      }}
+                      className={cn(
+                        "w-full rounded-2xl px-3 py-2.5 text-left",
+                        "transition-all duration-200 ease-app active:scale-[0.99]",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                        // calmer selection (not full primary fill)
+                        idx === activeIndex
+                          ? "bg-primary/12 border border-primary/18"
+                          : "hover:bg-primary/8 border border-transparent",
+                      )}
+                    >
+                      <p className="text-[13px] font-medium tracking-tight">
+                        {highlightMatch(town, q)}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
   );
 }
+
 
 export function BottomSheet({
   open,
