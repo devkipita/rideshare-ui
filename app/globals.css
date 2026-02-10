@@ -99,6 +99,7 @@
   --font-sans: "Poppins", system-ui, sans-serif;
   --font-poppins: "Poppins", system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-lexend: "Lexend", "Poppins", system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
