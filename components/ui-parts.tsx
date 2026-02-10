@@ -130,51 +130,124 @@ export function PillButton({
   );
 }
 
+
 export function ChipToggle({
   active,
   label,
   icon: Icon,
   onClick,
-  size = "md",
+  size = "sm",
+  className,
 }: {
   active: boolean;
   label: string;
   icon: LucideIcon;
   onClick: () => void;
   size?: "sm" | "md";
+  className?: string;
 }) {
-  const h = size === "sm" ? "h-11" : "h-12";
-  const text = size === "sm" ? "text-[13px]" : "text-sm";
-  const pad = size === "sm" ? "px-2.5" : "px-3";
+  const isSm = size === "sm";
 
   return (
     <button
       type="button"
       aria-pressed={active}
       onClick={onClick}
+      data-active={active ? "true" : "false"}
       className={cn(
-        h,
-        "w-full rounded-2xl border",
-        pad,
-        "flex items-center justify-center gap-2",
-        "transition-all duration-300 ease-app active:scale-[0.98]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+        // responsive sizing
+        isSm ? "h-12 px-3" : "h-[52px] px-4",
+        "min-w-[110px] sm:min-w-[140px]",
+        "flex-1",
+        // shape + layout
+        "group relative isolate inline-flex items-center justify-start gap-2.5",
+        "rounded-2xl border",
+        "transition-all duration-300 ease-app",
+        "active:scale-[0.99]",
+        // focus ring (outside)
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        // states
         active
-          ? "bg-primary text-primary-foreground border-primary shadow-[0_16px_32px_-26px_rgba(6,78,59,0.65)]"
-          : "bg-card/70 border-border/70 text-foreground/80 hover:bg-primary/7",
+          ? cn(
+              "bg-primary text-primary-foreground border-primary/70",
+              "shadow-[0_18px_44px_-34px_rgba(6,78,59,0.60)]",
+            )
+          : cn(
+              "bg-card/75 text-foreground border-border/70",
+              "shadow-[0_10px_26px_-30px_rgba(6,78,59,0.16)] dark:shadow-[0_14px_40px_-38px_rgba(0,0,0,0.80)]",
+              "hover:-translate-y-[1px]",
+              "hover:bg-primary/7",
+              "hover:border-primary/20",
+              "hover:shadow-[0_18px_44px_-34px_rgba(6,78,59,0.26)]",
+            ),
+        className,
       )}
     >
-      <Icon
+      {/* Icon bubble (50% radius) */}
+      <span
+        aria-hidden="true"
         className={cn(
-          "h-4 w-4",
-          active ? "text-primary-foreground" : "text-primary",
+          isSm ? "h-9 w-9" : "h-10 w-10",
+          "relative grid place-items-center shrink-0 rounded-full border",
+          "transition-all duration-300 ease-app",
+          active
+            ? cn(
+                "bg-primary-foreground/12 border-primary-foreground/18",
+                "shadow-[0_10px_20px_-18px_rgba(0,0,0,0.25)]",
+              )
+            : cn(
+                "bg-primary/10 border-primary/18",
+                "group-hover:bg-primary/14 group-hover:border-primary/26",
+              ),
         )}
-      />
-      <span className={cn(text, "font-extrabold tracking-tight")}>{label}</span>
+      >
+        {/* Soft highlight for that “Google” depth */}
+        <span
+          className={cn(
+            "pointer-events-none absolute inset-0 rounded-full opacity-70",
+            "bg-gradient-to-b from-white/40 via-transparent to-transparent",
+            "dark:from-white/10",
+          )}
+        />
+
+        {/* Bigger icon */}
+        <Icon
+          className={cn(
+            isSm ? "h-5 w-5" : "h-[22px] w-[22px]",
+            "relative",
+            "transition-transform duration-300 ease-app",
+            active ? "text-primary-foreground" : "text-primary",
+            "group-hover:scale-[1.04]",
+          )}
+          strokeWidth={2.2}
+        />
+      </span>
+
+      {/* Label (responsive + truncation) */}
+      <span
+        className={cn(
+          isSm ? "text-[13px]" : "text-sm",
+          "font-extrabold tracking-tight leading-none",
+          "truncate",
+        )}
+      >
+        {label}
+      </span>
+
+      {/* Active overlay (adds depth without changing your tokens) */}
+      {active ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-0 rounded-2xl",
+            "opacity-70 bg-gradient-to-b from-white/12 via-transparent to-transparent",
+          )}
+        />
+      ) : null}
     </button>
   );
 }
-
 export function LocationInput({
   id,
   label,

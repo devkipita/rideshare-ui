@@ -3,11 +3,12 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import {
   ArrowUpDown,
-  Dog,
-  Luggage,
-  Plane,
   Users,
   CalendarDays,
+  PawPrint,
+  PlaneTakeoff,
+  LuggageIcon,
+  PlaneIcon,
 } from "lucide-react";
 import { filterTowns } from "@/lib/kenyan-towns";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,14 @@ function todayISO() {
   return `${y}-${m}-${day}`;
 }
 
+/** Outside focus ring (primary) */
+const OUTSIDE_FOCUS_RING = cn(
+  "focus-within:ring-2 focus-within:ring-primary",
+  "focus-within:ring-offset-2 focus-within:ring-offset-background",
+  "focus-within:border-primary/40",
+  "transition-[box-shadow,border-color] duration-200 ease-app",
+);
+
 export function PassengerSearchForm({
   filters,
   onChange,
@@ -60,7 +69,7 @@ export function PassengerSearchForm({
   const [toSuggestions, setToSuggestions] = useState<string[]>([]);
   const minDate = useMemo(() => todayISO(), []);
 
-  // ✅ controlled open for date drawer (so icon can open it too)
+  // controlled open for date drawer (so icon can open it too)
   const [dateOpen, setDateOpen] = useState(false);
 
   const canSearch = useMemo(
@@ -94,7 +103,7 @@ export function PassengerSearchForm({
   const swap = () =>
     onChange({ ...filters, from: filters.to, to: filters.from });
 
-  const setSeats = (n: number) => () => update("seats", n as any);
+  const setSeats = (n: number) => () => update("seats", n);
   const toggle = (k: Toggleable) => () => update(k, !filters[k]);
 
   const routeLine =
@@ -104,12 +113,13 @@ export function PassengerSearchForm({
 
   return (
     <div className="space-y-3">
-      <Surface elevated className="p-4">
+      <div className="p-4">
         <p className="text-[12px] font-semibold text-muted-foreground">Hi 👋</p>
-        <p className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight">
-          Let’s find you great rides <span className="text-primary">today</span>.
+        <p className="mt-1 text-[18px] font-semibold leading-tight tracking-tight">
+          Let’s find you great rides <span className="text-primary">today</span>
+          .
         </p>
-      </Surface>
+      </div>
 
       <Surface elevated className="p-4">
         <div className="flex items-start justify-between gap-3">
@@ -123,7 +133,13 @@ export function PassengerSearchForm({
           </div>
         </div>
 
-        <div className="mt-3 relative overflow-hidden rounded-3xl border border-border/70 bg-card/60">
+        {/* ✅ Focus ring now wraps the WHOLE route card (outside border) */}
+        <div
+          className={cn(
+            "mt-3 relative overflow-hidden rounded-3xl border border-border/70 bg-card/60",
+            OUTSIDE_FOCUS_RING,
+          )}
+        >
           <button
             type="button"
             onClick={swap}
@@ -133,21 +149,25 @@ export function PassengerSearchForm({
               "bg-primary text-primary-foreground",
               "shadow-[0_18px_44px_-30px_rgba(6,78,59,0.55)]",
               "transition-all duration-300 ease-app active:scale-[0.98]",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             )}
             aria-label="Swap from and to"
           >
             <ArrowUpDown className="h-4 w-4" />
           </button>
 
-          <div className="p-3 sm:p-3.5 focus-within:ring-2 focus-within:ring-primary/25 focus-within:ring-inset">
+          {/* ✅ Removed inner focus-within rings; outer card now owns focus */}
+          <div className="p-3 sm:p-3.5">
             <LocationInput
               id="from"
               label="From"
               value={filters.from}
               placeholder="Nanyuki"
               suggestions={fromSuggestions}
-              onChange={(v) => handleLocationChange("from", v, setFromSuggestions)}
+              onChange={(v) =>
+                handleLocationChange("from", v, setFromSuggestions)
+              }
               onSelect={handleLocationSelect("from", setFromSuggestions)}
               onClear={handleLocationClear("from", setFromSuggestions)}
               compact
@@ -156,7 +176,7 @@ export function PassengerSearchForm({
 
           <FormDivider />
 
-          <div className="p-3 sm:p-3.5 focus-within:ring-2 focus-within:ring-primary/25 focus-within:ring-inset">
+          <div className="p-3 sm:p-3.5">
             <LocationInput
               id="to"
               label="To"
@@ -173,13 +193,13 @@ export function PassengerSearchForm({
       </Surface>
 
       <div className="grid grid-cols-2 gap-2">
-        <Surface elevated className="p-4">
+        {/* ✅ Surface focusRing now produces OUTSIDE primary ring */}
+        <Surface elevated className="p-4" focusRing>
           <div className="flex items-center justify-between">
             <p className="text-[13px] font-extrabold tracking-tight">
               Travel date
             </p>
 
-            {/* ✅ icon is now clickable */}
             <button
               type="button"
               onClick={() => setDateOpen(true)}
@@ -187,7 +207,8 @@ export function PassengerSearchForm({
                 "h-10 w-10 rounded-2xl grid place-items-center",
                 "hover:bg-primary/10 active:scale-[0.98]",
                 "transition-all duration-300 ease-app",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               )}
               aria-label="Open travel date picker"
             >
@@ -241,23 +262,23 @@ export function PassengerSearchForm({
       </div>
 
       <Surface elevated className="p-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-wrap gap-2">
           <ChipToggle
-            icon={Dog}
+            icon={PawPrint}
             label="Pets"
             active={filters.pets}
             onClick={toggle("pets")}
             size="sm"
           />
           <ChipToggle
-            icon={Luggage}
+            icon={LuggageIcon}
             label="Luggage"
             active={filters.luggage}
             onClick={toggle("luggage")}
             size="sm"
           />
           <ChipToggle
-            icon={Plane}
+            icon={PlaneIcon}
             label="Airport"
             active={filters.airport}
             onClick={toggle("airport")}
