@@ -6,8 +6,8 @@ import {
   Users,
   CalendarDays,
   PawPrint,
-  PlaneTakeoff,
   LuggageIcon,
+  PlaneIcon,
 } from "lucide-react";
 import { filterTowns } from "@/lib/kenyan-towns";
 import { cn } from "@/lib/utils";
@@ -278,7 +278,7 @@ export function PassengerSearchForm({
             size="sm"
           />
           <ChipToggle
-            icon={PlaneTakeoff}
+            icon={PlaneIcon}
             label="Airport"
             active={filters.airport}
             onClick={toggle("airport")}

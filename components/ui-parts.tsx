@@ -162,7 +162,7 @@ export function ChipToggle({
         "flex-1",
         // shape + layout
         "group relative isolate inline-flex items-center justify-start gap-2.5",
-        "rounded-2xl border",
+        "rounded-4xl border",
         "transition-all duration-300 ease-app",
         "active:scale-[0.99]",
         // focus ring (outside)
