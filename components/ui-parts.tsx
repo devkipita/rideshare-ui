@@ -10,6 +10,7 @@ import React, {
 import type { LucideIcon } from "lucide-react";
 import { CornerDownLeft, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createPortal } from "react-dom";
 
 export function AppBackdrop({
   children,
@@ -268,50 +269,88 @@ function highlightMatch(text: string, query: string) {
   );
 }
 
+type Placement = "top" | "bottom";
+
 export function LocationInput({
   id,
   label,
   value,
   placeholder,
   suggestions,
+  fallbackSuggestions = [],
+  minChars = 1,
+  placement = "bottom",
   onChange,
   onSelect,
   onClear,
   compact,
-  minChars = 2,
+  rightSlot,
+  nextFocusId,
 }: {
   id: string;
   label: string;
   value: string;
   placeholder: string;
   suggestions: string[];
+  fallbackSuggestions?: string[];
+  minChars?: number;
+  placement?: Placement;
   onChange: (v: string) => void;
   onSelect: (v: string) => void;
   onClear: () => void;
   compact?: boolean;
-  minChars?: number;
+  rightSlot?: React.ReactNode;
+  nextFocusId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number; width: number; place: Placement }>({
+    left: 0,
+    top: 0,
+    width: 0,
+    place: placement,
+  });
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const listId = useMemo(() => `${id}-list`, [id]);
+  const popRef = useRef<HTMLDivElement | null>(null);
 
   const q = value.trim();
-  const canSearch = q.length >= minChars;
-  const hasResults = suggestions.length > 0;
+  const canQuery = q.length >= minChars;
+
+  const items =
+    q && canQuery && suggestions.length > 0
+      ? suggestions
+      : q
+        ? fallbackSuggestions
+        : [];
+
+  const hasItems = items.length > 0;
+
+  const listId = useMemo(() => `${id}-list`, [id]);
+  const state = open ? "open" : "closed";
+
+  const focusNext = () => {
+    if (!nextFocusId) return;
+    window.setTimeout(() => {
+      const el = document.getElementById(nextFocusId) as HTMLInputElement | null;
+      el?.focus();
+      el?.select?.();
+    }, 0);
+  };
 
   useEffect(() => {
-    function close(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    if (!q) {
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
     }
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, []);
 
-  // ✅ Mount for smooth close
+    // Only open if we have items to show (no empty UX panels)
+    setOpen(hasItems);
+  }, [q, hasItems]);
+
   useEffect(() => {
     if (open) {
       setMounted(true);
@@ -323,18 +362,65 @@ export function LocationInput({
     }
   }, [open, mounted]);
 
-  // ✅ Visual hierarchy rule:
-  // only open popup AFTER user types at least 1 char (and keep it calm until minChars)
-  useEffect(() => {
-    if (!q) {
-      setOpen(false);
-      setActiveIndex(-1);
-      return;
-    }
-    setOpen(true);
-  }, [q]);
+  const measure = () => {
+    const el = wrapRef.current;
+    if (!el) return;
 
-  const state = open ? "open" : "closed";
+    const r = el.getBoundingClientRect();
+    const gap = 10;
+    const maxH = 264;
+    const spaceBelow = window.innerHeight - r.bottom;
+    const spaceAbove = r.top;
+
+    let nextPlace: Placement = placement;
+    if (placement === "bottom" && spaceBelow < maxH + gap && spaceAbove > spaceBelow) nextPlace = "top";
+    if (placement === "top" && spaceAbove < maxH + gap && spaceBelow > spaceAbove) nextPlace = "bottom";
+
+    const top = nextPlace === "bottom" ? r.bottom + gap : r.top - gap;
+
+    setPos({
+      left: Math.max(10, Math.min(r.left, window.innerWidth - r.width - 10)),
+      top,
+      width: r.width,
+      place: nextPlace,
+    });
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+    measure();
+
+    const onResize = () => measure();
+    const onScroll = () => measure();
+
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [mounted, placement, value]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      const inWrap = !!wrapRef.current?.contains(t);
+      const inPop = !!popRef.current?.contains(t);
+      if (!inWrap && !inPop) setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [mounted]);
+
+  const commitSelect = (town: string) => {
+    onSelect(town);
+    setOpen(false);
+    inputRef.current?.blur();
+    focusNext();
+  };
 
   return (
     <div ref={wrapRef} className="relative">
@@ -344,6 +430,7 @@ export function LocationInput({
             compact ? "h-10 w-10" : "h-11 w-11",
             "rounded-2xl grid place-items-center",
             "bg-primary/10 border border-primary/15",
+            "shadow-[0_10px_24px_-20px_rgba(6,78,59,0.22)]",
           )}
         >
           <MapPin className="h-4 w-4 text-primary" />
@@ -352,8 +439,8 @@ export function LocationInput({
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
 
-          {/* input has NO ring — card owns focus styling */}
           <input
+            id={id}
             ref={inputRef}
             value={value}
             placeholder={placeholder}
@@ -362,22 +449,26 @@ export function LocationInput({
               setActiveIndex(-1);
             }}
             onKeyDown={(e) => {
-              if (!canSearch) return;
-              if (!hasResults) return;
+              if (e.key === "Tab") {
+                setOpen(false);
+                return;
+              }
+
+              if (!hasItems) return;
 
               if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1));
+                setActiveIndex((i) => Math.min(i + 1, items.length - 1));
               }
               if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setActiveIndex((i) => Math.max(i - 1, 0));
               }
-              if (e.key === "Enter" && activeIndex >= 0) {
-                e.preventDefault();
-                onSelect(suggestions[activeIndex]);
-                setOpen(false);
-                inputRef.current?.blur();
+              if (e.key === "Enter") {
+                if (activeIndex >= 0) {
+                  e.preventDefault();
+                  commitSelect(items[activeIndex]);
+                }
               }
               if (e.key === "Escape") {
                 setOpen(false);
@@ -395,91 +486,70 @@ export function LocationInput({
           />
         </div>
 
-        {value ? <ClearBtn onClick={onClear} /> : <div className="w-11" />}
+        {rightSlot ? rightSlot : null}
       </div>
 
-      {/* ✅ Popup: only when user typed something (mounted for animation) */}
-      {mounted ? (
-        <div className="absolute z-50 w-full mt-2">
-          <div
-            data-state={state}
-            className={cn(
-              // stronger structure, less “fog” (better hierarchy)
-              "glass rounded-3xl p-2 border border-border/70",
-              "shadow-[0_28px_80px_-60px_rgba(6,78,59,0.55)] dark:shadow-[0_34px_110px_-80px_rgba(0,0,0,0.90)]",
-              "backdrop-blur-xl",
-              "overflow-hidden",
-              // animation
-              "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1",
-              "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-1",
-            )}
-          >
-            {/* Header row (calm, M3-ish) */}
-            <div className="px-2 pt-1 pb-2 flex items-center justify-between">
-              <p className="text-[11px] font-medium text-muted-foreground">
-                {canSearch ? "Matches" : `Type ${minChars}+ letters to search`}
-              </p>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground/80">
-                <CornerDownLeft className="h-3.5 w-3.5" />
-                <span>Select</span>
+      {mounted && hasItems && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={popRef}
+              style={{
+                position: "fixed",
+                left: pos.left,
+                top: pos.top,
+                width: pos.width,
+                zIndex: 9999,
+                transform: pos.place === "top" ? "translateY(-100%)" : undefined,
+              }}
+              data-state={state}
+              className={cn(
+                "rounded-[26px] border border-border/70",
+                "bg-[color-mix(in_oklch,hsl(var(--card))_86%,rgba(34,197,94,0.06))]",
+                "backdrop-blur-xl",
+                "shadow-[0_28px_90px_-70px_rgba(6,78,59,0.65)] dark:shadow-[0_34px_120px_-86px_rgba(0,0,0,0.92)]",
+                "overflow-hidden",
+                "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1",
+                "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-1",
+              )}
+            >
+              <div className="px-3 pt-2.5 pb-2 flex items-center justify-between">
+                <p className="text-[11px] font-medium text-muted-foreground">Suggestions</p>
+                <p className="text-[11px] text-muted-foreground/80">Enter to select</p>
               </div>
-            </div>
 
-            {/* Content */}
-            <div className="max-h-60 overflow-auto px-1 pb-1">
-              {!canSearch ? (
-                <div className="rounded-2xl px-3 py-3 bg-primary/5 border border-primary/10">
-                  <p className="text-[13px] font-medium text-foreground/85">
-                    Start typing…
-                  </p>
-                  <p className="mt-0.5 text-[12px] text-muted-foreground">
-                    We’ll show the best matches as you type.
-                  </p>
-                </div>
-              ) : !hasResults ? (
-                <div className="rounded-2xl px-3 py-3 bg-primary/5 border border-primary/10">
-                  <p className="text-[13px] font-medium text-foreground/85">
-                    No matches
-                  </p>
-                  <p className="mt-0.5 text-[12px] text-muted-foreground">
-                    Try a different keyword.
-                  </p>
-                </div>
-              ) : (
-                <div id={listId} role="listbox" className="space-y-1">
-                  {suggestions.map((town, idx) => (
+              <div className="max-h-[264px] overflow-y-auto px-2 pb-2 overscroll-contain">
+                <div id={listId} role="listbox" className="space-y-1.5">
+                  {items.map((town, idx) => (
                     <button
                       key={`${town}-${idx}`}
                       type="button"
                       role="option"
                       aria-selected={idx === activeIndex}
                       onMouseEnter={() => setActiveIndex(idx)}
-                      onClick={() => {
-                        onSelect(town);
-                        setOpen(false);
-                        inputRef.current?.blur();
-                      }}
+                      onClick={() => commitSelect(town)}
                       className={cn(
-                        "w-full rounded-2xl px-3 py-2.5 text-left",
+                        "w-full text-left rounded-[999px] px-3.5 py-3",
                         "transition-all duration-200 ease-app active:scale-[0.99]",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                        // calmer selection (not full primary fill)
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
                         idx === activeIndex
-                          ? "bg-primary/12 border border-primary/18"
-                          : "hover:bg-primary/8 border border-transparent",
+                          ? "bg-primary/14 border border-primary/18 shadow-[0_18px_44px_-34px_rgba(6,78,59,0.35)]"
+                          : "border border-transparent hover:bg-primary/10 hover:border-primary/14",
                       )}
                     >
-                      <p className="text-[13px] font-medium tracking-tight">
-                        {highlightMatch(town, q)}
-                      </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[13px] font-medium tracking-tight">
+                          {highlightMatch(town, q)}
+                        </p>
+                        <span className="text-[11px] text-muted-foreground/70">Select</span>
+                      </div>
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
