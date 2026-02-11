@@ -65,8 +65,8 @@ export function PassengerSearch({
       >
         <div className="mx-auto max-w-[1100px]">
           {/* ✅ add safe-area padding so bottom content (Search button/Tip) never hides */}
-          <div className="md:px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+24px)]">
-            <div className="grid gap-3 md:gap-4 md:grid-cols-[420px_1fr] items-start">
+          <div className="pt-2 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+            <div className="grid gap-3 md:gap-2 items-start">
               {/* Left */}
               <div className="space-y-3 md:sticky md:top-4 md:bottom-4">
                 <PassengerSearchForm
