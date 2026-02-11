@@ -8,6 +8,7 @@ import {
   PawPrint,
   LuggageIcon,
   PlaneIcon,
+  ArrowRightIcon,
 } from "lucide-react";
 import { filterTowns } from "@/lib/kenyan-towns";
 import { cn } from "@/lib/utils";
@@ -111,10 +112,16 @@ export function PassengerSearchForm({
   const setSeats = (n: number) => () => update("seats", n);
   const toggle = (k: Toggleable) => () => update(k, !filters[k]);
 
-  const routeLine =
-    filters.from || filters.to
-      ? `${filters.from || "Pick origin"} → ${filters.to || "Pick destination"}`
-      : "Pick origin → Pick destination";
+  const fromLabel = filters.from || "Where from?";
+const toLabel = filters.to || "Where to?";
+
+const routeLine = (
+  <span className="inline-flex items-center gap-2 truncate">
+    <span className="truncate">{fromLabel}</span>
+    <ArrowRightIcon className="h-4 w-4 shrink-0 text-primary/80" aria-hidden="true" />
+    <span className="truncate">{toLabel}</span>
+  </span>
+);
 
   return (
     <div className="space-y-3">
