@@ -69,7 +69,7 @@ function AppContent() {
   const pageTitle = useMemo(() => {
     if (isPassenger) {
       if (showingRideDetails) return "Ride Details";
-      if (activeTab === "search") return "Find and Share Ride";
+      if (activeTab === "search") return "Find and Share a Ride";
       if (activeTab === "trips") return "My Trips";
       if (activeTab === "messages") return "Messages";
       return "Profile";
