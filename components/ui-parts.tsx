@@ -8,9 +8,11 @@ import React, {
   type HTMLAttributes,
 } from "react";
 import type { LucideIcon } from "lucide-react";
-import { CornerDownLeft, MapPin, X } from "lucide-react";
+import { Check, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createPortal } from "react-dom";
+
+const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
 
 export function AppBackdrop({
   children,
@@ -21,7 +23,7 @@ export function AppBackdrop({
 }) {
   return (
     <div className={cn("min-h-dvh text-foreground", className)}>
-      <div className="app-backdrop min-h-dvh">
+      <div className="min-h-dvh">
         <div className="relative">{children}</div>
       </div>
     </div>
@@ -49,31 +51,41 @@ export function Surface({
   ...divProps
 }: SurfaceProps) {
   const toneClass =
-    tone === "sheet" || tone === "panel"
-      ? "bg-card/85 border-border/70"
-      : tone === "raised"
-        ? "bg-card/80 border-border/70"
-        : "bg-card/80 border-border/70";
+    tone === "sheet"
+      ? "bg-card/92 border-border/70"
+      : tone === "panel"
+        ? "bg-card/88 border-border/70"
+        : tone === "raised"
+          ? "bg-card/86 border-border/70"
+          : "bg-card/82 border-border/70";
+
+  const shadowClass = elevated
+    ? "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_28%,transparent)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.85)]"
+    : "shadow-[0_12px_30px_-34px_color-mix(in_oklch,var(--primary)_18%,transparent)] dark:shadow-[0_14px_40px_-38px_rgba(0,0,0,0.80)]";
 
   return (
     <div
       {...divProps}
       className={cn(
-        "relative rounded-3xl border backdrop-blur-xl",
+        "relative rounded-3xl border",
+        "supports-[backdrop-filter]:backdrop-blur-xl",
         toneClass,
-        elevated
-          ? "shadow-[0_18px_44px_-34px_rgba(6,78,59,0.30)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.85)]"
-          : "shadow-[0_12px_30px_-34px_rgba(6,78,59,0.18)] dark:shadow-[0_14px_40px_-38px_rgba(0,0,0,0.80)]",
-        "transition-all duration-300 ease-app",
+        shadowClass,
+        "transition-all duration-300",
+        EASE,
         interactive &&
-          "hover:-translate-y-[1px] hover:shadow-[0_26px_62px_-48px_rgba(6,78,59,0.35)] active:translate-y-0 active:scale-[0.99]",
+          cn(
+            "hover:-translate-y-[1px]",
+            "hover:shadow-[0_26px_62px_-48px_color-mix(in_oklch,var(--primary)_32%,transparent)]",
+            "active:translate-y-0 active:scale-[0.99]",
+          ),
         focusRing
-          ? "focus-within:ring-2 focus-within:ring-primary/25 focus-within:ring-inset focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-inset"
+          ? "focus-within:ring-2 focus-within:ring-primary/45 focus-within:ring-inset"
           : "",
         className,
       )}
     >
-      <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-70 bg-gradient-to-b from-primary/8 via-transparent to-transparent" />
+      <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-55 bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
       <div className="relative">{children}</div>
     </div>
   );
@@ -89,9 +101,11 @@ export function ClearBtn({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        "touch-target h-11 w-11 rounded-2xl grid place-items-center",
-        "transition-all duration-300 ease-app hover:bg-primary/10 active:scale-[0.98]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+        "touch-target h-11 w-11 rounded-full grid place-items-center",
+        "transition-all duration-300",
+        EASE,
+        "hover:bg-primary/10 active:scale-[0.98]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
       )}
       aria-label="Clear"
     >
@@ -117,12 +131,22 @@ export function PillButton({
       aria-pressed={!!active}
       onClick={onClick}
       className={cn(
-        "h-12 rounded-2xl px-3 text-sm font-extrabold tracking-tight",
-        "border transition-all duration-300 ease-app active:scale-[0.98]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+        "h-11 rounded-full px-4",
+        "inline-flex items-center justify-center gap-2",
+        "text-[13px] font-semibold tracking-tight",
+        "border transition-all duration-300",
+        EASE,
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+        "active:scale-[0.99]",
         active
-          ? "bg-primary text-primary-foreground border-primary shadow-[0_16px_32px_-26px_rgba(6,78,59,0.65)]"
-          : "bg-card/70 border-border/70 text-foreground/80 hover:bg-primary/7",
+          ? cn(
+              "bg-primary text-primary-foreground border-primary/60",
+              "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_40%,transparent)]",
+            )
+          : cn(
+              "bg-card/70 border-border/70 text-foreground/85",
+              "hover:bg-primary/10 hover:border-primary/20",
+            ),
         className,
       )}
     >
@@ -130,7 +154,6 @@ export function PillButton({
     </button>
   );
 }
-
 
 export function ChipToggle({
   active,
@@ -156,99 +179,73 @@ export function ChipToggle({
       onClick={onClick}
       data-active={active ? "true" : "false"}
       className={cn(
-        // responsive sizing
-        isSm ? "h-12 px-3" : "h-[52px] px-4",
-        "min-w-[110px] sm:min-w-[140px]",
-        "flex-1",
-        // shape + layout
-        "group relative isolate inline-flex items-center justify-start gap-2.5",
-        "rounded-4xl border",
-        "transition-all duration-300 ease-app",
+        isSm ? "h-10 px-3" : "h-[44px] px-3.5",
+        "inline-flex w-auto items-center gap-2",
+        "rounded-full border",
+        "transition-all duration-300",
+        EASE,
         "active:scale-[0.99]",
-        // focus ring (outside)
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        // states
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(var(--ring)/0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
           ? cn(
-              "bg-primary text-primary-foreground border-primary/70",
-              "shadow-[0_18px_44px_-34px_rgba(6,78,59,0.60)]",
+              "border-[oklch(var(--ring)/0.30)]",
+              "bg-[oklch(var(--ring)/0.14)] dark:bg-[oklch(var(--ring)/0.18)]",
+              "shadow-[0_14px_32px_-26px_oklch(var(--ring)/0.45)]",
             )
           : cn(
-              "bg-card/75 text-foreground border-border/70",
-              "shadow-[0_10px_26px_-30px_rgba(6,78,59,0.16)] dark:shadow-[0_14px_40px_-38px_rgba(0,0,0,0.80)]",
-              "hover:-translate-y-[1px]",
-              "hover:bg-primary/7",
-              "hover:border-primary/20",
-              "hover:shadow-[0_18px_44px_-34px_rgba(6,78,59,0.26)]",
+              "border-border/70 bg-card/75 text-foreground",
+              "hover:bg-primary/8 hover:border-primary/20",
+              "hover:shadow-[0_14px_32px_-28px_color-mix(in_oklch,var(--primary)_18%,transparent)]",
             ),
         className,
       )}
     >
-      {/* Icon bubble (50% radius) */}
       <span
         aria-hidden="true"
         className={cn(
-          isSm ? "h-9 w-9" : "h-10 w-10",
-          "relative grid place-items-center shrink-0 rounded-full border",
-          "transition-all duration-300 ease-app",
+          isSm ? "h-8 w-8" : "h-9 w-9",
+          "grid shrink-0 place-items-center rounded-full border",
+          "transition-all duration-300",
+          EASE,
           active
-            ? cn(
-                "bg-primary-foreground/12 border-primary-foreground/18",
-                "shadow-[0_10px_20px_-18px_rgba(0,0,0,0.25)]",
-              )
-            : cn(
-                "bg-primary/10 border-primary/18",
-                "group-hover:bg-primary/14 group-hover:border-primary/26",
-              ),
+            ? "bg-[oklch(var(--ring)/0.16)] border-[oklch(var(--ring)/0.28)]"
+            : "bg-primary/10 border-primary/15",
         )}
       >
-        {/* Soft highlight for that “Google” depth */}
-        <span
-          className={cn(
-            "pointer-events-none absolute inset-0 rounded-full opacity-70",
-            "bg-gradient-to-b from-white/40 via-transparent to-transparent",
-            "dark:from-white/10",
-          )}
-        />
-
-        {/* Bigger icon */}
         <Icon
           className={cn(
-            isSm ? "h-5 w-5" : "h-[22px] w-[22px]",
-            "relative",
-            "transition-transform duration-300 ease-app",
-            active ? "text-primary-foreground" : "text-primary",
-            "group-hover:scale-[1.04]",
+            isSm ? "h-[18px] w-[18px]" : "h-5 w-5",
+            "transition-transform duration-300",
+            EASE,
+            active ? "text-[oklch(var(--ring))]" : "text-primary",
           )}
           strokeWidth={2.2}
         />
       </span>
 
-      {/* Label (responsive + truncation) */}
       <span
         className={cn(
-          isSm ? "text-[13px]" : "text-sm",
-          "font-extrabold tracking-tight leading-none",
-          "truncate",
+          isSm ? "text-[13px]" : "text-[14px]",
+          "font-semibold tracking-tight leading-none",
+          "whitespace-nowrap",
+          active ? "text-[oklch(var(--ring))]" : "text-foreground/85",
         )}
       >
         {label}
       </span>
 
-      {/* Active overlay (adds depth without changing your tokens) */}
       {active ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "pointer-events-none absolute inset-0 rounded-2xl",
-            "opacity-70 bg-gradient-to-b from-white/12 via-transparent to-transparent",
-          )}
-        />
+        <span className="ml-1 inline-flex items-center">
+          <Check
+            className="h-4 w-4 text-[oklch(var(--ring))]"
+            strokeWidth={2.6}
+          />
+        </span>
       ) : null}
     </button>
   );
 }
+
 function highlightMatch(text: string, query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return <>{text}</>;
@@ -305,7 +302,12 @@ export function LocationInput({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
-  const [pos, setPos] = useState<{ left: number; top: number; width: number; place: Placement }>({
+  const [pos, setPos] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    place: Placement;
+  }>({
     left: 0,
     top: 0,
     width: 0,
@@ -334,7 +336,9 @@ export function LocationInput({
   const focusNext = () => {
     if (!nextFocusId) return;
     window.setTimeout(() => {
-      const el = document.getElementById(nextFocusId) as HTMLInputElement | null;
+      const el = document.getElementById(
+        nextFocusId,
+      ) as HTMLInputElement | null;
       el?.focus();
       el?.select?.();
     }, 0);
@@ -346,8 +350,6 @@ export function LocationInput({
       setActiveIndex(-1);
       return;
     }
-
-    // Only open if we have items to show (no empty UX panels)
     setOpen(hasItems);
   }, [q, hasItems]);
 
@@ -373,8 +375,18 @@ export function LocationInput({
     const spaceAbove = r.top;
 
     let nextPlace: Placement = placement;
-    if (placement === "bottom" && spaceBelow < maxH + gap && spaceAbove > spaceBelow) nextPlace = "top";
-    if (placement === "top" && spaceAbove < maxH + gap && spaceBelow > spaceAbove) nextPlace = "bottom";
+    if (
+      placement === "bottom" &&
+      spaceBelow < maxH + gap &&
+      spaceAbove > spaceBelow
+    )
+      nextPlace = "top";
+    if (
+      placement === "top" &&
+      spaceAbove < maxH + gap &&
+      spaceBelow > spaceAbove
+    )
+      nextPlace = "bottom";
 
     const top = nextPlace === "bottom" ? r.bottom + gap : r.top - gap;
 
@@ -430,14 +442,16 @@ export function LocationInput({
             compact ? "h-10 w-10" : "h-11 w-11",
             "rounded-2xl grid place-items-center",
             "bg-primary/10 border border-primary/15",
-            "shadow-[0_10px_24px_-20px_rgba(6,78,59,0.22)]",
+            "shadow-[0_10px_24px_-20px_color-mix(in_oklch,var(--primary)_22%,transparent)]",
           )}
         >
           <MapPin className="h-4 w-4 text-primary" />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+          <p className="text-[11px] font-medium text-muted-foreground">
+            {label}
+          </p>
 
           <input
             id={id}
@@ -487,6 +501,15 @@ export function LocationInput({
         </div>
 
         {rightSlot ? rightSlot : null}
+
+        {!value ? null : (
+          <ClearBtn
+            onClick={() => {
+              onClear();
+              inputRef.current?.focus();
+            }}
+          />
+        )}
       </div>
 
       {mounted && hasItems && typeof document !== "undefined"
@@ -499,22 +522,27 @@ export function LocationInput({
                 top: pos.top,
                 width: pos.width,
                 zIndex: 9999,
-                transform: pos.place === "top" ? "translateY(-100%)" : undefined,
+                transform:
+                  pos.place === "top" ? "translateY(-100%)" : undefined,
               }}
               data-state={state}
               className={cn(
                 "rounded-[26px] border border-border/70",
-                "bg-[color-mix(in_oklch,hsl(var(--card))_86%,rgba(34,197,94,0.06))]",
-                "backdrop-blur-xl",
-                "shadow-[0_28px_90px_-70px_rgba(6,78,59,0.65)] dark:shadow-[0_34px_120px_-86px_rgba(0,0,0,0.92)]",
+                "bg-[color-mix(in_oklch,var(--card)_92%,var(--primary)_8%)]",
+                "supports-[backdrop-filter]:backdrop-blur-xl",
+                "shadow-[0_28px_90px_-70px_color-mix(in_oklch,var(--primary)_55%,transparent)] dark:shadow-[0_34px_120px_-86px_rgba(0,0,0,0.92)]",
                 "overflow-hidden",
                 "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1",
                 "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-1",
               )}
             >
               <div className="px-3 pt-2.5 pb-2 flex items-center justify-between">
-                <p className="text-[11px] font-medium text-muted-foreground">Suggestions</p>
-                <p className="text-[11px] text-muted-foreground/80">Enter to select</p>
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  Suggestions
+                </p>
+                <p className="text-[11px] text-muted-foreground/80">
+                  Enter to select
+                </p>
               </div>
 
               <div className="max-h-[264px] overflow-y-auto px-2 pb-2 overscroll-contain">
@@ -528,11 +556,13 @@ export function LocationInput({
                       onMouseEnter={() => setActiveIndex(idx)}
                       onClick={() => commitSelect(town)}
                       className={cn(
-                        "w-full text-left rounded-[999px] px-3.5 py-3",
-                        "transition-all duration-200 ease-app active:scale-[0.99]",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+                        "w-full text-left rounded-full px-4 py-3",
+                        "transition-all duration-200",
+                        EASE,
+                        "active:scale-[0.99]",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
                         idx === activeIndex
-                          ? "bg-primary/14 border border-primary/18 shadow-[0_18px_44px_-34px_rgba(6,78,59,0.35)]"
+                          ? "bg-primary/14 border border-primary/18 shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_32%,transparent)]"
                           : "border border-transparent hover:bg-primary/10 hover:border-primary/14",
                       )}
                     >
@@ -540,7 +570,9 @@ export function LocationInput({
                         <p className="text-[13px] font-medium tracking-tight">
                           {highlightMatch(town, q)}
                         </p>
-                        <span className="text-[11px] text-muted-foreground/70">Select</span>
+                        <span className="text-[11px] text-muted-foreground/70">
+                          Select
+                        </span>
                       </div>
                     </button>
                   ))}
@@ -553,7 +585,6 @@ export function LocationInput({
     </div>
   );
 }
-
 
 export function BottomSheet({
   open,
@@ -616,7 +647,8 @@ export function BottomSheet({
     <div className={cn("md:hidden", open ? "" : "pointer-events-none")}>
       <div
         className={cn(
-          "fixed inset-0 z-40 transition-all duration-300 ease-app",
+          "fixed inset-0 z-40 transition-all duration-300",
+          EASE,
           open ? "bg-black/45" : "bg-transparent",
         )}
         onClick={() => onOpenChange(false)}
@@ -658,6 +690,7 @@ export function BottomSheet({
     </div>
   );
 }
+
 export function ShimmerCard() {
   return (
     <Surface className="p-3 sm:p-4">
@@ -702,11 +735,11 @@ export function MapPreview({ from, to }: { from: string; to: string }) {
       </div>
 
       <div className="mt-3 h-[96px] rounded-2xl border border-primary/12 bg-gradient-to-br from-primary/14 via-card/70 to-transparent overflow-hidden relative">
-        <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_1px_1px,rgba(6,78,59,0.14)_1px,transparent_0)] dark:[background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.10)_1px,transparent_0)] [background-size:14px_14px]" />
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 h-9 w-9 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-[0_14px_34px_-26px_rgba(6,78,59,0.70)]">
+        <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_1px_1px,color-mix(in_oklch,var(--primary)_18%,transparent)_1px,transparent_0)] dark:[background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.10)_1px,transparent_0)] [background-size:14px_14px]" />
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 h-9 w-9 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-[0_14px_34px_-26px_color-mix(in_oklch,var(--primary)_52%,transparent)]">
           <span className="text-[12px] font-extrabold">{left}</span>
         </div>
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 h-9 w-9 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-[0_14px_34px_-26px_rgba(6,78,59,0.70)]">
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 h-9 w-9 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-[0_14px_34px_-26px_color-mix(in_oklch,var(--primary)_52%,transparent)]">
           <span className="text-[12px] font-extrabold">{right}</span>
         </div>
         <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 h-[2px] bg-primary/25" />

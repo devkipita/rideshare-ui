@@ -60,7 +60,7 @@ export function TopNav(props: TopNavProps) {
           <div
             className={cn(
               // “cooler” glass + elevation + crisp border (M3-ish)
-              "glass rounded-2xl",
+              "glass rounded-4xl",
               "h-12 sm:h-13",
               "px-2 sm:px-2.5",
               "flex items-center gap-2",
