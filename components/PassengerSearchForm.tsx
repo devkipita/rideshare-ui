@@ -21,6 +21,7 @@ import {
   Surface,
 } from "./ui-parts";
 import { DatePickerCard } from "./ui/date-picker";
+import { HeroTyping } from "./ui/hero-typing";
 
 export interface SearchFilters {
   from: string;
@@ -125,13 +126,7 @@ const routeLine = (
 
   return (
     <div className="space-y-3">
-      <div className="px-4">
-        <p className="text-[12px] font-medium text-muted-foreground">Hi 👋</p>
-        <p className="mt-1 text-[18px] font-semibold leading-tight tracking-tight">
-          Let’s find you great rides <span className="text-primary">today</span>
-          .
-        </p>
-      </div>
+      <HeroTyping />
 
       <Surface elevated className="p-4">
         <div className="flex items-start justify-between gap-3">

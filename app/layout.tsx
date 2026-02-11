@@ -1,11 +1,13 @@
 import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import { Lexend } from 'next/font/google'
+import { getServerSession } from 'next-auth'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/components/auth-provider'
+import { authOptions } from '@/lib/auth'
 import './globals.css'
 
-const APP_NAME = 'Kipita RideShare'
+const APP_NAME = 'RideShare'
 const APP_DESCRIPTION = 'Share the road. Split the cost. Join a community of conscious travelers.'
 const FAVICON_PATH = '/favicon_io'
 const THEME_COLOR_LIGHT = '#f5f7f4'
@@ -90,11 +92,13 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const session = await getServerSession(authOptions)
+
   return (
     <html lang="en" className={lexend.variable} suppressHydrationWarning>
       <head>
@@ -114,7 +118,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`font-lexend antialiased min-h-screen bg-background text-foreground`}>
-        <AuthProvider>
+        <AuthProvider session={session}>
           <div className="flex flex-col h-screen w-full max-w-md mx-auto relative">
             {children}
           </div>
