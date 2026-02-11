@@ -89,11 +89,11 @@ export function PassengerSearchForm({
 
     const q = v.trim();
     if (q.length < MIN_TOWN_CHARS) {
-      setSug([]); 
+      setSug([]);
       return;
     }
 
-    setSug(filterTowns(q)); 
+    setSug(filterTowns(q));
   };
 
   const handleLocationSelect =
@@ -113,29 +113,13 @@ export function PassengerSearchForm({
   const setSeats = (n: number) => () => update("seats", n);
   const toggle = (k: Toggleable) => () => update(k, !filters[k]);
 
-  const fromLabel = filters.from || "Where from?";
-const toLabel = filters.to || "Where to?";
-
-const routeLine = (
-  <span className="inline-flex items-center gap-2 truncate">
-    <span className="truncate">{fromLabel}</span>
-    <ArrowRightIcon className="h-4 w-4 shrink-0 text-primary/80" aria-hidden="true" />
-    <span className="truncate">{toLabel}</span>
-  </span>
-);
-
   return (
     <div className="space-y-3">
-      <HeroTyping />
-
       <Surface elevated className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[12px] font-medium text-muted-foreground">
               Route
-            </p>
-            <p className="mt-1 text-[15px] sm:text-[16px] font-semibold tracking-tight truncate">
-              {routeLine}
             </p>
           </div>
         </div>
