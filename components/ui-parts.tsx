@@ -664,7 +664,7 @@ export function BottomSheet({
             : "transform 320ms cubic-bezier(0.22,1,0.36,1)",
         }}
       >
-        <div className="px-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+        <div className="py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
           <Surface elevated className="rounded-3xl overflow-hidden">
             <div className="px-4 pt-3 pb-2">
               <div
@@ -714,36 +714,3 @@ export function ShimmerCard() {
   );
 }
 
-export function MapPreview({ from, to }: { from: string; to: string }) {
-  const left = from?.trim()?.[0]?.toUpperCase() || "A";
-  const right = to?.trim()?.[0]?.toUpperCase() || "B";
-
-  return (
-    <Surface className="p-3 sm:p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            Route preview
-          </p>
-          <p className="mt-1 text-sm font-extrabold tracking-tight truncate">
-            {from || "—"} <span className="text-primary">→</span> {to || "—"}
-          </p>
-        </div>
-        <div className="h-11 w-11 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15">
-          <MapPin className="h-4 w-4 text-primary" />
-        </div>
-      </div>
-
-      <div className="mt-3 h-[96px] rounded-2xl border border-primary/12 bg-gradient-to-br from-primary/14 via-card/70 to-transparent overflow-hidden relative">
-        <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_1px_1px,color-mix(in_oklch,var(--primary)_18%,transparent)_1px,transparent_0)] dark:[background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.10)_1px,transparent_0)] [background-size:14px_14px]" />
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 h-9 w-9 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-[0_14px_34px_-26px_color-mix(in_oklch,var(--primary)_52%,transparent)]">
-          <span className="text-[12px] font-extrabold">{left}</span>
-        </div>
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 h-9 w-9 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-[0_14px_34px_-26px_color-mix(in_oklch,var(--primary)_52%,transparent)]">
-          <span className="text-[12px] font-extrabold">{right}</span>
-        </div>
-        <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 h-[2px] bg-primary/25" />
-      </div>
-    </Surface>
-  );
-}

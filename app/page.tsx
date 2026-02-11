@@ -7,13 +7,13 @@ import { BottomNav } from "@/components/bottom-nav";
 import { PassengerSearch } from "@/components/passenger-search";
 import { RideCard, type RideCardData } from "@/components/ride-card";
 import { DriverOfferRide } from "@/components/driver-offer-ride";
-import { DriverRequests } from "@/components/driver-requests";
 import { DriverEarnings } from "@/components/driver-earnings";
 import { MessagesScreen } from "@/components/messages-screen";
 import { ProfileScreen } from "@/components/profile-screen";
 import { MyRides } from "@/components/my-rides";
 import { SplashScreen } from "@/components/KipitaSplash";
 import { RideDetailsScreen } from "@/components/ride-details";
+import { DriverRequests } from "@/components/driver-requests";
 
 const mockRides: RideCardData[] = [
   {
@@ -102,7 +102,7 @@ function AppContent() {
 
   return (
     <div className="min-h-dvh w-full bg-background text-foreground overflow-hidden relative">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] sm:h-[260px] rounded-b-[40px] bg-primary/12 dark:bg-primary/14 border-b border-primary/10" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] sm:h-[260px] rounded-b-[40px] bg-primary dark:bg-primary/14 border-b border-primary/10" />
       <div className="relative z-10 flex flex-col min-h-dvh">
         {isMessages ? (
           <TopNav variant="chat" user={{ name: "John D.", role: "driver" }} />
@@ -112,13 +112,14 @@ function AppContent() {
 
         {!isMessages && (
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-screen-sm mx-auto w-full px-2 pb-24 space-y-4">
+            <div className="max-w-screen-sm mx-auto bg-primary/25 w-full px-1 pb-24 space-y-4">
               {isPassenger && (
                 <>
                   {activeTab === "search" && (
                     <div className="pt-1">
                       {!selectedRide ? (
                         <>
+                        <p className="text-center text-sm py-2 font-semibold text-[#fff]">Find Your Ride Today</p>
                           <PassengerSearch
                             onSearch={() => {
                               setSelectedRide(null);

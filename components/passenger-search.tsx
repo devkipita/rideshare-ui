@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { PassengerSearchForm, type SearchFilters } from "./PassengerSearchForm";
 import { RideResults, type Driver } from "./RideResults";
-import { AppBackdrop, BottomSheet, MapPreview, Surface } from "./ui-parts";
+import { AppBackdrop, BottomSheet, Surface } from "./ui-parts";
+import { MapPreview } from "./ui/MapPreview";
 
 type Status = "idle" | "loading" | "ready";
 
@@ -37,6 +38,7 @@ export function PassengerSearch({
   const runSearch = () => {
     if (!canSearch || status === "loading") return;
     onSearch?.(filters);
+
     setStatus("loading");
     setResults([]);
     setSheetOpen(true);
@@ -51,11 +53,8 @@ export function PassengerSearch({
     }, 850);
   };
 
-  const showDesktopResults = status !== "idle";
-
   return (
     <AppBackdrop>
-      {/* ✅ Mobile scroll container (prevents clipping) */}
       <div
         className={[
           "h-dvh overflow-y-auto overflow-x-hidden overscroll-y-contain",
@@ -63,51 +62,32 @@ export function PassengerSearch({
           HIDE_SCROLLBAR,
         ].join(" ")}
       >
-        <div className="mx-auto max-w-[1100px]">
-          {/* ✅ add safe-area padding so bottom content (Search button/Tip) never hides */}
-          <div className="pt-2 pb-[calc(env(safe-area-inset-bottom)+24px)]">
-            <div className="grid gap-3 md:gap-2 items-start">
-              {/* Left */}
-              <div className="space-y-3 md:sticky md:top-4 md:bottom-4">
-                <PassengerSearchForm
-                  filters={filters}
-                  onChange={setFilters}
-                  onSearch={runSearch}
-                  loading={status === "loading"}
-                />
+        <div className="mx-auto w-full max-w-[520px]">
+          <div className="pb-[calc(env(safe-area-inset-bottom)+24px)]">
+            <div className="space-y-3">
+              <PassengerSearchForm
+                filters={filters}
+                onChange={setFilters}
+                onSearch={runSearch}
+                loading={status === "loading"}
+              />
+{/* 
+              <Surface elevated className="p-4">
+                <p className="text-[12px] font-extrabold tracking-tight">Tip</p>
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Try flexible dates — you’ll see more drivers and better
+                  prices.
+                </p>
+              </Surface>
 
-                <Surface elevated className="p-4">
-                  <p className="text-[12px] font-extrabold tracking-tight">
-                    Tip
-                  </p>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
-                    Try flexible dates — you’ll see more drivers and better
-                    prices.
-                  </p>
-                </Surface>
-              </div>
-
-              {/* Right (desktop only) */}
-              <div className="hidden md:block space-y-3">
-                {showDesktopResults ? (
-                  <>
-                    <Surface elevated className="p-3 md:p-4">
-                      <MapPreview from={filters.from} to={filters.to} />
-                    </Surface>
-                    <RideResults status={status} results={results} />
-                  </>
-                ) : (
-                  <Surface elevated className="p-4">
-                    <p className="text-sm font-extrabold tracking-tight text-foreground/85">
-                      Start by picking your route
-                    </p>
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                      Choose towns, a date, and seats — results will appear
-                      here.
-                    </p>
-                  </Surface>
-                )}
-              </div>
+              <Surface elevated className="p-4">
+                <p className="text-sm font-extrabold tracking-tight text-foreground/85">
+                  Start by picking your route
+                </p>
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Choose towns, a date, and seats — results will appear here.
+                </p>
+              </Surface> */}
             </div>
 
             <BottomSheet
