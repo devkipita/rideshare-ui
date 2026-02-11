@@ -97,7 +97,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const session = await getServerSession(authOptions)
+  // guard against missing/misconfigured auth env in production so the app keeps rendering
+  const session = await (async () => {
+    try {
+      return await getServerSession(authOptions)
+    } catch (error) {
+      console.error('getServerSession failed; rendering without session', error)
+      return null
+    }
+  })()
 
   return (
     <html lang="en" className={lexend.variable} suppressHydrationWarning>
