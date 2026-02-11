@@ -179,7 +179,7 @@ export function ChipToggle({
       onClick={onClick}
       data-active={active ? "true" : "false"}
       className={cn(
-        isSm ? "h-10 px-3" : "h-[44px] px-3.5",
+        isSm ? "h-10 pr-3" : "h-[44px] pr-3.5",
         "inline-flex w-auto items-center gap-2",
         "rounded-full border",
         "transition-all duration-300",

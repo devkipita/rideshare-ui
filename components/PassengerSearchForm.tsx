@@ -290,14 +290,14 @@ export function PassengerSearchForm({
           onClick={onSearch}
           disabled={!canSearch || !!loading}
           className={cn(
-            "mt-3 h-12 w-full rounded-2xl font-semibold tracking-tight",
+            "mt-3 h-12 w-full rounded-4xl font-semibold tracking-tight",
             "transition-all duration-300 ease-app active:scale-[0.99]",
             "bg-primary text-primary-foreground shadow-[0_18px_44px_-34px_rgba(6,78,59,0.55)]",
             "hover:brightness-[0.99]",
             "disabled:opacity-100 disabled:bg-primary/35 disabled:text-primary-foreground/80 disabled:shadow-none",
           )}
         >
-          {loading ? "Searching…" : "Search Group Rides"}
+          {loading ? "Searching…" : "Search For Rides"}
         </Button>
       </Surface>
     </div>
