@@ -87,11 +87,11 @@ export function PassengerSearchForm({
 
     const q = v.trim();
     if (q.length < MIN_TOWN_CHARS) {
-      setSug([]); // ✅ wait for input
+      setSug([]); 
       return;
     }
 
-    setSug(filterTowns(q)); // ✅ uses your towns utils
+    setSug(filterTowns(q)); 
   };
 
   const handleLocationSelect =
@@ -118,7 +118,7 @@ export function PassengerSearchForm({
 
   return (
     <div className="space-y-3">
-      <div className="p-4">
+      <div className="px-4">
         <p className="text-[12px] font-medium text-muted-foreground">Hi 👋</p>
         <p className="mt-1 text-[18px] font-semibold leading-tight tracking-tight">
           Let’s find you great rides <span className="text-primary">today</span>
