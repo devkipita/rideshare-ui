@@ -112,7 +112,7 @@ function AppContent() {
 
         {!isMessages && (
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-screen-sm mx-auto bg-primary/25 w-full px-1 pb-24 space-y-4">
+            <div className="max-w-screen-sm mx-auto bg-primary/25 w-full px-3 pb-24 space-y-4">
               {isPassenger && (
                 <>
                   {activeTab === "search" && (

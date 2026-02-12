@@ -15,7 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { filterTowns } from "@/lib/kenyan-towns";
-import { ChipToggle, FormDivider, LocationInput, PillButton, Surface } from "./ui-parts";
+import {
+  ChipToggle,
+  FormDivider,
+  LocationInput,
+  PillButton,
+  Surface,
+} from "./ui-parts";
 import { DatePickerCard } from "./ui/date-picker";
 
 interface OfferRideForm {
@@ -70,12 +76,12 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
   const canPost = useMemo(() => {
     return Boolean(
       form.from.trim() &&
-        form.to.trim() &&
-        form.date &&
-        form.departTime &&
-        form.seats > 0 &&
-        Number.isFinite(form.pricePerSeat) &&
-        form.pricePerSeat > 0,
+      form.to.trim() &&
+      form.date &&
+      form.departTime &&
+      form.seats > 0 &&
+      Number.isFinite(form.pricePerSeat) &&
+      form.pricePerSeat > 0,
     );
   }, [form]);
 
@@ -94,14 +100,21 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
   };
 
   const handleLocationSelect =
-    (field: LocationField, setSug: React.Dispatch<React.SetStateAction<string[]>>) =>
+    (
+      field: LocationField,
+      setSug: React.Dispatch<React.SetStateAction<string[]>>,
+    ) =>
     (v: string) => {
       update(field, v);
       setSug([]);
     };
 
   const handleLocationClear =
-    (field: LocationField, setSug: React.Dispatch<React.SetStateAction<string[]>>) => () => {
+    (
+      field: LocationField,
+      setSug: React.Dispatch<React.SetStateAction<string[]>>,
+    ) =>
+    () => {
       update(field, "");
       setSug([]);
     };
@@ -157,11 +170,18 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
                   viewBox="0 0 24 24"
                   aria-hidden="true"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.6} d="M5 13l4 4L19 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.6}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-[15px] font-extrabold tracking-tight">Ride posted</p>
+                <p className="text-[15px] font-extrabold tracking-tight">
+                  Ride posted
+                </p>
                 <p className="mt-0.5 text-[12px] text-muted-foreground">
                   Your ride is live. Requests will appear in your inbox.
                 </p>
@@ -174,23 +194,27 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
   }
 
   const routeLine =
-    form.from || form.to ? `${form.from || "From where?"} → ${form.to || "To where?"}` : "From where? → To where?";
+    form.from || form.to
+      ? `${form.from || "From where?"} → ${form.to || "To where?"}`
+      : "From where? → To where?";
 
   return (
     <div className="w-full overflow-x-hidden">
       <div className="mx-auto max-w-screen-sm px-2 pb-[calc(env(safe-area-inset-bottom)+96px)] space-y-3">
-        <div className="px-1 pt-1">
-          <p className="text-[12px] font-medium text-muted-foreground">Offer a ride</p>
-          <p className="mt-1 text-[18px] font-semibold leading-tight tracking-tight">
-            Share your route and earn <span className="text-primary">today</span>.
-          </p>
-        </div>
+        <p className="mt-1 p-1 text-[18px] font-semibold leading-tight tracking-tight text-accent">
+          Share your route{" "}
+          <span className="text-secondary">fill your empty seats</span>.
+        </p>
 
         <Surface elevated className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[12px] font-medium text-muted-foreground">Route</p>
-              <p className="mt-1 text-[15px] font-semibold tracking-tight truncate">{routeLine}</p>
+              <p className="text-[12px] font-medium text-muted-foreground">
+                Route
+              </p>
+              <p className="mt-1 text-[15px] font-semibold tracking-tight truncate">
+                {routeLine}
+              </p>
             </div>
 
             <button
@@ -218,7 +242,9 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
                 placeholder="Leaving From"
                 suggestions={fromSuggestions}
                 minChars={MIN_TOWN_CHARS}
-                onChange={(v) => handleLocationChange("from", v, setFromSuggestions)}
+                onChange={(v) =>
+                  handleLocationChange("from", v, setFromSuggestions)
+                }
                 onSelect={handleLocationSelect("from", setFromSuggestions)}
                 onClear={handleLocationClear("from", setFromSuggestions)}
                 compact
@@ -236,7 +262,9 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
                 placeholder="Going To"
                 suggestions={toSuggestions}
                 minChars={MIN_TOWN_CHARS}
-                onChange={(v) => handleLocationChange("to", v, setToSuggestions)}
+                onChange={(v) =>
+                  handleLocationChange("to", v, setToSuggestions)
+                }
                 onSelect={handleLocationSelect("to", setToSuggestions)}
                 onClear={handleLocationClear("to", setToSuggestions)}
                 compact
@@ -283,8 +311,12 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
                 <Users className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-[12px] font-medium text-muted-foreground">Seats</p>
-                <p className="mt-0.5 text-[15px] font-semibold tracking-tight">{form.seats}</p>
+                <p className="text-[12px] font-medium text-muted-foreground">
+                  Seats
+                </p>
+                <p className="mt-0.5 text-[15px] font-semibold tracking-tight">
+                  {form.seats}
+                </p>
               </div>
             </div>
 
@@ -358,7 +390,9 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
         </Surface>
 
         <Surface elevated className="p-3">
-          <p className="px-1 text-[13px] font-semibold tracking-tight">Amenities</p>
+          <p className="px-1 text-[13px] font-semibold tracking-tight">
+            Amenities
+          </p>
 
           <div className="mt-2 flex flex-wrap gap-2">
             <ChipToggle
