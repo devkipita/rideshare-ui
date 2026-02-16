@@ -9,10 +9,11 @@ import {
   Settings,
   ChevronRight,
   ShieldCheck,
+  Lock,
 } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
-import { useProtectedRoute } from '@/hooks/use-auth'
 import { StateFeedback } from '@/components/state-feedback'
+import { AuthDrawer } from '@/components/auth-drawer'
 
 interface ProfileScreenProps {
   userMode: 'passenger' | 'driver'
@@ -147,11 +148,17 @@ function ActionButton({
 
 // ORGANISM
 export function ProfileScreen({ userMode }: ProfileScreenProps) {
-  const { status } = useProtectedRoute()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [authDrawerOpen, setAuthDrawerOpen] = useState(false)
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      setAuthDrawerOpen(true)
+    }
+  }, [status])
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -245,7 +252,36 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
   }
 
   if (status === 'unauthenticated') {
-    return null
+    return (
+      <div className="px-4 pb-28 space-y-4">
+        <GlassCard className="p-6 text-center">
+          <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15">
+            <Lock className="h-6 w-6 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground">
+            Sign in to view your profile
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Continue with sign in or create a new account from the drawer.
+          </p>
+          <button
+            type="button"
+            onClick={() => setAuthDrawerOpen(true)}
+            className="mt-4 w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-emerald-700"
+          >
+            Sign In / Sign Up
+          </button>
+        </GlassCard>
+
+        <AuthDrawer
+          open={authDrawerOpen}
+          onOpenChange={setAuthDrawerOpen}
+          initialView="signin"
+          callbackUrl="/"
+          navigateOnSuccess={false}
+        />
+      </div>
+    )
   }
 
   return (
@@ -307,7 +343,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
             icon={LogOut}
             label="Log out"
             destructive
-            onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+            onClick={() => signOut({ callbackUrl: '/' })}
           />
         </GlassCard>
       </section>

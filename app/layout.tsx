@@ -27,6 +27,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  colorScheme: 'light dark',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: THEME_COLOR_LIGHT },
     { media: '(prefers-color-scheme: dark)', color: THEME_COLOR_DARK },
@@ -46,13 +47,8 @@ export const metadata: Metadata = {
   category: 'travel',
   authors: [{ name: APP_NAME }],
   referrer: 'origin-when-cross-origin',
-  colorScheme: 'light dark',
   formatDetection: { telephone: true, address: false, email: false },
   manifest: `${FAVICON_PATH}/site.webmanifest`,
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: THEME_COLOR_LIGHT },
-    { media: '(prefers-color-scheme: dark)', color: THEME_COLOR_DARK },
-  ],
   icons: {
     icon: [
       { url: `${FAVICON_PATH}/favicon.ico`, rel: 'icon' },
