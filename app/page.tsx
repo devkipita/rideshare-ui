@@ -101,25 +101,32 @@ function AppContent() {
   if (mode === "splash") return <SplashScreen />;
 
   return (
-    <div className="min-h-dvh w-full bg-background text-foreground overflow-hidden relative">
+    <div className="fixed inset-0 w-full h-full bg-background text-foreground overflow-hidden">
+      {/* Background gradient - positioned absolutely */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] sm:h-[260px] rounded-b-[40px] bg-primary dark:bg-primary/14 border-b border-primary/10" />
-      <div className="relative z-10 flex flex-col min-h-dvh">
+
+      {/* Main flex container */}
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Top Navigation - Fixed height */}
         {isMessages ? (
           <TopNav variant="chat" user={{ name: "John D.", role: "driver" }} />
         ) : (
           <TopNav variant="default" title={pageTitle} onBack={onBack} />
         )}
 
+        {/* Scrollable Content Area - Takes remaining space */}
         {!isMessages && (
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-screen-sm mx-auto bg-primary/25 w-full px-3 pb-24 space-y-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
+            <div className="max-w-screen-sm mx-auto bg-primary/25 w-full px-2 pb-24 space-y-4">
               {isPassenger && (
                 <>
                   {activeTab === "search" && (
                     <div className="pt-1">
                       {!selectedRide ? (
                         <>
-                        <p className="text-center text-sm py-2 font-semibold text-[#fff]">Find Your Ride Today</p>
+                          <p className="text-center text-sm py-2 font-semibold text-[#fff]">
+                            Find Your Ride Today
+                          </p>
                           <PassengerSearch
                             onSearch={() => {
                               setSelectedRide(null);
@@ -190,8 +197,10 @@ function AppContent() {
           </div>
         )}
 
+        {/* Messages Screen - Has its own scroll handling */}
         {isMessages && <MessagesScreen />}
 
+        {/* Bottom Navigation - Fixed height */}
         <BottomNav
           mode={isPassenger ? "passenger" : "driver"}
           activeTab={activeTab}

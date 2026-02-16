@@ -1,212 +1,683 @@
-'use client'
+"use client";
+
+import * as React from "react";
+import {
+  CalendarDays,
+  Clock3,
+  Footprints,
+  Luggage,
+  MapPin,
+  PawPrint,
+  Search,
+  SlidersHorizontal,
+  Users2,
+} from "lucide-react";
 
 import {
-  MapPin,
-  Clock,
-  Users,
-  MoreVertical,
-  CheckCircle2,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+  BottomSheet,
+  ChipToggle,
+  PillButton,
+  ShimmerCard,
+  Surface,
+} from "@/components/ui-parts";
+import { Button } from "@/components/ui/button";
 
-/* ─────────────────────────────────────
-   TYPES
-───────────────────────────────────── */
+type RideTiming = "now" | "scheduled";
 
-interface Ride {
-  id: string
-  from: string
-  to: string
-  date: string
-  time: string
-  driver: string
-  price: number
-  passengers: number
-  status: 'upcoming' | 'completed' | 'cancelled'
+type RequestedRide = {
+  id: string;
+  from: string;
+  to: string;
+  timing: RideTiming;
+  dateLabel: string;
+  timeLabel: string;
+  seatsNeeded: number;
+  luggage: boolean;
+  pets: boolean;
+  pickupStation?: string;
+  dropoffStation?: string;
+  note?: string;
+  status: "active" | "matched" | "cancelled";
+};
+
+type PastRide = {
+  id: string;
+  from: string;
+  to: string;
+  dateLabel: string;
+  timeLabel: string;
+  seatsTaken: number;
+  totalSeats: number;
+  luggage: boolean;
+  pets: boolean;
+  pickupStation?: string;
+  dropoffStation?: string;
+  distanceLabel?: string;
+  durationLabel?: string;
+  status: "completed" | "cancelled";
+};
+
+const requestedRidesMock: RequestedRide[] = [
+  {
+    id: "req-1",
+    from: "Nairobi",
+    to: "Thika",
+    timing: "scheduled",
+    dateLabel: "Tomorrow",
+    timeLabel: "6:40 PM",
+    seatsNeeded: 1,
+    luggage: false,
+    pets: true,
+    pickupStation: "Westlands, Sarit Centre",
+    dropoffStation: "Thika, Makongeni",
+    note: "Small pet in carrier.",
+    status: "active",
+  },
+  {
+    id: "req-2",
+    from: "Nanyuki",
+    to: "Nairobi",
+    timing: "now",
+    dateLabel: "Today",
+    timeLabel: "Leaving soon",
+    seatsNeeded: 2,
+    luggage: true,
+    pets: false,
+    pickupStation: "Nanyuki Town, Next to Equity Bank",
+    dropoffStation: "Nairobi CBD, Railway Station",
+    status: "matched",
+  },
+  {
+    id: "req-3",
+    from: "Nakuru",
+    to: "Eldoret",
+    timing: "scheduled",
+    dateLabel: "Feb 20",
+    timeLabel: "10:00 AM",
+    seatsNeeded: 3,
+    luggage: true,
+    pets: false,
+    pickupStation: "Nakuru Town Center",
+    dropoffStation: "Eldoret CBD",
+    status: "active",
+  },
+  {
+    id: "req-4",
+    from: "Mombasa",
+    to: "Nairobi",
+    timing: "scheduled",
+    dateLabel: "Feb 22",
+    timeLabel: "5:30 AM",
+    seatsNeeded: 2,
+    luggage: true,
+    pets: true,
+    pickupStation: "Mombasa CBD, Digo Road",
+    dropoffStation: "Nairobi, Jomo Kenyatta Airport",
+    note: "Early morning flight connection needed.",
+    status: "active",
+  },
+  {
+    id: "req-5",
+    from: "Kisumu",
+    to: "Nairobi",
+    timing: "scheduled",
+    dateLabel: "Feb 25",
+    timeLabel: "2:00 PM",
+    seatsNeeded: 1,
+    luggage: false,
+    pets: false,
+    pickupStation: "Kisumu Bus Station",
+    dropoffStation: "Nairobi CBD, Railways",
+    status: "active",
+  },
+];
+
+const pastRidesMock: PastRide[] = [
+  {
+    id: "past-1",
+    from: "Nairobi",
+    to: "Nanyuki",
+    dateLabel: "Feb 10",
+    timeLabel: "5:00 PM",
+    seatsTaken: 3,
+    totalSeats: 6,
+    luggage: true,
+    pets: false,
+    pickupStation: "Railway Station, Nairobi CBD",
+    dropoffStation: "Nanyuki Town Center",
+    distanceLabel: "185 km",
+    durationLabel: "2h 45min",
+    status: "completed",
+  },
+  {
+    id: "past-2",
+    from: "Thika",
+    to: "Nairobi",
+    dateLabel: "Feb 8",
+    timeLabel: "8:00 AM",
+    seatsTaken: 2,
+    totalSeats: 4,
+    luggage: false,
+    pets: false,
+    pickupStation: "Thika Town Center",
+    dropoffStation: "Nairobi, Westlands",
+    distanceLabel: "42 km",
+    durationLabel: "55min",
+    status: "completed",
+  },
+  {
+    id: "past-3",
+    from: "Nakuru",
+    to: "Nairobi",
+    dateLabel: "Feb 5",
+    timeLabel: "6:30 AM",
+    seatsTaken: 4,
+    totalSeats: 5,
+    luggage: true,
+    pets: false,
+    pickupStation: "Nakuru CBD",
+    dropoffStation: "Nairobi, Upper Hill",
+    distanceLabel: "158 km",
+    durationLabel: "2h 15min",
+    status: "completed",
+  },
+  {
+    id: "past-4",
+    from: "Nairobi",
+    to: "Mombasa",
+    dateLabel: "Jan 28",
+    timeLabel: "4:00 AM",
+    seatsTaken: 3,
+    totalSeats: 6,
+    luggage: true,
+    pets: true,
+    pickupStation: "Nairobi CBD, Railways",
+    dropoffStation: "Mombasa, Nyali Beach",
+    distanceLabel: "485 km",
+    durationLabel: "6h 30min",
+    status: "completed",
+  },
+];
+
+function SectionHeader({ title, count }: { title: string; count?: number }) {
+  return (
+    <div className="flex items-center gap-3 px-1 py-2">
+      <p className="text-xs font-extrabold tracking-[0.22em] text-primary/90">
+        {title.toUpperCase()}
+      </p>
+      {typeof count === "number" ? (
+        <div className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+          {count}
+        </div>
+      ) : null}
+      <div className="h-px flex-1 bg-gradient-to-r from-primary/25 to-transparent" />
+    </div>
+  );
 }
 
-/* ─────────────────────────────────────
-   MOCK DATA
-───────────────────────────────────── */
-
-const rides: Ride[] = [
-  {
-    id: '1',
-    from: 'Nanyuki',
-    to: 'Nairobi',
-    date: 'Today',
-    time: '7:00 AM – 8:00 AM',
-    driver: 'James K.',
-    price: 1200,
-    passengers: 2,
-    status: 'upcoming',
-  },
-  {
-    id: '2',
-    from: 'Nairobi',
-    to: 'Nanyuki',
-    date: 'Yesterday',
-    time: '5:00 PM – 6:15 PM',
-    driver: 'Sarah M.',
-    price: 1200,
-    passengers: 3,
-    status: 'completed',
-  },
-]
-
-/* ─────────────────────────────────────
-   ATOMIC UI
-───────────────────────────────────── */
-
-function GlassCard({
-  children,
-  className,
+function Tag({
+  icon,
+  label,
+  tone = "muted",
 }: {
-  children: React.ReactNode
-  className?: string
+  icon: React.ReactNode;
+  label: string;
+  tone?: "muted" | "primary";
 }) {
   return (
     <div
-      className={cn(
-        'rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl',
-        'shadow-[0_10px_30px_rgba(0,0,0,0.15)]',
-        'transition-all duration-200 active:scale-[0.98]',
-        'p-4',
-        className
-      )}
+      className={[
+        "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border",
+        "supports-[backdrop-filter]:backdrop-blur-xl",
+        tone === "primary"
+          ? "bg-primary/14 border-primary/20 text-primary"
+          : "bg-card/70 border-border/70 text-foreground/80",
+      ].join(" ")}
     >
-      {children}
+      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
+        {icon}
+      </span>
+      <span className="leading-none">{label}</span>
     </div>
-  )
+  );
 }
 
-function SectionTitle({ children }: { children: string }) {
+function MetricPill({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <h3 className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-      {children}
-    </h3>
-  )
+    <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/75 px-3 py-2 text-xs font-semibold text-foreground/85">
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
+        {icon}
+      </span>
+      <span>{label}</span>
+    </div>
+  );
 }
 
-/* ─────────────────────────────────────
-   MAIN COMPONENT
-───────────────────────────────────── */
-
-export function MyRides() {
-  const upcoming = rides.filter((r) => r.status === 'upcoming')
-  const completed = rides.filter((r) => r.status === 'completed')
-
+function PlaceRow({
+  kind,
+  text,
+}: {
+  kind: "pickup" | "dropoff";
+  text: string;
+}) {
+  const isPickup = kind === "pickup";
   return (
-    <div className="space-y-8 px-2 pb-24">
-      {/* UPCOMING */}
-      {upcoming.length > 0 && (
-        <section className="space-y-3">
-          <SectionTitle>Upcoming Ride</SectionTitle>
-
-          {upcoming.map((ride) => (
-            <GlassCard key={ride.id}>
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-base font-semibold text-foreground leading-tight">
-                    {ride.from} → {ride.to}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{ride.date}</p>
-                </div>
-
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="rounded-full"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Meta */}
-              <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  <span>{ride.time}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-4 w-4" />
-                  <span>{ride.passengers} pax</span>
-                </div>
-                <div className="text-right text-sm font-semibold text-primary">
-                  KES {ride.price}
-                </div>
-              </div>
-
-              {/* Driver */}
-              <div className="mt-4 flex items-center gap-3 rounded-2xl bg-primary/10 p-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/30 text-sm font-bold text-primary">
-                  {ride.driver[0]}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {ride.driver}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Driver
-                  </p>
-                </div>
-              </div>
-            </GlassCard>
-          ))}
-        </section>
-      )}
-
-      {/* COMPLETED */}
-      {completed.length > 0 && (
-        <section className="space-y-3">
-          <SectionTitle>Past Rides</SectionTitle>
-
-          {completed.map((ride) => (
-            <GlassCard
-              key={ride.id}
-              className="opacity-80 grayscale-[0.25]"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {ride.from} → {ride.to}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {ride.date}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">
-                    {ride.time}
-                  </p>
-                  <div className="mt-1 flex items-center justify-end gap-1 text-green-500">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="text-xs font-medium">Completed</span>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-          ))}
-        </section>
-      )}
-
-      {/* EMPTY STATE */}
-      {upcoming.length === 0 && completed.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 backdrop-blur">
-            <MapPin className="h-8 w-8 text-muted-foreground" />
+    <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card/70 px-3 py-3">
+      <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-xl bg-primary/10 border border-primary/15 text-primary">
+        {isPickup ? (
+          <div className="grid h-5 w-5 place-items-center rounded-full bg-primary">
+            <div className="h-2.5 w-2.5 rounded-full bg-background" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground">
-            No rides yet
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Book or join a ride to get started
+        ) : (
+          <MapPin className="h-4 w-4" />
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-extrabold tracking-[0.2em] text-primary/80">
+          {isPickup ? "PICKUP" : "DROP-OFF"}
+        </p>
+        <p className="mt-1 text-sm font-semibold text-foreground/90">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function RequestedRideCard({ ride }: { ride: RequestedRide }) {
+  const statusLabel =
+    ride.status === "active"
+      ? "Active request"
+      : ride.status === "matched"
+        ? "Matched"
+        : "Cancelled";
+
+  return (
+    <Surface tone="panel" elevated interactive className="p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Tag
+          icon={<Footprints className="h-3.5 w-3.5" />}
+          label="Ride request"
+          tone="primary"
+        />
+        <Tag
+          icon={<Clock3 className="h-3.5 w-3.5" />}
+          label={ride.timing === "now" ? "Now" : "Later"}
+        />
+        <Tag
+          icon={<CalendarDays className="h-3.5 w-3.5" />}
+          label={statusLabel}
+        />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">
+            FROM
+          </p>
+          <p className="mt-1 truncate text-xl font-extrabold text-foreground">
+            {ride.from}
           </p>
         </div>
+
+        <div className="mt-3 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 border border-primary/15 text-primary">
+          <Footprints className="h-5 w-5" />
+        </div>
+
+        <div className="min-w-0 text-right">
+          <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">
+            TO
+          </p>
+          <p className="mt-1 truncate text-xl font-extrabold text-foreground">
+            {ride.to}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+        <CalendarDays className="h-4 w-4" />
+        <span>{ride.dateLabel}</span>
+        <span className="opacity-60">•</span>
+        <Clock3 className="h-4 w-4" />
+        <span>{ride.timeLabel}</span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <MetricPill
+          icon={<Users2 className="h-4 w-4" />}
+          label={`${ride.seatsNeeded} seat${ride.seatsNeeded > 1 ? "s" : ""}`}
+        />
+        <MetricPill
+          icon={<Luggage className="h-4 w-4" />}
+          label={ride.luggage ? "Luggage" : "No luggage"}
+        />
+        <MetricPill
+          icon={<PawPrint className="h-4 w-4" />}
+          label={ride.pets ? "Pets ok" : "No pets"}
+        />
+      </div>
+
+      {(ride.pickupStation || ride.dropoffStation) && (
+        <div className="mt-4 space-y-2">
+          {ride.pickupStation ? (
+            <PlaceRow kind="pickup" text={ride.pickupStation} />
+          ) : null}
+          {ride.dropoffStation ? (
+            <PlaceRow kind="dropoff" text={ride.dropoffStation} />
+          ) : null}
+        </div>
       )}
+
+      {ride.note ? (
+        <div className="mt-4 rounded-2xl border border-border/70 bg-card/70 px-3 py-3">
+          <p className="text-[10px] font-extrabold tracking-[0.2em] text-muted-foreground">
+            NOTE
+          </p>
+          <p className="mt-1 text-sm font-semibold text-foreground/90">
+            {ride.note}
+          </p>
+        </div>
+      ) : null}
+    </Surface>
+  );
+}
+
+function PastRideCard({ ride }: { ride: PastRide }) {
+  return (
+    <Surface tone="raised" interactive className="p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Tag
+          icon={<CalendarDays className="h-3.5 w-3.5" />}
+          label="Past ride"
+          tone="primary"
+        />
+        <Tag
+          icon={<Clock3 className="h-3.5 w-3.5" />}
+          label={ride.status === "completed" ? "Completed" : "Cancelled"}
+        />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">
+            FROM
+          </p>
+          <p className="mt-1 truncate text-xl font-extrabold text-foreground">
+            {ride.from}
+          </p>
+        </div>
+
+        <div className="mt-3 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 border border-primary/15 text-primary">
+          <MapPin className="h-5 w-5" />
+        </div>
+
+        <div className="min-w-0 text-right">
+          <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">
+            TO
+          </p>
+          <p className="mt-1 truncate text-xl font-extrabold text-foreground">
+            {ride.to}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+        <CalendarDays className="h-4 w-4" />
+        <span>{ride.dateLabel}</span>
+        <span className="opacity-60">•</span>
+        <Clock3 className="h-4 w-4" />
+        <span>{ride.timeLabel}</span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <MetricPill
+          icon={<Users2 className="h-4 w-4" />}
+          label={`${ride.seatsTaken}/${ride.totalSeats} seats`}
+        />
+        <MetricPill
+          icon={<Luggage className="h-4 w-4" />}
+          label={ride.luggage ? "Luggage" : "No luggage"}
+        />
+        <MetricPill
+          icon={<PawPrint className="h-4 w-4" />}
+          label={ride.pets ? "Pets ok" : "No pets"}
+        />
+      </div>
+
+      {(ride.pickupStation || ride.dropoffStation) && (
+        <div className="mt-4 space-y-2">
+          {ride.pickupStation ? (
+            <PlaceRow kind="pickup" text={ride.pickupStation} />
+          ) : null}
+          {ride.dropoffStation ? (
+            <PlaceRow kind="dropoff" text={ride.dropoffStation} />
+          ) : null}
+        </div>
+      )}
+
+      {ride.distanceLabel || ride.durationLabel ? (
+        <div className="mt-4 rounded-2xl border border-border/70 bg-card/70 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+            <span className="text-muted-foreground">Distance</span>
+            <span className="text-foreground/85">
+              {ride.distanceLabel ?? "—"}
+            </span>
+          </div>
+          <div className="mt-2 h-px bg-border/70" />
+          <div className="mt-2 flex items-center justify-between gap-3 text-xs font-semibold">
+            <span className="text-muted-foreground">Duration</span>
+            <span className="text-foreground/85">
+              {ride.durationLabel ?? "—"}
+            </span>
+          </div>
+        </div>
+      ) : null}
+    </Surface>
+  );
+}
+
+function FiltersSheet({
+  open,
+  onOpenChange,
+  luggage,
+  pets,
+  setLuggage,
+  setPets,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  luggage: boolean;
+  pets: boolean;
+  setLuggage: (v: boolean) => void;
+  setPets: (v: boolean) => void;
+}) {
+  return (
+    <BottomSheet open={open} onOpenChange={onOpenChange} title="Filters">
+      <div className="space-y-3">
+        <Surface tone="sheet" className="p-3">
+          <p className="text-sm font-extrabold tracking-tight">Preferences</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <ChipToggle
+              active={luggage}
+              label="Luggage"
+              icon={Luggage}
+              onClick={() => setLuggage(!luggage)}
+              size="md"
+            />
+            <ChipToggle
+              active={pets}
+              label="Pets ok"
+              icon={PawPrint}
+              onClick={() => setPets(!pets)}
+              size="md"
+            />
+          </div>
+        </Surface>
+
+        <Button
+          variant="secondary"
+          className="h-11 w-full rounded-2xl font-semibold"
+          onClick={() => {
+            setLuggage(false);
+            setPets(false);
+          }}
+        >
+          Clear filters
+        </Button>
+      </div>
+    </BottomSheet>
+  );
+}
+
+function SkeletonList({ count = 5 }: { count?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <ShimmerCard key={i} />
+      ))}
     </div>
-  )
+  );
+}
+
+export function MyRides() {
+  const [tab, setTab] = React.useState<"requested" | "past">("requested");
+  const [query, setQuery] = React.useState("");
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
+  const [onlyLuggage, setOnlyLuggage] = React.useState(false);
+  const [onlyPets, setOnlyPets] = React.useState(false);
+
+  const [loadingRequested, setLoadingRequested] = React.useState(true);
+  const [loadingPast, setLoadingPast] = React.useState(true);
+
+  React.useEffect(() => {
+    const t1 = window.setTimeout(() => setLoadingRequested(false), 650);
+    const t2 = window.setTimeout(() => setLoadingPast(false), 850);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, []);
+
+  const loading = tab === "requested" ? loadingRequested : loadingPast;
+  const base = tab === "requested" ? requestedRidesMock : pastRidesMock;
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return base
+      .filter((r) => {
+        if (!q) return true;
+        const hay = [
+          r.from,
+          r.to,
+          (r as any).pickupStation ?? "",
+          (r as any).dropoffStation ?? "",
+          (r as any).status ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      })
+      .filter((r) => {
+        const luggage = (r as any).luggage as boolean;
+        const pets = (r as any).pets as boolean;
+        if (onlyLuggage && !luggage) return false;
+        if (onlyPets && !pets) return false;
+        return true;
+      });
+  }, [base, query, onlyLuggage, onlyPets]);
+
+  return (
+    <div className="w-full space-y-4 pb-4">
+      <Surface tone="sheet" className="p-3">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-medium text-muted-foreground">
+              From, to, station...
+            </p>
+            <div className="mt-1 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-1 py-0.5">
+              <Search className="h-4 w-4 text-primary" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search"
+                className="h-7 w-full bg-transparent text-[14px] font-semibold outline-none placeholder:text-muted-foreground/80"
+              />
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(true)}
+                className="grid h-10 w-10 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
+                aria-label="Filters"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <PillButton
+            active={tab === "requested"}
+            onClick={() => setTab("requested")}
+            className="flex-1"
+          >
+            Requested
+          </PillButton>
+          <PillButton
+            active={tab === "past"}
+            onClick={() => setTab("past")}
+            className="flex-1"
+          >
+            Previous
+          </PillButton>
+        </div>
+      </Surface>
+
+      <SectionHeader
+        title={tab === "requested" ? "Requested rides" : "Previous rides"}
+        count={loading ? undefined : filtered.length}
+      />
+
+      {loading ? (
+        <SkeletonList count={tab === "requested" ? 5 : 4} />
+      ) : filtered.length ? (
+        <div className="space-y-3">
+          {filtered.map((r: any) =>
+            tab === "requested" ? (
+              <RequestedRideCard key={r.id} ride={r as RequestedRide} />
+            ) : (
+              <PastRideCard key={r.id} ride={r as PastRide} />
+            ),
+          )}
+        </div>
+      ) : (
+        <Surface tone="panel" className="p-6 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 border border-primary/15 text-primary">
+            <MapPin className="h-6 w-6" />
+          </div>
+          <p className="mt-3 text-base font-extrabold">No rides found</p>
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">
+            Try a different search or clear filters.
+          </p>
+          <Button
+            variant="secondary"
+            className="mt-5 h-11 w-full rounded-2xl font-semibold"
+            onClick={() => {
+              setQuery("");
+              setOnlyLuggage(false);
+              setOnlyPets(false);
+            }}
+          >
+            Clear search
+          </Button>
+        </Surface>
+      )}
+
+      <FiltersSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        luggage={onlyLuggage}
+        pets={onlyPets}
+        setLuggage={setOnlyLuggage}
+        setPets={setOnlyPets}
+      />
+    </div>
+  );
 }
