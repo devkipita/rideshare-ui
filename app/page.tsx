@@ -8,7 +8,7 @@ import { PassengerSearch } from "@/components/passenger-search";
 import { RideCard, type RideCardData } from "@/components/ride-card";
 import { DriverOfferRide } from "@/components/driver-offer-ride";
 import { DriverEarnings } from "@/components/driver-earnings";
-import { MessagesScreen } from "@/components/messages-screen";
+import { NotificationsScreen } from "@/components/messages-screen";
 import { ProfileScreen } from "@/components/profile-screen";
 import { MyRides } from "@/components/my-rides";
 import { SplashScreen } from "@/components/KipitaSplash";
@@ -101,12 +101,12 @@ function AppContent() {
   if (mode === "splash") return <SplashScreen />;
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-background text-foreground overflow-hidden">
-      {/* Background gradient - positioned absolutely */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] sm:h-[260px] rounded-b-[40px] bg-primary dark:bg-primary/14 border-b border-primary/10" />
+    <div className="fixed inset-0 w-full h-full max-w-[430px] mx-auto bg-background text-foreground overflow-hidden">
+      {/* Background gradient - constrained to mobile width on desktop */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] rounded-b-[40px] bg-primary dark:bg-primary/14 border-b border-primary/10" />
 
       {/* Main flex container */}
-      <div className="relative z-10 flex flex-col h-full">
+      <div className="relative z-10 flex flex-col h-full w-full">
         {/* Top Navigation - Fixed height */}
         {isMessages ? (
           <TopNav variant="chat" user={{ name: "John D.", role: "driver" }} />
@@ -116,8 +116,8 @@ function AppContent() {
 
         {/* Scrollable Content Area - Takes remaining space */}
         {!isMessages && (
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
-            <div className="max-w-screen-sm mx-auto bg-primary/25 w-full px-2 pb-24 space-y-4">
+          <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
+            <div className="w-full bg-primary/25 px-3 pb-24 space-y-4">
               {isPassenger && (
                 <>
                   {activeTab === "search" && (
@@ -137,7 +137,7 @@ function AppContent() {
                           {searchResults && (
                             <div className="mt-5 space-y-3">
                               <div className="px-1 flex items-end justify-between gap-2">
-                                <h2 className="text-[15px] sm:text-base font-extrabold tracking-tight">
+                                <h2 className="text-[15px] font-extrabold tracking-tight">
                                   {mockRides.length} rides available
                                 </h2>
                                 <button
@@ -197,10 +197,10 @@ function AppContent() {
           </div>
         )}
 
-        {/* Messages Screen - Has its own scroll handling */}
-        {isMessages && <MessagesScreen />}
+        {/* Messages Screen */}
+        {isMessages && <NotificationsScreen />}
 
-        {/* Bottom Navigation - Fixed height */}
+        {/* Bottom Navigation */}
         <BottomNav
           mode={isPassenger ? "passenger" : "driver"}
           activeTab={activeTab}
