@@ -25,3 +25,7 @@ export function useAppMode() {
   if (!ctx) throw new Error("useAppMode must be used within AppProvider");
   return ctx;
 }
+
+export function useOptionalAppMode() {
+  return React.useContext(AppModeContext);
+}

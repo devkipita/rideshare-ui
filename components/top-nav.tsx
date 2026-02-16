@@ -1,11 +1,12 @@
 "use client";
 
-import { useAppMode } from "@/app/context";
+import { useOptionalAppMode } from "@/app/context";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 type TopNavBase = {
   onBack?: () => void;
@@ -44,7 +45,8 @@ function AppLogo() {
 }
 
 export function TopNav(props: TopNavProps) {
-  const { setMode } = useAppMode();
+  const appMode = useOptionalAppMode();
+  const router = useRouter();
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -61,7 +63,9 @@ export function TopNav(props: TopNavProps) {
 
   const handleBack = () => {
     if (props.onBack) props.onBack();
-    else setMode("splash");
+    else if (appMode?.setMode) appMode.setMode("splash");
+    else if (window.history.length > 1) router.back();
+    else router.push("/");
   };
 
   return (

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { signIn, getProviders, type ClientSafeProvider } from "next-auth/react";
 import { useAppMode } from "@/app/context";
+import { signInAsDriver, signInAsPassenger, type LoginRole } from "@/lib/authHelper";
 import {
   Drawer,
   DrawerClose,
@@ -111,6 +112,7 @@ export function SplashScreen() {
   const [phase, setPhase] = useState<"enter" | "reveal">(initialPhase);
   const [authOpen, setAuthOpen] = useState(false);
   const [authView, setAuthView] = useState<"signin" | "signup">("signin");
+  const [selectedRole, setSelectedRole] = useState<LoginRole>("passenger");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [signInValues, setSignInValues] = useState({
@@ -267,6 +269,7 @@ export function SplashScreen() {
       email: signUpValues.email.trim(),
       phone: signUpValues.phone.trim(),
       password: signUpValues.password,
+      role: selectedRole,
     };
 
     try {
@@ -305,9 +308,13 @@ export function SplashScreen() {
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     if (!googleProvider) return;
-    signIn(googleProvider.id, { callbackUrl: "/" });
+    if (selectedRole === "driver") {
+      await signInAsDriver("/");
+      return;
+    }
+    await signInAsPassenger("/");
   };
 
   return (
@@ -718,14 +725,20 @@ export function SplashScreen() {
                     title="Find a ride"
                     subtitle="Find a seat nearby"
                     delay={0.4}
-                    onClick={() => setMode("passenger")}
+                    onClick={() => {
+                      setSelectedRole("passenger");
+                      setMode("passenger");
+                    }}
                   />
                   <SelectionCard
                     icon={Navigation}
                     title="Offer a Ride"
                     subtitle="Share your empty seats"
                     delay={0.5}
-                    onClick={() => setMode("driver")}
+                    onClick={() => {
+                      setSelectedRole("driver");
+                      setMode("driver");
+                    }}
                   />
                 </div>
 

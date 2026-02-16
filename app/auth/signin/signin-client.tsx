@@ -9,6 +9,8 @@ export function SignInClient() {
   const searchParams = useSearchParams()
   const [drawerOpen, setDrawerOpen] = useState(true)
   const authErrorCode = searchParams.get('error')
+  const roleParam = searchParams.get('role')
+  const selectedRole = roleParam === 'driver' ? 'driver' : 'passenger'
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center px-4">
@@ -38,6 +40,7 @@ export function SignInClient() {
         onOpenChange={setDrawerOpen}
         initialView="signin"
         initialError={authErrorCode}
+        selectedRole={selectedRole}
         callbackUrl="/"
         navigateOnSuccess
       />

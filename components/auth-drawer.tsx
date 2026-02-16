@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Lock, Mail, UserRound, X } from 'lucide-react'
 import { getProviders, signIn, type ClientSafeProvider } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { signInAsDriver, signInAsPassenger, type LoginRole } from '@/lib/authHelper'
 import {
   Drawer,
   DrawerClose,
@@ -20,6 +21,7 @@ interface AuthDrawerProps {
   onOpenChange: (open: boolean) => void
   initialView?: AuthView
   initialError?: string | null
+  selectedRole?: LoginRole
   callbackUrl?: string
   navigateOnSuccess?: boolean
 }
@@ -71,6 +73,7 @@ export function AuthDrawer({
   onOpenChange,
   initialView = 'signin',
   initialError,
+  selectedRole = 'passenger',
   callbackUrl = '/',
   navigateOnSuccess = false,
 }: AuthDrawerProps) {
@@ -189,6 +192,7 @@ export function AuthDrawer({
       email: signUpValues.email.trim(),
       phone: signUpValues.phone.trim(),
       password: signUpValues.password,
+      role: selectedRole,
     }
 
     try {
@@ -232,9 +236,13 @@ export function AuthDrawer({
     }
   }
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     if (!googleProvider || authLoading) return
-    signIn(googleProvider.id, { callbackUrl })
+    if (selectedRole === 'driver') {
+      await signInAsDriver(callbackUrl)
+      return
+    }
+    await signInAsPassenger(callbackUrl)
   }
 
   return (

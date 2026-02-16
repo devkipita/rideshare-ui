@@ -12,9 +12,24 @@ const APP_DESCRIPTION = 'Share the road. Split the cost. Join a community of con
 const FAVICON_PATH = '/favicon_io'
 const THEME_COLOR_LIGHT = '#f5f7f4'
 const THEME_COLOR_DARK = '#0f1613'
-const metadataBase = process.env.NEXT_PUBLIC_SITE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
-  : undefined
+
+function resolveMetadataBase() {
+  const fallback = 'http://localhost:3000'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  const nextAuthUrl = process.env.NEXTAUTH_URL?.trim()
+  const vercelUrl = process.env.VERCEL_URL?.trim()
+
+  const candidate =
+    siteUrl || nextAuthUrl || (vercelUrl ? `https://${vercelUrl}` : fallback)
+
+  try {
+    return new URL(candidate)
+  } catch {
+    return new URL(fallback)
+  }
+}
+
+const metadataBase = resolveMetadataBase()
 
 const lexend = Lexend({
   subsets: ['latin'],
@@ -35,7 +50,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  ...(metadataBase ? { metadataBase } : {}),
+  metadataBase,
   title: {
     default: `${APP_NAME} | Carpool Community`,
     template: `%s | ${APP_NAME}`,

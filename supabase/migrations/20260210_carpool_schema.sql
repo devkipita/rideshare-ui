@@ -1,5 +1,7 @@
 -- Carpool app core schema for Supabase / Postgres
 -- Generated on 2026-02-10
+-- FIXED: Postgres does NOT support `CREATE POLICY IF NOT EXISTS`.
+-- Use `DROP POLICY IF EXISTS ...; CREATE POLICY ...;` instead.
 
 -- Extensions
 create extension if not exists "pgcrypto";
@@ -200,24 +202,34 @@ alter table public.payments enable row level security;
 alter table public.messages enable row level security;
 
 -- Driver profiles RLS
-create policy if not exists driver_profiles_select_own on public.driver_profiles
+drop policy if exists driver_profiles_select_own on public.driver_profiles;
+create policy driver_profiles_select_own on public.driver_profiles
   for select using (auth.uid() = user_id or public.is_admin());
-create policy if not exists driver_profiles_insert_own on public.driver_profiles
+
+drop policy if exists driver_profiles_insert_own on public.driver_profiles;
+create policy driver_profiles_insert_own on public.driver_profiles
   for insert with check (auth.uid() = user_id or public.is_admin());
-create policy if not exists driver_profiles_update_own on public.driver_profiles
+
+drop policy if exists driver_profiles_update_own on public.driver_profiles;
+create policy driver_profiles_update_own on public.driver_profiles
   for update using (auth.uid() = user_id or public.is_admin())
   with check (auth.uid() = user_id or public.is_admin());
 
 -- Bookings RLS
-create policy if not exists bookings_select_self_or_driver on public.bookings
+drop policy if exists bookings_select_self_or_driver on public.bookings;
+create policy bookings_select_self_or_driver on public.bookings
   for select using (
     auth.uid() = passenger_id
     or public.is_ride_driver(ride_id)
     or public.is_admin()
   );
-create policy if not exists bookings_insert_by_passenger on public.bookings
+
+drop policy if exists bookings_insert_by_passenger on public.bookings;
+create policy bookings_insert_by_passenger on public.bookings
   for insert with check (auth.uid() = passenger_id or public.is_admin());
-create policy if not exists bookings_update_self_or_driver on public.bookings
+
+drop policy if exists bookings_update_self_or_driver on public.bookings;
+create policy bookings_update_self_or_driver on public.bookings
   for update using (
     auth.uid() = passenger_id
     or public.is_ride_driver(ride_id)
@@ -228,53 +240,79 @@ create policy if not exists bookings_update_self_or_driver on public.bookings
     or public.is_ride_driver(ride_id)
     or public.is_admin()
   );
-create policy if not exists bookings_delete_self on public.bookings
+
+drop policy if exists bookings_delete_self on public.bookings;
+create policy bookings_delete_self on public.bookings
   for delete using (auth.uid() = passenger_id or public.is_admin());
 
 -- Payments RLS
-create policy if not exists payments_select_participants on public.payments
+drop policy if exists payments_select_participants on public.payments;
+create policy payments_select_participants on public.payments
   for select using (
     exists(
-      select 1 from public.bookings b
+      select 1
+      from public.bookings b
       join public.rides r on r.id = b.ride_id
       where b.id = payments.booking_id
         and (b.passenger_id = auth.uid() or r.driver_id = auth.uid())
-    ) or public.is_admin()
+    )
+    or public.is_admin()
   );
-create policy if not exists payments_insert_by_driver_or_admin on public.payments
+
+drop policy if exists payments_insert_by_driver_or_admin on public.payments;
+create policy payments_insert_by_driver_or_admin on public.payments
   for insert with check (
     exists(
-      select 1 from public.bookings b
+      select 1
+      from public.bookings b
       join public.rides r on r.id = b.ride_id
       where b.id = payments.booking_id
         and r.driver_id = auth.uid()
-    ) or public.is_admin()
+    )
+    or public.is_admin()
   );
-create policy if not exists payments_update_participants on public.payments
+
+drop policy if exists payments_update_participants on public.payments;
+create policy payments_update_participants on public.payments
   for update using (
     exists(
-      select 1 from public.bookings b
+      select 1
+      from public.bookings b
       join public.rides r on r.id = b.ride_id
       where b.id = payments.booking_id
         and (b.passenger_id = auth.uid() or r.driver_id = auth.uid())
-    ) or public.is_admin()
+    )
+    or public.is_admin()
   )
   with check (
     exists(
-      select 1 from public.bookings b
+      select 1
+      from public.bookings b
       join public.rides r on r.id = b.ride_id
       where b.id = payments.booking_id
         and (b.passenger_id = auth.uid() or r.driver_id = auth.uid())
-    ) or public.is_admin()
+    )
+    or public.is_admin()
   );
 
 -- Messages RLS (ride participants only)
-create policy if not exists messages_select_participants on public.messages
-  for select using ((public.is_ride_participant(ride_id) and public.can_message_in_ride(ride_id)) or public.is_admin());
-create policy if not exists messages_insert_participants on public.messages
-  for insert with check (((public.is_ride_participant(ride_id) and public.can_message_in_ride(ride_id)) and auth.uid() = sender_id) or public.is_admin());
+drop policy if exists messages_select_participants on public.messages;
+create policy messages_select_participants on public.messages
+  for select using (
+    (public.is_ride_participant(ride_id) and public.can_message_in_ride(ride_id))
+    or public.is_admin()
+  );
+
+drop policy if exists messages_insert_participants on public.messages;
+create policy messages_insert_participants on public.messages
+  for insert with check (
+    (
+      (public.is_ride_participant(ride_id) and public.can_message_in_ride(ride_id))
+      and auth.uid() = sender_id
+    )
+    or public.is_admin()
+  );
 
 -- Indexes to keep RLS helper functions fast
 create index if not exists bookings_ride_passenger_idx on public.bookings(ride_id, passenger_id);
 create index if not exists rides_driver_id_idx on public.rides(id, driver_id);
-
