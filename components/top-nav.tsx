@@ -18,8 +18,7 @@ type TopNavProps =
   | ({ variant: "chat"; user: { name: string; role: string } } & TopNavBase);
 
 function readInitialTheme() {
-  const saved =
-    typeof window !== "undefined" ? localStorage.getItem("theme") : null;
+  const saved = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
   if (saved === "dark") return true;
   if (saved === "light") return false;
   return typeof document !== "undefined"
@@ -30,7 +29,6 @@ function readInitialTheme() {
 function AppLogo() {
   return (
     <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-      {/* no background, just the SVG */}
       <div className="relative h-8 w-[150px] sm:h-9 sm:w-[180px] md:h-10 md:w-[200px]">
         <Image
           src="/Kipita Logo v3-08.svg"
@@ -49,9 +47,7 @@ export function TopNav(props: TopNavProps) {
   const router = useRouter();
   const [isDark, setIsDark] = useState(false);
 
-  useEffect(() => {
-    setIsDark(readInitialTheme());
-  }, []);
+  useEffect(() => setIsDark(readInitialTheme()), []);
 
   const toggleTheme = () => {
     const html = document.documentElement;
@@ -69,25 +65,33 @@ export function TopNav(props: TopNavProps) {
   };
 
   return (
-    <header className={cn("sticky top-0 z-50", props.className)}>
-      <div className="pt-[max(8px,env(safe-area-inset-top))]">
-        <div className="mx-auto max-w-screen-sm px-2">
+    <header className={cn("sticky top-0 z-50 bg-transparent", props.className)}>
+      <div className="bg-transparent pt-[max(8px,env(safe-area-inset-top))]">
+        <div className="mx-auto max-w-screen-sm px-2 bg-transparent">
           <div
             className={cn(
-              "glass rounded-4xl",
+              "relative isolate",
               "h-12 sm:h-13",
+              "rounded-full",
               "px-2 sm:px-2.5",
-              "relative flex items-center justify-between",
+              "flex items-center justify-between",
+              "border",
+              "supports-[backdrop-filter]:backdrop-blur-xl",
+              "bg-white/70 border-border/60",
               "shadow-[0_18px_50px_-44px_rgba(6,78,59,0.55)]",
+              "dark:bg-[rgba(8,20,16,0.72)]",
+              "dark:border-white/10",
               "dark:shadow-[0_22px_70px_-58px_rgba(0,0,0,0.85)]",
             )}
           >
+            <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
+
             <Button
               variant="ghost"
               size="icon"
               onClick={handleBack}
               className={cn(
-                "h-10 w-10 rounded-xl",
+                "h-10 w-10 rounded-full",
                 "hover:bg-primary/10 active:scale-[0.98]",
                 "transition-all duration-300 ease-app",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
@@ -104,14 +108,14 @@ export function TopNav(props: TopNavProps) {
               size="icon"
               onClick={toggleTheme}
               className={cn(
-                "h-10 w-10 rounded-xl",
+                "h-10 w-10 rounded-full",
                 "hover:bg-primary/10 active:scale-[0.98]",
                 "transition-all duration-300 ease-app",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
               )}
               aria-label="Toggle theme"
             >
-              {isDark ? <Sun className="h-7 w-7" /> : <Moon className="h-7 w-7" />}
+              {isDark ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
             </Button>
           </div>
         </div>
