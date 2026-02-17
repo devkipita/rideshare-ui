@@ -14,11 +14,21 @@ type TopNavBase = {
 };
 
 type TopNavProps =
-  | ({ variant: "default"; title: string } & TopNavBase)
+  | ({ variant: "default"; title?: string } & TopNavBase)
   | ({ variant: "chat"; user: { name: string; role: string } } & TopNavBase);
 
+type NavSnapshot = {
+  mode?: string;
+  activeTab?: string;
+  searchResults?: boolean;
+  selectedRide?: unknown;
+};
+
+const SNAP_KEY = "kipita_nav_snapshot";
+
 function readInitialTheme() {
-  const saved = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
+  const saved =
+    typeof window !== "undefined" ? localStorage.getItem("theme") : null;
   if (saved === "dark") return true;
   if (saved === "light") return false;
   return typeof document !== "undefined"
@@ -42,6 +52,24 @@ function AppLogo() {
   );
 }
 
+function readSnapshot(): NavSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SNAP_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as NavSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+function emitRestore(s: NavSnapshot) {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(new CustomEvent("kipita:restore", { detail: s }));
+  } catch {}
+}
+
 export function TopNav(props: TopNavProps) {
   const appMode = useOptionalAppMode();
   const router = useRouter();
@@ -58,10 +86,33 @@ export function TopNav(props: TopNavProps) {
   };
 
   const handleBack = () => {
-    if (props.onBack) props.onBack();
-    else if (appMode?.setMode) appMode.setMode("splash");
-    else if (window.history.length > 1) router.back();
-    else router.push("/");
+    if (props.onBack) {
+      props.onBack();
+      return;
+    }
+
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    const snap = readSnapshot();
+
+    if (snap) emitRestore(snap);
+
+    if (snap?.mode && appMode?.setMode) {
+      if (snap.mode !== "splash") appMode.setMode(snap.mode as any);
+      else appMode.setMode("passenger" as any);
+      return;
+    }
+
+    if (appMode?.mode && appMode?.setMode) {
+      if (appMode.mode === "splash") appMode.setMode("passenger" as any);
+      else appMode.setMode(appMode.mode as any);
+      return;
+    }
+
+    router.push("/");
   };
 
   return (
@@ -115,10 +166,20 @@ export function TopNav(props: TopNavProps) {
               )}
               aria-label="Toggle theme"
             >
-              {isDark ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
+              {isDark ? (
+                <Sun className="h-6 w-6" />
+              ) : (
+                <Moon className="h-6 w-6" />
+              )}
             </Button>
           </div>
         </div>
+
+        {props.variant === "default" ? (
+            <p className="text-center text-[13px] font-semibold text-white/90">
+              {props.title}
+            </p>
+        ) : null}
       </div>
     </header>
   );

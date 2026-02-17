@@ -71,23 +71,6 @@ export function PassengerSearch({
                 onSearch={runSearch}
                 loading={status === "loading"}
               />
-{/* 
-              <Surface elevated className="p-4">
-                <p className="text-[12px] font-extrabold tracking-tight">Tip</p>
-                <p className="mt-1 text-[12px] text-muted-foreground">
-                  Try flexible dates — you’ll see more drivers and better
-                  prices.
-                </p>
-              </Surface>
-
-              <Surface elevated className="p-4">
-                <p className="text-sm font-extrabold tracking-tight text-foreground/85">
-                  Start by picking your route
-                </p>
-                <p className="mt-1 text-[12px] text-muted-foreground">
-                  Choose towns, a date, and seats — results will appear here.
-                </p>
-              </Surface> */}
             </div>
 
             <BottomSheet

@@ -1132,7 +1132,7 @@ export function MyRides() {
 
   return (
     <div className="w-full space-y-4 pb-4">
-      <p className="text-lg font-semibold text-center m-0 py-1 text-white">
+      <p className="text-sm font-semibold text-center m-0 py-1 text-white">
         My Rides
       </p>
 
