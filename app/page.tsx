@@ -1,7 +1,9 @@
+// app/page.tsx (your Home) - wrap AppContent with ChatProvider
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { AppProvider, useAppMode } from "@/app/context";
+import { ChatProvider } from "@/components/global-chat";
 import { TopNav } from "@/components/top-nav";
 import { BottomNav } from "@/components/bottom-nav";
 import { PassengerSearch } from "@/components/passenger-search";
@@ -10,10 +12,10 @@ import { DriverOfferRide } from "@/components/driver-offer-ride";
 import { DriverEarnings } from "@/components/driver-earnings";
 import { NotificationsScreen } from "@/components/messages-screen";
 import { ProfileScreen } from "@/components/profile-screen";
-import { MyRides } from "@/components/my-rides";
 import { SplashScreen } from "@/components/KipitaSplash";
 import { RideDetailsScreen } from "@/components/ride-details";
 import { DriverRequests } from "@/components/driver-requests";
+import { MyRides } from "@/components/my-rides";
 
 const mockRides: RideCardData[] = [
   {
@@ -62,7 +64,6 @@ function AppContent() {
 
   const isPassenger = mode === "passenger";
   const isMessages = activeTab === "messages";
-
   const showingRideDetails =
     isPassenger && activeTab === "search" && !!selectedRide;
 
@@ -102,19 +103,15 @@ function AppContent() {
 
   return (
     <div className="fixed inset-0 w-full h-full max-w-[430px] mx-auto bg-background text-foreground overflow-hidden">
-      {/* Background gradient - constrained to mobile width on desktop */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] rounded-b-[40px] bg-primary dark:bg-primary/14 border-b border-primary/10" />
 
-      {/* Main flex container */}
       <div className="relative z-10 flex flex-col h-full w-full">
-        {/* Top Navigation - Fixed height */}
         {isMessages ? (
           <TopNav variant="chat" user={{ name: "John D.", role: "driver" }} />
         ) : (
           <TopNav variant="default" title={pageTitle} onBack={onBack} />
         )}
 
-        {/* Scrollable Content Area - Takes remaining space */}
         {!isMessages && (
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
             <div className="w-full bg-primary/25 px-3 pb-24 space-y-4">
@@ -197,10 +194,8 @@ function AppContent() {
           </div>
         )}
 
-        {/* Messages Screen */}
         {isMessages && <NotificationsScreen />}
 
-        {/* Bottom Navigation */}
         <BottomNav
           mode={isPassenger ? "passenger" : "driver"}
           activeTab={activeTab}
@@ -214,7 +209,21 @@ function AppContent() {
 export default function Home() {
   return (
     <AppProvider>
-      <AppContent />
+      <ChatProvider
+        initialMessages={[
+          {
+            id: "m-1",
+            rideId: "req-2",
+            driverId: "drv-1",
+            sender: "driver",
+            text: "Hey! I’m 5 minutes away from pickup.",
+            createdAt: Date.now() - 1000 * 60 * 8,
+            readByUser: false,
+          },
+        ]}
+      >
+        <AppContent />
+      </ChatProvider>
     </AppProvider>
   );
 }

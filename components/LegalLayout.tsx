@@ -24,7 +24,7 @@ export default function LegalLayout({ policy }: { policy: Policy }) {
     <div className="max-w-7xl mx-auto px-2 py-4 sm:py-8">
       <TopNav variant="default" title={policy.title} />
 
-      <div className="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-4 gap-10 sm:gap-12">
+      <div className="mt-8 sm:mt-10 grid grid-cols-1 gap-10 sm:gap-12">
         {/* Sidebar */}
         <aside className="lg:col-span-1">
           <LegalSidebar sections={policy.sections} />

@@ -31,7 +31,7 @@ type TabDef = {
 const PASSENGER_TABS: readonly TabDef[] = [
   { id: "search", label: "Search", icon: HomeIcon },
   { id: "trips", label: "Trips", icon: ReceiptText },
-  { id: "messages", label: "Messages", icon: BellDot },
+  { id: "messages", label: "Notification", icon: BellDot },
   { id: "profile", label: "Profile", icon: User },
 ] as const;
 

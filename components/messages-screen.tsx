@@ -664,6 +664,7 @@ export function NotificationsScreen({
   return (
     <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide bg-primary/25 px-3 pb-24">
       <div className="w-full pt-1 space-y-3">
+        <p className="text-center text-sm font-semibold text-white">Ride and Road Updates</p>
         {/* Search and Filters Section */}
         <Surface tone="sheet" className="p-3">
           <p className="text-[11px] font-medium text-muted-foreground">
