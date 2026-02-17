@@ -877,7 +877,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
     return (
       <div className="min-h-[100dvh] overflow-y-auto overscroll-contain">
         <div className="px-4 pb-24 space-y-4">
-          <p className="text-sm font-medium text-muted-foreground text-center m-0 py-1">
+          <p className="text-sm font-medium text-[#fff] text-center m-0 py-1">
             Welcome to Your Account
           </p>
           <GlassCard className="p-6 text-center">
