@@ -913,7 +913,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
 
   return (
     <div className="min-h-[100dvh]">
-      <div className="mx-auto w-full max-w-md px-2 pb-24 pt-4">
+      <div className="mx-auto w-full max-w-md pb-24 pt-4">
         <div className="pb-[calc(6rem+env(safe-area-inset-bottom))] overflow-x-hidden space-y-5">
           {profileError ? (
             <StateFeedback
