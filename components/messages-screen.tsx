@@ -636,7 +636,7 @@ export function NotificationsScreen({
   return (
     <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide bg-primary/25 px-3 pb-24">
       <div className="w-full pt-1 space-y-3">
-        <p className="text-center text-sm font-semibold text-white">Post a ride</p>
+        <p className="text-center text-sm font-semibold text-white">Whats Happening on the Road</p>
 
         <Surface tone="sheet" className="p-3">
           <p className="text-[11px] font-medium text-muted-foreground">
