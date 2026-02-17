@@ -12,6 +12,8 @@ import {
   Search,
   SlidersHorizontal,
   MapPin,
+  Send,
+  Pencil,
 } from "lucide-react";
 
 type Role = "driver" | "passenger";
@@ -80,47 +82,6 @@ function Surface({
       <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-55 bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
       <div className="relative">{children}</div>
     </div>
-  );
-}
-
-function PillButton({
-  active,
-  children,
-  onClick,
-  className,
-}: {
-  active?: boolean;
-  children: React.ReactNode;
-  onClick?: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={!!active}
-      onClick={onClick}
-      className={[
-        "h-10 rounded-full px-4",
-        "inline-flex items-center justify-center gap-2",
-        "text-[13px] font-semibold tracking-tight",
-        "border transition-all duration-300",
-        EASE,
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
-        "active:scale-[0.99]",
-        active
-          ? [
-              "bg-primary text-primary-foreground border-primary/60",
-              "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_40%,transparent)]",
-            ].join(" ")
-          : [
-              "bg-card/70 border-border/70 text-foreground/85",
-              "hover:bg-primary/10 hover:border-primary/20",
-            ].join(" "),
-        className ?? "",
-      ].join(" ")}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -585,7 +546,6 @@ export function NotificationsScreen({
 }: {
   role?: Role;
 }) {
-  const [tab, setTab] = React.useState<"all" | "rides" | "alerts">("all");
   const [query, setQuery] = React.useState("");
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
@@ -598,6 +558,7 @@ export function NotificationsScreen({
 
   const [loading, setLoading] = React.useState(true);
   const [items, setItems] = React.useState<Notice[]>([]);
+  const [postText, setPostText] = React.useState("");
 
   React.useEffect(() => {
     const t = window.setTimeout(() => {
@@ -619,14 +580,7 @@ export function NotificationsScreen({
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-
     return items
-      .filter((n) => {
-        if (tab === "rides") return n.kind === "ride";
-        if (tab === "alerts")
-          return n.kind === "announcement" || n.severity !== "info";
-        return true;
-      })
       .filter((n) => {
         if (!kinds[n.kind]) return false;
         if (onlyUnread && n.read) return false;
@@ -643,7 +597,7 @@ export function NotificationsScreen({
         return hay.includes(q);
       })
       .sort((a, b) => b.timestamp - a.timestamp);
-  }, [items, tab, query, kinds, onlyUnread]);
+  }, [items, query, kinds, onlyUnread]);
 
   const grouped = React.useMemo(() => groupByDay(filtered), [filtered]);
   const unreadCount = React.useMemo(
@@ -661,56 +615,57 @@ export function NotificationsScreen({
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  const postUpdate = () => {
+    const body = postText.trim();
+    if (!body) return;
+
+    const newNotice: Notice = {
+      id: `local-${Date.now()}`,
+      kind: "announcement",
+      severity: "info",
+      title: "Update",
+      body,
+      timestamp: Date.now(),
+      read: false,
+    };
+
+    setItems((prev) => [newNotice, ...prev]);
+    setPostText("");
+  };
+
   return (
     <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide bg-primary/25 px-3 pb-24">
       <div className="w-full pt-1 space-y-3">
-        <p className="text-center text-sm font-semibold text-white">Ride and Road Updates</p>
-        {/* Search and Filters Section */}
+        <p className="text-center text-sm font-semibold text-white">Post a ride</p>
+
         <Surface tone="sheet" className="p-3">
           <p className="text-[11px] font-medium text-muted-foreground">
             Route, area, keywords...
           </p>
 
           <div className="mt-1 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
-            <Search className="h-4 w-4 text-primary" />
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/10 border border-primary/15 text-primary">
+              <Pencil className="h-4 w-4" />
+            </span>
+
             <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search notifications"
+              value={postText}
+              onChange={(e) => setPostText(e.target.value)}
+              placeholder="Write an update"
               className="h-7 w-full bg-transparent text-[13px] font-semibold outline-none placeholder:text-muted-foreground/80"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") postUpdate();
+              }}
             />
+
             <button
               type="button"
-              onClick={() => setFiltersOpen(true)}
+              onClick={postUpdate}
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
-              aria-label="Filters"
+              aria-label="Post"
             >
-              <SlidersHorizontal className="h-4 w-4" />
+              <Send className="h-4 w-4" />
             </button>
-          </div>
-
-          <div className="mt-2.5 flex items-center gap-2">
-            <PillButton
-              active={tab === "all"}
-              onClick={() => setTab("all")}
-              className="flex-1"
-            >
-              All
-            </PillButton>
-            <PillButton
-              active={tab === "rides"}
-              onClick={() => setTab("rides")}
-              className="flex-1"
-            >
-              Rides
-            </PillButton>
-            <PillButton
-              active={tab === "alerts"}
-              onClick={() => setTab("alerts")}
-              className="flex-1"
-            >
-              Alerts
-            </PillButton>
           </div>
 
           <div className="mt-2.5 flex items-center justify-between gap-2">
@@ -727,15 +682,36 @@ export function NotificationsScreen({
               </button>
             )}
           </div>
+
+          <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+            <Search className="h-4 w-4 text-primary" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search notifications"
+              className="h-7 w-full bg-transparent text-[13px] font-semibold outline-none placeholder:text-muted-foreground/80"
+            />
+          </div>
         </Surface>
 
-        {/* Section Header */}
-        <SectionHeader
-          title="Notifications"
-          count={loading ? undefined : filtered.length}
-        />
+        <div className="flex items-center justify-between gap-3 px-1">
+          <div className="flex-1 min-w-0">
+            <SectionHeader
+              title="Notifications"
+              count={loading ? undefined : filtered.length}
+            />
+          </div>
 
-        {/* Notifications List */}
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
+            aria-label="Filters"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+          </button>
+        </div>
+
         {loading ? (
           <div className="space-y-2.5">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -765,9 +741,7 @@ export function NotificationsScreen({
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 border border-primary/15 text-primary">
               <Bell className="h-5 w-5" />
             </div>
-            <p className="mt-2.5 text-[15px] font-extrabold">
-              No notifications
-            </p>
+            <p className="mt-2.5 text-[15px] font-extrabold">No notifications</p>
             <p className="mt-1 text-[13px] font-semibold text-muted-foreground">
               Try a different search or clear filters.
             </p>
@@ -778,7 +752,6 @@ export function NotificationsScreen({
                 setQuery("");
                 setKinds({ ride: true, announcement: true, system: true });
                 setOnlyUnread(false);
-                setTab("all");
               }}
             >
               Clear all filters
