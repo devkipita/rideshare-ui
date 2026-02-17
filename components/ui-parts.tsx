@@ -591,11 +591,13 @@ export function BottomSheet({
   title,
   onOpenChange,
   children,
+  headerRight,
 }: {
   open: boolean;
   title?: string;
   onOpenChange: (v: boolean) => void;
   children: React.ReactNode;
+  headerRight?: React.ReactNode;
 }) {
   const startY = useRef<number | null>(null);
   const lastY = useRef(0);
@@ -675,12 +677,33 @@ export function BottomSheet({
                 onPointerCancel={onPointerUp}
                 style={{ touchAction: "none" }}
               />
-              {title ? (
-                <p className="mt-3 text-sm font-extrabold tracking-tight">
-                  {title}
-                </p>
+
+              {title || headerRight ? (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  {title ? (
+                    <p className="text-sm font-extrabold tracking-tight">
+                      {title}
+                    </p>
+                  ) : (
+                    <span />
+                  )}
+
+                  {headerRight ? (
+                    headerRight
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onOpenChange(false)}
+                      aria-label="Close"
+                      className="grid h-9 w-9 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               ) : null}
             </div>
+
             <div className="px-3 pb-3 max-h-[78vh] overflow-auto">
               {children}
             </div>
@@ -713,4 +736,3 @@ export function ShimmerCard() {
     </Surface>
   );
 }
-

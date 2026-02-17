@@ -1,5 +1,3 @@
-// users/me/route.ts
-
 // app/api/users/me/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
@@ -58,7 +56,6 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Missing identity" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
-
   const patch: Record<string, any> = {};
 
   if (body?.name !== undefined)
@@ -68,7 +65,6 @@ export async function PATCH(req: Request) {
     patch.image =
       typeof body.image === "string" ? body.image.trim() || null : null;
 
-  // ✅ phone is NOT directly set here anymore (we verify it through OTP endpoints)
   if (body?.phone !== undefined) {
     return NextResponse.json(
       {
@@ -79,9 +75,8 @@ export async function PATCH(req: Request) {
     );
   }
 
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0)
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
-  }
 
   const upd = supabaseAdmin
     .from("users")

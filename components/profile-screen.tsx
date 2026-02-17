@@ -1,7 +1,8 @@
+// app/(whatever)/profile/ProfileScreen.tsx
 "use client";
 
 import type { ComponentType, ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Phone,
@@ -20,6 +21,8 @@ import {
   FileText,
   Cookie,
   CalendarDays,
+  Trash2,
+  Upload,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -325,14 +328,14 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function ProfileSkeleton() {
   return (
-    <div className="h-[100dvh] overflow-y-auto overscroll-contain">
+    <div className="min-h-[100dvh] overflow-y-auto overscroll-contain">
       <div className="min-h-[100dvh]">
         <div className="mx-auto w-full max-w-md pb-44 pt-4 overflow-x-hidden">
           <div className="pb-[calc(6rem+env(safe-area-inset-bottom))] overflow-x-hidden space-y-5">
             <GlassCard className="relative overflow-hidden">
               <div className="p-5 text-center">
                 <div className="mx-auto mb-3 grid place-items-center">
-                  <div className="relative h-20 w-20 rounded-full overflow-auto border border-border bg-muted">
+                  <div className="relative h-20 w-20 rounded-full overflow-hidden border border-border bg-muted">
                     <Skeleton className="h-full w-full rounded-full" />
                   </div>
                 </div>
@@ -506,13 +509,17 @@ function SheetDrawer({
             </button>
           </div>
 
-          <div className="px-5 pb-6 pt-5 max-h-[calc(100dvh-7rem)] overflow-y-auto">
+          <div className="px-5 pb-6 pt-5 max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain">
             {children}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function bytesToMb(n: number) {
+  return Math.round((n / (1024 * 1024)) * 10) / 10;
 }
 
 export function ProfileScreen({ userMode }: ProfileScreenProps) {
@@ -528,10 +535,17 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
   const [editName, setEditName] = useState("");
-  const [editImage, setEditImage] = useState("");
+  const [editImage, setEditImage] = useState<string>("");
 
   const [avatarFailed, setAvatarFailed] = useState(false);
+
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [pickedPreview, setPickedPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [phoneForVerify, setPhoneForVerify] = useState("");
   const [otp, setOtp] = useState("");
@@ -651,13 +665,25 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
     };
   }, [status, derived.role]);
 
+  useEffect(() => {
+    if (!pickedFile) {
+      setPickedPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(pickedFile);
+    setPickedPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pickedFile]);
+
   const isDriver = derived.role === "driver";
   const driverVerified = Boolean(driverProfile?.verified);
   const completedRides = Number(driverStats?.completed_rides ?? 0);
 
   const openEdit = () => {
     setSaveError(null);
+    setUploadError(null);
     setOtpError(null);
+
     setOtp("");
     setOtpSent(false);
     setResendIn(0);
@@ -666,6 +692,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
     setEditImage(profile?.image ?? session?.user?.image ?? "");
     setPhoneForVerify(profile?.phone ?? "");
 
+    setPickedFile(null);
     setEditOpen(true);
   };
 
@@ -688,10 +715,63 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ?? "Failed to save profile.");
       setProfile(json?.user ?? null);
+      setPickedFile(null);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save profile.");
     } finally {
       setSaveLoading(false);
+    }
+  };
+
+  const pickAvatar = (file: File | null) => {
+    setUploadError(null);
+    if (!file) {
+      setPickedFile(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please choose an image file.");
+      return;
+    }
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setUploadError(
+        `Image is too large (${bytesToMb(file.size)}MB). Max is 5MB.`,
+      );
+      return;
+    }
+    setPickedFile(file);
+  };
+
+  const uploadAvatar = async () => {
+    setUploadError(null);
+    if (!pickedFile) {
+      setUploadError("Choose an image first.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", pickedFile);
+
+      const res = await fetch("/api/users/me/avatar", {
+        method: "POST",
+        body: form,
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ?? "Failed to upload avatar.");
+
+      const url = typeof json?.url === "string" ? json.url : "";
+      if (!url) throw new Error("Upload succeeded but no URL returned.");
+
+      setEditImage(url);
+      setPickedFile(null);
+    } catch (e) {
+      setUploadError(
+        e instanceof Error ? e.message : "Failed to upload avatar.",
+      );
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -795,7 +875,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
 
   if (status === "unauthenticated") {
     return (
-      <div className="h-[100dvh] overflow-y-auto overscroll-contain">
+      <div className="min-h-[100dvh] overflow-y-auto overscroll-contain">
         <div className="px-4 pb-24 space-y-4">
           <GlassCard className="p-6 text-center">
             <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/10">
@@ -832,358 +912,440 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
   }
 
   return (
-    <div className="h-[100dvh] overflow-y-auto overscroll-contain">
-      <div className="min-h-[100dvh]">
-        <div className="mx-auto w-full max-w-md px-2 pb-24 pt-4">
-          <div className="pb-[calc(6rem+env(safe-area-inset-bottom))] overflow-x-hidden space-y-5">
-            {profileError ? (
-              <StateFeedback
-                state="error"
-                title="Profile unavailable"
-                message={profileError}
-              />
-            ) : null}
+    <div className="min-h-[100dvh]">
+      <div className="mx-auto w-full max-w-md px-2 pb-24 pt-4">
+        <div className="pb-[calc(6rem+env(safe-area-inset-bottom))] overflow-x-hidden space-y-5">
+          {profileError ? (
+            <StateFeedback
+              state="error"
+              title="Profile unavailable"
+              message={profileError}
+            />
+          ) : null}
 
-            <div className="relative">
-              <div className="absolute inset-x-0 -top-5 h-20 rounded-[28px] bg-primary/12 blur-2xl" />
-              <GlassCard className="relative overflow-hidden">
-                <div className="p-5 text-center">
-                  <div className="mx-auto mb-3 grid place-items-center">
-                    <div className="relative h-20 w-20 rounded-full overflow-hidden border border-border bg-muted">
-                      {derived.avatarUrl && !avatarFailed ? (
-                        <Image
-                          src={derived.avatarUrl}
-                          alt={`${derived.name} avatar`}
-                          fill
-                          sizes="80px"
-                          className="object-cover"
-                          priority
-                          onError={() => setAvatarFailed(true)}
-                        />
-                      ) : (
-                        <div className="h-full w-full grid place-items-center bg-primary/12">
-                          <span className="text-2xl font-black text-primary">
-                            {derived.initials}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <h2 className="text-[18px] sm:text-xl font-black text-foreground leading-tight">
-                    {derived.name}
-                  </h2>
-
-                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[12px] font-semibold text-foreground">
-                      <ShieldCheck className="h-4 w-4 text-primary" />
-                      <span>{isDriver ? "Driver" : "Passenger"}</span>
-                    </div>
-
-                    {isDriver ? (
-                      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[12px] font-bold text-foreground">
-                        <BadgeCheck
-                          className={`h-4 w-4 ${driverVerified ? "text-emerald-600" : "text-amber-600"}`}
-                        />
-                        <span>
-                          {driverVerified ? "Verified" : "Unverified"}
+          <div className="relative">
+            <div className="absolute inset-x-0 -top-5 h-20 rounded-[28px] bg-primary/12 blur-2xl" />
+            <GlassCard className="relative overflow-hidden">
+              <div className="p-5 text-center">
+                <div className="mx-auto mb-3 grid place-items-center">
+                  <div className="relative h-20 w-20 rounded-full overflow-hidden border border-border bg-muted">
+                    {derived.avatarUrl && !avatarFailed ? (
+                      <Image
+                        src={derived.avatarUrl}
+                        alt={`${derived.name} avatar`}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                        priority
+                        onError={() => setAvatarFailed(true)}
+                      />
+                    ) : (
+                      <div className="h-full w-full grid place-items-center bg-primary/12">
+                        <span className="text-2xl font-black text-primary">
+                          {derived.initials}
                         </span>
                       </div>
-                    ) : null}
-
-                    <button
-                      type="button"
-                      onClick={openEdit}
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[12px] font-bold text-foreground hover:bg-accent/40 transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98]"
-                    >
-                      <Pencil className="h-4 w-4 text-primary" />
-                      Edit
-                    </button>
+                    )}
                   </div>
                 </div>
-              </GlassCard>
-            </div>
 
-            <OverviewStats
-              isDriver={isDriver}
-              driverVerified={driverVerified}
-              completedRides={completedRides}
-              memberSince={derived.memberSince}
-            />
+                <h2 className="text-[18px] sm:text-xl font-black text-foreground leading-tight">
+                  {derived.name}
+                </h2>
 
-            <section className="space-y-3">
-              <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
-                CONTACT
-              </p>
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[12px] font-semibold text-foreground">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <span>{isDriver ? "Driver" : "Passenger"}</span>
+                  </div>
 
-              <InfoRow
-                icon={Phone}
-                label="Phone"
-                value={derived.phone || "Not provided"}
-                right={
-                  <span
-                    className={[
-                      "inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-black",
-                      derived.phoneVerified
-                        ? "text-emerald-700"
-                        : "text-amber-700",
-                    ].join(" ")}
+                  {isDriver ? (
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[12px] font-bold text-foreground">
+                      <BadgeCheck
+                        className={`h-4 w-4 ${driverVerified ? "text-emerald-600" : "text-amber-600"}`}
+                      />
+                      <span>{driverVerified ? "Verified" : "Unverified"}</span>
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={openEdit}
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[12px] font-bold text-foreground hover:bg-accent/40 transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98]"
                   >
-                    {derived.phoneVerified ? "Verified" : "Unverified"}
-                  </span>
-                }
-              />
+                    <Pencil className="h-4 w-4 text-primary" />
+                    Edit
+                  </button>
+                </div>
 
-              <InfoRow
-                icon={Mail}
-                label="Email"
-                value={derived.email || "Not provided"}
-              />
-            </section>
-
-            <section className="space-y-2">
-              <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
-                LEGAL
-              </p>
-              <GlassCard className="p-1">
-                <ActionButton
-                  icon={FileText}
-                  label="Terms & Conditions"
-                  onClick={() => router.push("/legal/terms")}
-                />
-                <div className="h-px bg-border mx-4" />
-                <ActionButton
-                  icon={ShieldCheck}
-                  label="Privacy Policy"
-                  onClick={() => router.push("/legal/privacy")}
-                />
-                <div className="h-px bg-border mx-4" />
-                <ActionButton
-                  icon={Cookie}
-                  label="Cookie Policy"
-                  onClick={() => router.push("/legal/cookies")}
-                />
-              </GlassCard>
-            </section>
-
-            <section className="space-y-2">
-              <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
-                ACCOUNT
-              </p>
-              <GlassCard className="p-1">
-                <ActionButton icon={Settings} label="Settings" disabled />
-                <div className="h-px bg-border mx-4" />
-                <ActionButton
-                  icon={LogOut}
-                  label="Log out"
-                  destructive
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                />
-              </GlassCard>
-            </section>
+                <p className="mt-3 text-[11px] font-semibold text-muted-foreground">
+                  Signed in with {derived.providerLabel}
+                </p>
+              </div>
+            </GlassCard>
           </div>
 
-          <SheetDrawer
-            open={editOpen}
-            title="Edit profile"
-            description="Update your account details."
-            onClose={() => setEditOpen(false)}
-          >
-            {saveError ? (
-              <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-                {saveError}
-              </div>
-            ) : null}
+          <OverviewStats
+            isDriver={isDriver}
+            driverVerified={driverVerified}
+            completedRides={completedRides}
+            memberSince={derived.memberSince}
+          />
 
-            <div className="space-y-4">
-              <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
-                <p className="text-sm font-black text-foreground">Basic</p>
+          <section className="space-y-3">
+            <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
+              CONTACT
+            </p>
+
+            <InfoRow
+              icon={Phone}
+              label="Phone"
+              value={derived.phone || "Not provided"}
+              right={
+                <span
+                  className={[
+                    "inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-black",
+                    derived.phoneVerified
+                      ? "text-emerald-700"
+                      : "text-amber-700",
+                  ].join(" ")}
+                >
+                  {derived.phoneVerified ? "Verified" : "Unverified"}
+                </span>
+              }
+            />
+
+            <InfoRow
+              icon={Mail}
+              label="Email"
+              value={derived.email || "Not provided"}
+            />
+          </section>
+
+          <section className="space-y-2">
+            <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
+              LEGAL
+            </p>
+            <GlassCard className="p-1">
+              <ActionButton
+                icon={FileText}
+                label="Terms & Conditions"
+                onClick={() => router.push("/legal/terms")}
+              />
+              <div className="h-px bg-border mx-4" />
+              <ActionButton
+                icon={ShieldCheck}
+                label="Privacy Policy"
+                onClick={() => router.push("/legal/privacy")}
+              />
+              <div className="h-px bg-border mx-4" />
+              <ActionButton
+                icon={Cookie}
+                label="Cookie Policy"
+                onClick={() => router.push("/legal/cookies")}
+              />
+            </GlassCard>
+          </section>
+
+          <section className="space-y-2">
+            <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
+              ACCOUNT
+            </p>
+            <GlassCard className="p-1">
+              <ActionButton icon={Settings} label="Settings" disabled />
+              <div className="h-px bg-border mx-4" />
+              <ActionButton
+                icon={LogOut}
+                label="Log out"
+                destructive
+                onClick={() => signOut({ callbackUrl: "/" })}
+              />
+            </GlassCard>
+          </section>
+        </div>
+
+        <SheetDrawer
+          open={editOpen}
+          title="Edit profile"
+          description="Update your account details."
+          onClose={() => setEditOpen(false)}
+        >
+          {saveError ? (
+            <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+              {saveError}
+            </div>
+          ) : null}
+
+          <div className="space-y-4">
+            <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+              <p className="text-sm font-black text-foreground">Basic</p>
+
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative h-16 w-16 rounded-2xl overflow-hidden border border-border bg-muted shrink-0">
+                    {pickedPreview ? (
+                      <Image
+                        src={pickedPreview}
+                        alt="New avatar preview"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : editImage ? (
+                      <Image
+                        src={editImage}
+                        alt="Current avatar"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full grid place-items-center bg-primary/12">
+                        <ImageIcon className="h-5 w-5 text-primary" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-black text-foreground">
+                      Profile picture
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                      PNG/JPG/WebP. Max 5MB.
+                    </p>
+
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => pickAvatar(e.target.files?.[0] ?? null)}
+                    />
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        disabled={uploading || saveLoading || otpLoading}
+                        aria-label="Choose profile picture"
+                        title="Choose"
+                        className="h-10 w-10 rounded-2xl border border-border bg-card text-foreground hover:bg-accent/40 disabled:opacity-70 inline-flex items-center justify-center"
+                      >
+                        <Upload className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={uploadAvatar}
+                        disabled={!pickedFile || uploading || saveLoading}
+                        className="h-10 px-4 rounded-2xl bg-primary text-sm font-black text-primary-foreground hover:opacity-95 disabled:opacity-70 inline-flex items-center gap-2"
+                      >
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : null}
+                        Upload
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPickedFile(null);
+                          setEditImage("");
+                        }}
+                        disabled={uploading || saveLoading}
+                        aria-label="Remove profile picture"
+                        title="Remove"
+                        className="h-10 w-10 rounded-2xl border border-border bg-card text-foreground hover:bg-accent/40 disabled:opacity-70 inline-flex items-center justify-center"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {uploadError ? (
+                      <div className="mt-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+                        {uploadError}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <Input
+                icon={User}
+                label="Full name"
+                value={editName}
+                onChange={setEditName}
+                placeholder="e.g. Dennis Mwangi"
+                disabled={saveLoading}
+              />
+
+              <button
+                type="button"
+                onClick={saveBasicProfile}
+                disabled={saveLoading || uploading}
+                className="h-12 w-full rounded-2xl bg-primary text-sm font-black text-primary-foreground hover:opacity-95 transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] disabled:opacity-70 inline-flex items-center justify-center gap-2 active:scale-[0.985]"
+              >
+                {saveLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Save basic details
+              </button>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+              <p className="text-sm font-black text-foreground">
+                Phone verification
+              </p>
+
+              <p className="text-xs font-semibold text-muted-foreground">
+                Status:{" "}
+                <span
+                  className={
+                    derived.phoneVerified
+                      ? "text-emerald-600"
+                      : "text-amber-600"
+                  }
+                >
+                  {derived.phoneVerified ? "Verified" : "Not verified"}
+                </span>
+              </p>
+
+              <Input
+                icon={Phone}
+                label="Phone number"
+                value={phoneForVerify}
+                onChange={setPhoneForVerify}
+                placeholder="e.g. +2547..."
+                disabled={otpLoading}
+              />
+
+              {otpSent ? (
+                <Input
+                  icon={Lock}
+                  label="6-digit code"
+                  value={otp}
+                  onChange={setOtp}
+                  placeholder="123456"
+                  disabled={otpLoading}
+                  type="text"
+                />
+              ) : null}
+
+              {otpError ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+                  {otpError}
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={startPhoneVerification}
+                  disabled={
+                    otpLoading || !phoneForVerify.trim() || resendIn > 0
+                  }
+                  className="h-12 rounded-2xl border border-border bg-card text-sm font-black text-foreground hover:bg-accent/40 disabled:opacity-70"
+                >
+                  {resendIn > 0
+                    ? `Resend in ${resendIn}s`
+                    : otpSent
+                      ? "Resend code"
+                      : "Send code"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={verifyPhoneCode}
+                  disabled={otpLoading || !otpSent || otp.trim().length !== 6}
+                  className="h-12 rounded-2xl bg-primary text-sm font-black text-primary-foreground hover:opacity-95 disabled:opacity-70"
+                >
+                  {otpLoading && otpSent ? "Verifying..." : "Verify"}
+                </button>
+              </div>
+            </div>
+
+            {isDriver ? (
+              <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-black text-foreground">
+                    Driver verification
+                  </p>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-black">
+                    <BadgeCheck
+                      className={`h-4 w-4 ${driverVerified ? "text-emerald-600" : "text-amber-600"}`}
+                    />
+                    {driverVerified ? "Verified" : "Unverified"}
+                  </span>
+                </div>
+
+                {driverSaveError ? (
+                  <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+                    {driverSaveError}
+                  </div>
+                ) : null}
 
                 <Input
                   icon={User}
-                  label="Full name"
-                  value={editName}
-                  onChange={setEditName}
-                  placeholder="e.g. Dennis Mwangi"
+                  label="National ID"
+                  value={String(driverProfile?.national_id ?? "")}
+                  onChange={(v) =>
+                    setDriverProfile((prev) => ({
+                      ...(prev ?? {}),
+                      national_id: v,
+                    }))
+                  }
+                  placeholder="e.g. 12345678"
+                  disabled={driverSaveLoading}
                 />
+
                 <Input
-                  icon={ImageIcon}
-                  label="Avatar URL"
-                  value={editImage}
-                  onChange={setEditImage}
-                  placeholder="https://..."
+                  icon={Lock}
+                  label="Driving license"
+                  value={String(driverProfile?.driving_license ?? "")}
+                  onChange={(v) =>
+                    setDriverProfile((prev) => ({
+                      ...(prev ?? {}),
+                      driving_license: v,
+                    }))
+                  }
+                  placeholder="e.g. DL-XXXXX"
+                  disabled={driverSaveLoading}
                 />
 
                 <button
                   type="button"
-                  onClick={saveBasicProfile}
-                  disabled={saveLoading}
-                  className="h-12 w-full rounded-2xl bg-primary text-sm font-black text-primary-foreground hover:opacity-95 transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] disabled:opacity-70 inline-flex items-center justify-center gap-2 active:scale-[0.985]"
+                  onClick={saveDriverDetails}
+                  disabled={driverSaveLoading}
+                  className="h-12 w-full rounded-2xl border border-border bg-card text-sm font-black text-foreground hover:bg-accent/40 disabled:opacity-70 inline-flex items-center justify-center gap-2"
                 >
-                  {saveLoading ? (
+                  {driverSaveLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : null}
-                  Save basic details
+                  Save driver details
                 </button>
-              </div>
-
-              <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-                <p className="text-sm font-black text-foreground">
-                  Phone verification
-                </p>
 
                 <p className="text-xs font-semibold text-muted-foreground">
-                  Status:{" "}
-                  <span
-                    className={
-                      derived.phoneVerified
-                        ? "text-emerald-600"
-                        : "text-amber-600"
-                    }
-                  >
-                    {derived.phoneVerified ? "Verified" : "Not verified"}
-                  </span>
+                  Verification is completed after admin review.
                 </p>
-
-                <Input
-                  icon={Phone}
-                  label="Phone number"
-                  value={phoneForVerify}
-                  onChange={setPhoneForVerify}
-                  placeholder="e.g. +2547..."
-                  disabled={otpLoading}
-                />
-
-                {otpSent ? (
-                  <Input
-                    icon={Lock}
-                    label="6-digit code"
-                    value={otp}
-                    onChange={setOtp}
-                    placeholder="123456"
-                    disabled={otpLoading}
-                    type="text"
-                  />
-                ) : null}
-
-                {otpError ? (
-                  <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-                    {otpError}
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={startPhoneVerification}
-                    disabled={
-                      otpLoading || !phoneForVerify.trim() || resendIn > 0
-                    }
-                    className="h-12 rounded-2xl border border-border bg-card text-sm font-black text-foreground hover:bg-accent/40 disabled:opacity-70"
-                  >
-                    {resendIn > 0
-                      ? `Resend in ${resendIn}s`
-                      : otpSent
-                        ? "Resend code"
-                        : "Send code"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={verifyPhoneCode}
-                    disabled={otpLoading || !otpSent || otp.trim().length !== 6}
-                    className="h-12 rounded-2xl bg-primary text-sm font-black text-primary-foreground hover:opacity-95 disabled:opacity-70"
-                  >
-                    {otpLoading && otpSent ? "Verifying..." : "Verify"}
-                  </button>
-                </div>
               </div>
+            ) : null}
 
-              {isDriver ? (
-                <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-black text-foreground">
-                      Driver verification
-                    </p>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-black">
-                      <BadgeCheck
-                        className={`h-4 w-4 ${driverVerified ? "text-emerald-600" : "text-amber-600"}`}
-                      />
-                      {driverVerified ? "Verified" : "Unverified"}
-                    </span>
-                  </div>
+            <button
+              type="button"
+              onClick={() => setEditOpen(false)}
+              className="h-12 w-full rounded-2xl border border-border bg-card text-sm font-black text-foreground hover:bg-accent/40 transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.985]"
+            >
+              Done
+            </button>
+          </div>
+        </SheetDrawer>
 
-                  {driverSaveError ? (
-                    <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-                      {driverSaveError}
-                    </div>
-                  ) : null}
-
-                  <Input
-                    icon={User}
-                    label="National ID"
-                    value={String(driverProfile?.national_id ?? "")}
-                    onChange={(v) =>
-                      setDriverProfile((prev) => ({
-                        ...(prev ?? {}),
-                        national_id: v,
-                      }))
-                    }
-                    placeholder="e.g. 12345678"
-                    disabled={driverSaveLoading}
-                  />
-
-                  <Input
-                    icon={Lock}
-                    label="Driving license"
-                    value={String(driverProfile?.driving_license ?? "")}
-                    onChange={(v) =>
-                      setDriverProfile((prev) => ({
-                        ...(prev ?? {}),
-                        driving_license: v,
-                      }))
-                    }
-                    placeholder="e.g. DL-XXXXX"
-                    disabled={driverSaveLoading}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={saveDriverDetails}
-                    disabled={driverSaveLoading}
-                    className="h-12 w-full rounded-2xl border border-border bg-card text-sm font-black text-foreground hover:bg-accent/40 disabled:opacity-70 inline-flex items-center justify-center gap-2"
-                  >
-                    {driverSaveLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : null}
-                    Save driver details
-                  </button>
-
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    Verification is completed after admin review.
-                  </p>
-                </div>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => setEditOpen(false)}
-                className="h-12 w-full rounded-2xl border border-border bg-card text-sm font-black text-foreground hover:bg-accent/40 transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.985]"
-              >
-                Done
-              </button>
-            </div>
-          </SheetDrawer>
-
-          <AuthDrawer
-            open={authDrawerOpen}
-            onOpenChange={setAuthDrawerOpen}
-            initialView="signin"
-            selectedRole={userMode}
-            callbackUrl="/"
-            navigateOnSuccess={false}
-          />
-        </div>
+        <AuthDrawer
+          open={authDrawerOpen}
+          onOpenChange={setAuthDrawerOpen}
+          initialView="signin"
+          selectedRole={userMode}
+          callbackUrl="/"
+          navigateOnSuccess={false}
+        />
       </div>
     </div>
   );

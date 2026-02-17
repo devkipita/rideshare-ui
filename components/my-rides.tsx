@@ -19,6 +19,7 @@ import {
   Hash,
   MessageCircle,
   PaletteIcon,
+  X,
 } from "lucide-react";
 
 import {
@@ -426,7 +427,6 @@ function RequestedRideDetails({
       : ride.status === "matched"
         ? "Matched"
         : "Cancelled";
-
   const canShowDriver = ride.status === "matched" && !!ride.driver;
 
   return (
@@ -895,7 +895,21 @@ function FiltersSheet({
   setPets: (v: boolean) => void;
 }) {
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} title="Filters">
+    <BottomSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Filters"
+      headerRight={
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          className="grid h-10 w-10 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 hover:bg-accent/40 active:scale-[0.99]"
+          aria-label="Close filters"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      }
+    >
       <div className="space-y-3">
         <Surface tone="sheet" className="p-3">
           <p className="text-sm font-extrabold tracking-tight">Preferences</p>
@@ -1001,7 +1015,21 @@ function RideDetailsSheet({
         : "Ride";
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} title={title}>
+    <BottomSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      headerRight={
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          className="grid h-10 w-10 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 hover:bg-accent/40 active:scale-[0.99]"
+          aria-label="Close ride details"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      }
+    >
       {selected ? (
         selected.kind === "requested" ? (
           <RequestedRideDetails ride={selected.ride} onMessage={onMessage} />
