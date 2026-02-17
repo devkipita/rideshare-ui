@@ -20,6 +20,7 @@ import {
   MessageCircle,
   PaletteIcon,
   X,
+  Palette,
 } from "lucide-react";
 
 import {
@@ -326,93 +327,157 @@ function DriverSummaryCard({
   driver: Driver;
   onMessage: () => void;
 }) {
+  const isVerified = !!driver.verified;
+
   return (
-    <Surface tone="panel" className="p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <DriverAvatar
-            name={driver.name}
-            src={driver.avatarUrl}
-            verified={driver.verified}
-            size={48}
-          />
+    <Surface
+      tone="panel"
+      className={[
+        "relative overflow-hidden rounded-[28px] p-5",
+        // Brand-secondary base (light = strong secondary, dark = toned secondary wash)
+        "bg-[oklch(var(--secondary)/0.92)] dark:bg-[oklch(var(--secondary)/0.22)]",
+        // Depth gradient (kept subtle + uniform)
+        "bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.18),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.92),oklch(var(--secondary)/0.86))]",
+        "dark:bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.22),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.26),oklch(var(--secondary)/0.18))]",
+        // Border + shadow unified
+        "border border-border/60 dark:border-border/80",
+        "shadow-[0_10px_34px_-18px_rgba(0,0,0,0.22)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.75)]",
+      ].join(" ")}
+    >
+      {/* Soft highlight rim */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 "
+      />
+
+      {/* ===== Header ===== */}
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="relative shrink-0">
+            <div className="rounded-full p-[3px]">
+              <DriverAvatar
+                name={driver.name}
+                src={driver.avatarUrl}
+                verified={false}
+                size={52}
+              />
+            </div>
+
+            {isVerified ? (
+              <div className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-[oklch(var(--secondary)/0.55)] dark:ring-[oklch(var(--secondary)/0.20)]">
+                <BadgeCheck className="h-4 w-4" />
+              </div>
+            ) : null}
+          </div>
 
           <div className="min-w-0">
-            <p className="text-[11px] font-extrabold tracking-[0.2em] text-muted-foreground">
-              DRIVER
+            <p className="text-[10px] font-extrabold tracking-[0.18em] uppercase text-foreground/60 dark:text-foreground/70">
+              Your driver
             </p>
 
-            <div className="mt-1 flex items-center gap-2 min-w-0">
-              <p className="truncate text-lg font-extrabold text-foreground">
+            <div className="flex flex-col items-start gap-2 min-w-0">
+              <p className="truncate text-xl font-extrabold text-foreground">
                 {driver.name}
               </p>
 
-              {driver.verified ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-extrabold text-primary">
-                  <BadgeCheck className="h-3.5 w-3.5" />
+              {isVerified ? (
+                <span
+                  className={[
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1",
+                    "text-[11px] font-extrabold",
+                    "bg-[oklch(var(--primary)/0.14)] dark:bg-[oklch(var(--primary)/0.20)]",
+                    "text-primary",
+                    "border border-[oklch(var(--primary)/0.22)] dark:border-[oklch(var(--primary)/0.26)]",
+                    "whitespace-nowrap",
+                  ].join(" ")}
+                >
+                  <BadgeCheck className="h-3 w-3.5" />
                   Verified
                 </span>
               ) : null}
             </div>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
-                <Star className="h-3.5 w-3.5 text-primary" />
-                <span className="text-foreground/85">
-                  {driver.rating.toFixed(1)}
-                </span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
-                <BadgeCheck className="h-3.5 w-3.5 text-primary" />
-                <span className="text-foreground/85">{driver.trips} trips</span>
-              </span>
-            </div>
           </div>
         </div>
 
-        <Button
-          variant="secondary"
-          className="h-10 rounded-2xl px-4 font-semibold"
+        <button
+          type="button"
           onClick={onMessage}
+          className={[
+            "h-11 rounded-[18px] px-5",
+            "text-sm font-extrabold",
+            "bg-primary text-primary-foreground",
+            "shadow-[0_10px_26px_-18px_oklch(var(--primary)/0.75)]",
+            "hover:brightness-[1.03] active:scale-[0.98]",
+            "transition",
+          ].join(" ")}
         >
           Message
-        </Button>
+        </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="rounded-2xl border border-border/70 bg-card/70 p-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <Car className="h-4 w-4 text-primary" />
-            <span>Car</span>
-          </div>
-          <p className="mt-1 text-sm font-extrabold text-foreground/90 truncate">
-            {driver.car.makeModel}
-          </p>
+      {/* ===== Metrics (uniform pills) ===== */}
+      <div className="relative mt-4 flex flex-wrap items-center gap-2">
+        <div
+          className={[
+            "inline-flex items-center gap-2 rounded-full px-3.5 py-2",
+            "text-sm font-extrabold text-foreground",
+            "bg-background/55 dark:bg-card/55",
+            "border border-border/60 dark:border-border/80",
+            "backdrop-blur-md",
+          ].join(" ")}
+        >
+          <Star className="h-4 w-4 text-primary" fill="currentColor" />
+          <span>{driver.rating.toFixed(1)}</span>
         </div>
 
-        <div className="rounded-2xl border border-border/70 bg-card/70 p-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <PaletteIcon className="h-4 w-4 text-primary" />
-            <span>Color</span>
-          </div>
-          <p className="mt-1 text-sm font-extrabold text-foreground/90 truncate">
-            {driver.car.color}
-          </p>
+        <div
+          className={[
+            "inline-flex items-center gap-2 rounded-full px-3.5 py-2",
+            "text-sm font-extrabold text-foreground",
+            "bg-background/55 dark:bg-card/55",
+            "border border-border/60 dark:border-border/80",
+            "backdrop-blur-md",
+          ].join(" ")}
+        >
+          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <span>{driver.trips.toLocaleString()} trips</span>
         </div>
+      </div>
 
-        <div className="rounded-2xl border border-border/70 bg-card/70 p-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <Hash className="h-4 w-4 text-primary" />
-            <span>Plate</span>
+      {/* ===== Tiles (uniform + readable) ===== */}
+      <div className="relative mt-5 grid grid-cols-3 gap-2.5">
+        {[
+          { label: "Vehicle", icon: Car, value: driver.car.makeModel },
+          { label: "Color", icon: PaletteIcon, value: driver.car.color },
+          { label: "Plate", icon: Hash, value: driver.car.plate },
+        ].map(({ label, icon: Icon, value }) => (
+          <div
+            key={label}
+            className={[
+              "rounded-[18px] p-3.5",
+              "bg-background/62 dark:bg-card/62",
+              "border border-border/60 dark:border-border/80",
+              "backdrop-blur-md",
+              "transition",
+            ].join(" ")}
+          >
+            <div className="flex items-center gap-1.5">
+              <Icon className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-extrabold tracking-[0.14em] uppercase text-foreground/55 dark:text-foreground/60">
+                {label}
+              </span>
+            </div>
+
+            <p className="mt-2 truncate text-sm font-extrabold text-foreground">
+              {value}
+            </p>
           </div>
-          <p className="mt-1 text-sm font-extrabold text-foreground/90 truncate">
-            {driver.car.plate}
-          </p>
-        </div>
+        ))}
       </div>
     </Surface>
   );
 }
+
 
 function RequestedRideDetails({
   ride,

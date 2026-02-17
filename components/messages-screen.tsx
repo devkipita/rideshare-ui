@@ -636,7 +636,7 @@ export function NotificationsScreen({
   return (
     <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide bg-primary/25 px-3 pb-24">
       <div className="w-full pt-1 space-y-3">
-        <p className="text-center text-sm font-semibold text-white">Whats Happening on the Road</p>
+        <p className="text-center text-sm font-semibold text-white m-0 py-1">Ride and Road Updates</p>
 
         <Surface tone="sheet" className="p-3">
           <p className="text-[11px] font-medium text-muted-foreground">
@@ -651,7 +651,7 @@ export function NotificationsScreen({
             <input
               value={postText}
               onChange={(e) => setPostText(e.target.value)}
-              placeholder="Write an update"
+              placeholder="Whats happening on the road?"
               className="h-7 w-full bg-transparent text-[13px] font-semibold outline-none placeholder:text-muted-foreground/80"
               onKeyDown={(e) => {
                 if (e.key === "Enter") postUpdate();

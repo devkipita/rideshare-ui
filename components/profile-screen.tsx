@@ -980,10 +980,6 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
                     Edit
                   </button>
                 </div>
-
-                <p className="mt-3 text-[11px] font-semibold text-muted-foreground">
-                  Signed in with {derived.providerLabel}
-                </p>
               </div>
             </GlassCard>
           </div>
