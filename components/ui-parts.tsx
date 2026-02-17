@@ -601,8 +601,16 @@ export function BottomSheet({
 }) {
   const startY = useRef<number | null>(null);
   const lastY = useRef(0);
+  const lastT = useRef(0);
+  const velocity = useRef(0);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const canDrag = useRef(false);
+
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
+
+  const sheetMaxH = useMemo(() => "min(75vh, calc(100dvh - 84px))", []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -618,60 +626,143 @@ export function BottomSheet({
       setDragging(false);
       startY.current = null;
       lastY.current = 0;
+      lastT.current = 0;
+      velocity.current = 0;
+      canDrag.current = false;
     }
   }, [open]);
 
-  const onPointerDown = (e: React.PointerEvent) => {
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  const closeByGesture = (dy: number, v: number) => {
+    const distanceOk = dy > 110;
+    const flickOk = v > 0.75 && dy > 24;
+    if (distanceOk || flickOk) onOpenChange(false);
+    else setDragY(0);
+  };
+
+  const onPointerDownHandle = (e: React.PointerEvent) => {
+    if (!open) return;
     setDragging(true);
     startY.current = e.clientY;
     lastY.current = 0;
+    lastT.current = performance.now();
+    velocity.current = 0;
+    canDrag.current = true;
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const onPointerDownSheet = (e: React.PointerEvent) => {
+    if (!open) return;
+
+    const sc = scrollRef.current;
+    const atTop = !sc || sc.scrollTop <= 0;
+    if (!atTop) return;
+
+    const target = e.target as HTMLElement | null;
+    const el = target?.closest?.("[data-sheet-drag-handle]");
+    if (el) return;
+
+    setDragging(true);
+    startY.current = e.clientY;
+    lastY.current = 0;
+    lastT.current = performance.now();
+    velocity.current = 0;
+    canDrag.current = true;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging || startY.current == null) return;
-    const dy = Math.max(0, e.clientY - startY.current);
+    if (!dragging || startY.current == null || !canDrag.current) return;
+
+    const sc = scrollRef.current;
+    const atTop = !sc || sc.scrollTop <= 0;
+
+    const rawDy = e.clientY - startY.current;
+    const dy = Math.max(0, rawDy);
+
+    if (!atTop && dy > 0) {
+      canDrag.current = false;
+      setDragging(false);
+      startY.current = null;
+      lastY.current = 0;
+      lastT.current = 0;
+      velocity.current = 0;
+      setDragY(0);
+      return;
+    }
+
+    const now = performance.now();
+    const dt = Math.max(1, now - lastT.current);
+    const dv = (dy - lastY.current) / dt;
+    velocity.current = dv;
+
     lastY.current = dy;
+    lastT.current = now;
+
     setDragY(dy);
   };
 
   const onPointerUp = () => {
     if (!dragging) return;
+
     const dy = lastY.current;
+    const v = velocity.current;
+
     setDragging(false);
-    if (dy > 90) onOpenChange(false);
-    else setDragY(0);
     startY.current = null;
     lastY.current = 0;
+    lastT.current = 0;
+
+    closeByGesture(dy, v);
+    canDrag.current = false;
   };
 
   return (
     <div className={cn("md:hidden", open ? "" : "pointer-events-none")}>
       <div
         className={cn(
-          "fixed inset-0 z-40 transition-all duration-300",
+          "fixed inset-0 z-40 transition-opacity duration-300",
           EASE,
-          open ? "bg-black/45" : "bg-transparent",
+          open ? "opacity-100 bg-black/45" : "opacity-0 bg-transparent",
         )}
         onClick={() => onOpenChange(false)}
       />
+
       <div
         className="fixed left-0 right-0 bottom-0 z-50"
         role="dialog"
         aria-modal="true"
+        aria-label={title ?? "Bottom sheet"}
         style={{
           transform: open ? `translateY(${dragY}px)` : "translateY(100%)",
           transition: dragging
             ? "none"
             : "transform 320ms cubic-bezier(0.22,1,0.36,1)",
+          touchAction: "none",
         }}
+        onPointerDown={onPointerDownSheet}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
       >
-        <div className="py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-          <Surface elevated className="rounded-3xl overflow-hidden">
-            <div className="px-4 pt-3 pb-2">
+        <div className="w-full pb-[env(safe-area-inset-bottom)]">
+          <Surface
+            elevated
+            className="w-full overflow-hidden rounded-t-3xl rounded-b-none"
+          >
+            <div className="px-2 pt-3 pb-2">
               <div
+                data-sheet-drag-handle
                 className="mx-auto h-1.5 w-12 rounded-full bg-primary/20"
-                onPointerDown={onPointerDown}
+                onPointerDown={onPointerDownHandle}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
@@ -704,7 +795,11 @@ export function BottomSheet({
               ) : null}
             </div>
 
-            <div className="px-3 pb-3 max-h-[78vh] overflow-auto">
+            <div
+              ref={scrollRef}
+              className="px-1 pb-3 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+              style={{ maxHeight: sheetMaxH }}
+            >
               {children}
             </div>
           </Surface>
@@ -716,7 +811,7 @@ export function BottomSheet({
 
 export function ShimmerCard() {
   return (
-    <Surface className="p-3 sm:p-4">
+    <Surface className="p-2 sm:p-4">
       <div className="flex items-center gap-3">
         <div className="h-11 w-11 rounded-2xl bg-primary/10 relative overflow-hidden">
           <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/45 to-transparent dark:via-white/15" />
