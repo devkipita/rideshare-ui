@@ -219,7 +219,7 @@ function AppContent() {
   if (mode === "splash") return <SplashScreen />;
 
   return (
-    <div className="fixed inset-0 w-full h-full max-w-[430px] mx-auto bg-primary/25 text-foreground overflow-hidden">
+    <div className="fixed inset-0 w-full h-full max-w-[430px] mx-auto bg-primary/25 px-2 text-foreground overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] rounded-b-[40px] bg-primary dark:bg-primary/14 border-b border-primary/10" />
 
       <div className="relative z-10 flex flex-col h-full w-full">
