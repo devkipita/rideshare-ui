@@ -142,6 +142,9 @@ export function DriverRequests({
 
   return (
     <div className="md:hidden">
+      <p className="text-sm font-semibold text-center text-[#fff] py-1">
+        Driver Requests
+      </p>
       <div className="pb-[calc(120px+env(safe-area-inset-bottom))] space-y-3">
         <TripSummaryCard trip={trip} />
 
