@@ -219,7 +219,7 @@ function AppContent() {
   if (mode === "splash") return <SplashScreen />;
 
   return (
-    <div className="fixed inset-0 w-full h-full max-w-[430px] mx-auto bg-background text-foreground overflow-hidden">
+    <div className="fixed inset-0 w-full h-full max-w-[430px] mx-auto bg-primary/25 text-foreground overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[230px] rounded-b-[40px] bg-primary dark:bg-primary/14 border-b border-primary/10" />
 
       <div className="relative z-10 flex flex-col h-full w-full">
@@ -231,7 +231,7 @@ function AppContent() {
 
         {!isMessages && (
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
-            <div className="w-full bg-primary/25 px-3 pb-24 space-y-4">
+            <div className="w-full pb-24 space-y-4">
               {isPassenger && (
                 <>
                   {activeTab === "search" && (
