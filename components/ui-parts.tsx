@@ -119,15 +119,17 @@ export function PillButton({
   children,
   onClick,
   className,
+  type
 }: {
   active?: boolean;
   children: React.ReactNode;
   onClick?: () => void;
   className?: string;
+  type?: "button" | "submit" | "reset";
 }) {
   return (
     <button
-      type="button"
+      type={type ?? "button"}
       aria-pressed={!!active}
       onClick={onClick}
       className={cn(

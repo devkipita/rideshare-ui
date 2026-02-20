@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Surface, FormDivider } from "@/components/ui-parts";
+import { Surface, FormDivider, PillButton } from "@/components/ui-parts";
 import {
   BadgeCheck,
   CalendarDays,
@@ -92,13 +92,51 @@ const mockRequests: Request[] = [
   },
 ];
 
+const STORE_KEY = "kipita_driver_requests_v1";
+
+function safeRead<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function safeWrite(key: string, value: unknown) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
 export function DriverRequests({
   onOpenChat,
 }: {
   onOpenChat?: (payload: { requestId: string; passengerName: string }) => void;
 }) {
-  const [trip] = useState<Trip>(mockTrip);
+  const [trip, setTrip] = useState<Trip>(mockTrip);
   const [requests, setRequests] = useState<Request[]>(mockRequests);
+  const [view, setView] = useState<RequestStatus>("pending");
+
+  useEffect(() => {
+    const saved = safeRead<{
+      trip: Trip;
+      requests: Request[];
+      view: RequestStatus;
+    }>(STORE_KEY);
+    if (!saved) return;
+    if (saved.trip) setTrip(saved.trip);
+    if (Array.isArray(saved.requests) && saved.requests.length)
+      setRequests(saved.requests);
+    if (saved.view) setView(saved.view);
+  }, []);
+
+  useEffect(() => {
+    safeWrite(STORE_KEY, { trip, requests, view });
+  }, [trip, requests, view]);
 
   const pending = useMemo(
     () => requests.filter((r) => r.status === "pending"),
@@ -108,91 +146,157 @@ export function DriverRequests({
     () => requests.filter((r) => r.status === "accepted"),
     [requests],
   );
+  const rejected = useMemo(
+    () => requests.filter((r) => r.status === "rejected"),
+    [requests],
+  );
 
-  const accept = (id: string) => {
+  const acceptedSeats = useMemo(
+    () => accepted.reduce((sum, r) => sum + (r.seatsNeeded ?? 0), 0),
+    [accepted],
+  );
+  const seatsLeft = Math.max(0, (trip.availableSeats ?? 0) - acceptedSeats);
+
+  const accept = useCallback((id: string) => {
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "accepted" } : r)),
     );
-  };
+  }, []);
 
-  const decline = (id: string) => {
+  const decline = useCallback((id: string) => {
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "rejected" } : r)),
     );
-  };
+  }, []);
 
-  const openChat = (req: Request) => {
-    onOpenChat?.({ requestId: req.id, passengerName: req.passengerName });
-    window.dispatchEvent(
-      new CustomEvent("kipita:chat", {
-        detail: {
-          rideId: req.id,
-          peerName: req.passengerName,
-          peerRole: "passenger",
-        },
-      }),
-    );
-  };
+  const openChat = useCallback(
+    (req: Request) => {
+      onOpenChat?.({ requestId: req.id, passengerName: req.passengerName });
 
-  const callPassenger = (req: Request) => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("kipita:chat", {
+            detail: {
+              rideId: req.id,
+              peerName: req.passengerName,
+              peerRole: "passenger",
+            },
+          }),
+        );
+      }
+    },
+    [onOpenChat],
+  );
+
+  const callPassenger = useCallback((req: Request) => {
     const phone = req.phone?.trim();
     if (!phone) return;
-    window.location.href = `tel:${phone}`;
-  };
+    if (typeof window !== "undefined") window.location.href = `tel:${phone}`;
+  }, []);
+
+  const activeList =
+    view === "pending" ? pending : view === "accepted" ? accepted : rejected;
 
   return (
-    <div className="md:hidden">
+    <div className="w-full">
       <p className="text-sm font-semibold text-center text-[#fff] py-1">
         Manage your ride requests
       </p>
+
       <div className="pb-[calc(120px+env(safe-area-inset-bottom))] space-y-3">
-        <TripSummaryCard trip={trip} />
+        <TripSummaryCard trip={trip} seatsLeft={seatsLeft} />
 
-        <SectionCard title="Pending requests" count={pending.length} tone="pending">
-          {pending.length ? (
-            <div className="space-y-3">
-              {pending.map((req) => (
-                <RequestCard
-                  key={req.id}
-                  req={req}
-                  tone="pending"
-                  onChat={() => openChat(req)}
-                  onCall={() => callPassenger(req)}
-                  onAccept={() => accept(req.id)}
-                  onDecline={() => decline(req.id)}
-                />
-              ))}
+        <Surface tone="sheet" elevated className="overflow-hidden">
+          <div className="px-4 pt-4 pb-3">
+            <p className="text-[12px] font-extrabold tracking-tight text-foreground/80">
+              Requests
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <PillButton
+                type="button"
+                onClick={() => setView("pending")}
+                active={view === "pending"}
+                className="h-10"
+              >
+                Pending
+                <span className="ml-2 text-foreground/70">
+                  ({pending.length})
+                </span>
+              </PillButton>
+              <PillButton
+                type="button"
+                onClick={() => setView("accepted")}
+                active={view === "accepted"}
+                className="h-10"
+              >
+                Accepted
+                <span className="ml-2 text-foreground/70">
+                  ({accepted.length})
+                </span>
+              </PillButton>
+              <PillButton
+                type="button"
+                onClick={() => setView("rejected")}
+                active={view === "rejected"}
+                className="h-10"
+              >
+                Rejected
+                <span className="ml-2 text-foreground/70">
+                  ({rejected.length})
+                </span>
+              </PillButton>
             </div>
-          ) : (
-            <EmptyInline
-              icon={Clock3}
-              title="No pending requests"
-              desc="When someone requests to join your carpool, they’ll appear here."
-            />
-          )}
-        </SectionCard>
+          </div>
 
-        <SectionCard title="Accepted" count={accepted.length} tone="accepted">
-          {accepted.length ? (
-            <div className="space-y-3">
-              {accepted.map((req) => (
-                <RequestCard
-                  key={req.id}
-                  req={req}
-                  tone="accepted"
-                  onChat={() => openChat(req)}
-                  onCall={() => callPassenger(req)}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyInline
-              icon={Check}
-              title="No accepted passengers yet"
-              desc="Accepted passengers will show here with chat and call actions."
-            />
-          )}
-        </SectionCard>
+          <FormDivider />
+
+          <div className="px-4 py-4">
+            {activeList.length ? (
+              <div className="space-y-3">
+                {activeList.map((req) => (
+                  <RequestCard
+                    key={req.id}
+                    req={req}
+                    tone={view === "accepted" ? "accepted" : "pending"}
+                    showDecision={view === "pending"}
+                    onChat={() => openChat(req)}
+                    onCall={() => callPassenger(req)}
+                    onAccept={() => accept(req.id)}
+                    onDecline={() => decline(req.id)}
+                    disabledAccept={
+                      view === "pending" && req.seatsNeeded > seatsLeft
+                    }
+                    seatsLeft={seatsLeft}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyInline
+                icon={
+                  view === "accepted"
+                    ? Check
+                    : view === "rejected"
+                      ? XCircle
+                      : Clock3
+                }
+                title={
+                  view === "accepted"
+                    ? "No accepted passengers yet"
+                    : view === "rejected"
+                      ? "No rejected requests"
+                      : "No pending requests"
+                }
+                desc={
+                  view === "accepted"
+                    ? "Accepted passengers will show here with chat and call actions."
+                    : view === "rejected"
+                      ? "Declined requests will show here for reference."
+                      : "When someone requests to join your carpool, they’ll appear here."
+                }
+              />
+            )}
+          </div>
+        </Surface>
 
         <TrustReminder />
       </div>
@@ -200,7 +304,13 @@ export function DriverRequests({
   );
 }
 
-function TripSummaryCard({ trip }: { trip: Trip }) {
+function TripSummaryCard({
+  trip,
+  seatsLeft,
+}: {
+  trip: Trip;
+  seatsLeft: number;
+}) {
   return (
     <Surface tone="sheet" elevated className="overflow-hidden">
       <div className="px-4 pt-4 pb-3">
@@ -217,7 +327,7 @@ function TripSummaryCard({ trip }: { trip: Trip }) {
               <Chip icon={CalendarDays}>{trip.dateLabel}</Chip>
               <Chip icon={Clock3}>{trip.timeLabel}</Chip>
               <Chip icon={Users2} tone="primary">
-                {trip.availableSeats} seats left
+                {seatsLeft} seat{seatsLeft === 1 ? "" : "s"} left
               </Chip>
             </div>
           </div>
@@ -251,61 +361,32 @@ function TripSummaryCard({ trip }: { trip: Trip }) {
   );
 }
 
-function SectionCard({
-  title,
-  count,
-  tone,
-  children,
-}: {
-  title: string;
-  count: number;
-  tone: "pending" | "accepted";
-  children: React.ReactNode;
-}) {
-  return (
-    <Surface
-      tone="sheet"
-      elevated
-      className={cn(
-        "overflow-hidden",
-        tone === "pending"
-          ? "bg-[color-mix(in_oklch,var(--card)_90%,var(--primary)_6%)]"
-          : "bg-[color-mix(in_oklch,var(--card)_90%,var(--ring)_7%)]",
-      )}
-    >
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[12px] font-extrabold tracking-tight text-foreground/80">
-            {title}
-          </p>
-          <Chip tone={tone === "accepted" ? "primary" : "soft"} className="px-2.5">
-            {count}
-          </Chip>
-        </div>
-      </div>
-
-      <FormDivider />
-
-      <div className="px-4 py-4">{children}</div>
-    </Surface>
-  );
-}
-
 function RequestCard({
   req,
   tone,
+  showDecision,
   onAccept,
   onDecline,
   onChat,
   onCall,
+  disabledAccept,
+  seatsLeft,
 }: {
   req: Request;
   tone: "pending" | "accepted";
+  showDecision: boolean;
   onAccept?: () => void;
   onDecline?: () => void;
   onChat: () => void;
   onCall: () => void;
+  disabledAccept?: boolean;
+  seatsLeft: number;
 }) {
+  const seatsText =
+    req.seatsNeeded > seatsLeft && showDecision
+      ? `Needs ${req.seatsNeeded} seats (only ${seatsLeft} left)`
+      : `${req.seatsNeeded} seat${req.seatsNeeded === 1 ? "" : "s"}`;
+
   return (
     <div
       className={cn(
@@ -328,8 +409,15 @@ function RequestCard({
                   {req.passengerName}
                 </p>
 
-                <Chip icon={Users2} tone="soft" className="shrink-0">
-                  {req.seatsNeeded} seat{req.seatsNeeded === 1 ? "" : "s"}
+                <Chip
+                  icon={Users2}
+                  tone={disabledAccept ? "soft" : "soft"}
+                  className={cn(
+                    "shrink-0",
+                    disabledAccept && "text-foreground/70",
+                  )}
+                >
+                  {seatsText}
                 </Chip>
               </div>
 
@@ -357,16 +445,18 @@ function RequestCard({
           </div>
         </div>
 
-        {tone === "pending" ? (
+        {showDecision ? (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Button
               type="button"
               onClick={onAccept}
+              disabled={disabledAccept}
               className={cn(
                 "h-12 rounded-full",
                 "bg-primary text-primary-foreground hover:bg-primary/90",
                 "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_44%,transparent)]",
                 "active:scale-[0.99] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                disabledAccept && "opacity-60 pointer-events-none",
               )}
             >
               <CheckCircle2 className="mr-2 h-4.5 w-4.5" strokeWidth={2.4} />
@@ -417,7 +507,8 @@ function TrustReminder() {
               Trust-first reminder
             </p>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              Chat or call to confirm pickup timing before accepting. Accept only passengers whose seat needs match your trip.
+              Chat or call to confirm pickup timing before accepting. Accept
+              only passengers whose seat needs match your trip.
             </p>
           </div>
         </div>
@@ -450,7 +541,13 @@ function EmptyInline({
   );
 }
 
-function Avatar({ name, tone }: { name: string; tone: "pending" | "accepted" }) {
+function Avatar({
+  name,
+  tone,
+}: {
+  name: string;
+  tone: "pending" | "accepted";
+}) {
   return (
     <div
       className={cn(
@@ -568,10 +665,7 @@ function ActionIconBtn({
 }
 
 function initials(name: string) {
-  const parts = name
-    .replace(/\./g, "")
-    .split(" ")
-    .filter(Boolean);
+  const parts = name.replace(/\./g, "").split(" ").filter(Boolean);
   const a = parts[0]?.[0] ?? "U";
   const b = parts[1]?.[0] ?? "";
   return (a + b).toUpperCase();
