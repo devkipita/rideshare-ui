@@ -5,6 +5,7 @@ import { PassengerSearchForm, type SearchFilters } from "./PassengerSearchForm";
 import { RideResults, type Driver } from "./RideResults";
 import { AppBackdrop, BottomSheet, Surface } from "./ui-parts";
 import { MapPreview } from "./ui/MapPreview";
+import { AnnouncementsStrip, useAnnouncements } from "./announcements-strip";
 
 type Status = "idle" | "loading" | "ready";
 
@@ -34,6 +35,7 @@ export function PassengerSearch({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [requestPosted, setRequestPosted] = useState(false);
   const [postingRequest, setPostingRequest] = useState(false);
+  const announcements = useAnnouncements();
 
   const canSearch = useMemo(
     () =>
@@ -136,6 +138,7 @@ export function PassengerSearch({
                 onSearch={runSearch}
                 loading={status === "loading"}
               />
+              <AnnouncementsStrip announcements={announcements} />
             </div>
 
             <BottomSheet

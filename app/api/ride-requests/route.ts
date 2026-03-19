@@ -61,26 +61,21 @@ export async function POST(req: Request) {
   return NextResponse.json({ ride_request: data }, { status: 201 });
 }
 
-/** GET /api/ride-requests — fetch ride requests */
+/** GET /api/ride-requests — fetch ride requests (public) */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const userId = String(session.user.id);
-  const role = session.user.role;
+  const session = await getServerSession(authOptions).catch(() => null);
 
   let query = supabaseAdmin
     .from("ride_requests")
     .select("*, passenger:users!passenger_id(id,name,image)")
     .order("created_at", { ascending: false });
 
-  if (role === "driver") {
-    // Drivers see all active requests (demand visibility)
-    query = query.eq("status", "active");
+  if (session?.user?.id && session.user.role === "passenger") {
+    // Authenticated passengers see their own requests
+    query = query.eq("passenger_id", String(session.user.id));
   } else {
-    // Passengers see their own requests
-    query = query.eq("passenger_id", userId);
+    // Drivers and unauthenticated users see all active requests
+    query = query.eq("status", "active");
   }
 
   const { data, error } = await query;

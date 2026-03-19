@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { useSession } from "next-auth/react";
+import { AuthDrawer } from "@/components/auth-drawer";
 import {
   AlertTriangle,
   Bell,
@@ -472,6 +474,10 @@ function FiltersSheet({
 }
 
 export function NotificationsScreen(_props: { role?: Role }) {
+  const { status: sessionStatus } = useSession();
+  const isSignedIn = sessionStatus === "authenticated";
+  const [authDrawerOpen, setAuthDrawerOpen] = React.useState(false);
+
   const [query, setQuery] = React.useState("");
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
@@ -550,38 +556,69 @@ export function NotificationsScreen(_props: { role?: Role }) {
   };
 
   const [posting, setPosting] = React.useState(false);
+  const [postSeverity, setPostSeverity] = React.useState<NoticeSeverity>("info");
+  const [postLocation, setPostLocation] = React.useState("");
+  const [postError, setPostError] = React.useState<string | null>(null);
 
   const postUpdate = async () => {
     const body = postText.trim();
     if (!body || posting) return;
 
+    // Require sign-in before posting
+    if (!isSignedIn) {
+      setAuthDrawerOpen(true);
+      return;
+    }
+
     setPosting(true);
+    setPostError(null);
     try {
       const res = await fetch("/api/announcements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: body }),
+        body: JSON.stringify({
+          message: body,
+          severity: postSeverity,
+          location: postLocation.trim() || undefined,
+        }),
       });
 
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        if (res.status === 401) {
+          // Session expired or not signed in — open auth drawer
+          setAuthDrawerOpen(true);
+          return;
+        }
+        const err = await res.json().catch(() => ({ error: "Failed to post" }));
+        throw new Error(err.error || "Failed to post announcement");
+      }
+
+      const severityTitles: Record<NoticeSeverity, string> = {
+        info: "Road update",
+        warning: "Road warning",
+        critical: "Road alert",
+      };
 
       // Optimistically add to the list
       const newNotice: Notice = {
         id: `local-${Date.now()}`,
         kind: "announcement",
-        severity: "info",
-        title: "Road update from you",
+        severity: postSeverity,
+        title: severityTitles[postSeverity],
         body,
+        location: postLocation.trim() || undefined,
         timestamp: Date.now(),
         read: false,
       };
       setItems((prev) => [newNotice, ...prev]);
       setPostText("");
+      setPostLocation("");
+      setPostSeverity("info");
 
       // Refetch to get server data
       setTimeout(fetchNotifications, 1500);
-    } catch {
-      // silently fail
+    } catch (e: unknown) {
+      setPostError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setPosting(false);
     }
@@ -593,11 +630,12 @@ export function NotificationsScreen(_props: { role?: Role }) {
         <p className="text-center text-sm font-semibold text-white m-0 py-1">Ride and Road Updates</p>
 
         <Surface tone="sheet" className="p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">
-            Route, area, keywords...
+          <p className="text-[11px] font-extrabold tracking-[0.15em] text-muted-foreground">
+            POST A ROAD UPDATE
           </p>
 
-          <div className="mt-1 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+          {/* message input */}
+          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/10 border border-primary/15 text-primary">
               <Pencil className="h-4 w-4" />
             </span>
@@ -605,7 +643,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
             <input
               value={postText}
               onChange={(e) => setPostText(e.target.value)}
-              placeholder="Whats happening on the road?"
+              placeholder="What's happening on the road?"
               className="h-7 w-full bg-transparent text-[13px] font-semibold outline-none placeholder:text-muted-foreground/80"
               onKeyDown={(e) => {
                 if (e.key === "Enter") postUpdate();
@@ -615,14 +653,66 @@ export function NotificationsScreen(_props: { role?: Role }) {
             <button
               type="button"
               onClick={postUpdate}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
+              disabled={!postText.trim() || posting}
+              className={[
+                "grid h-9 w-9 shrink-0 place-items-center rounded-xl border active:scale-[0.99]",
+                "transition-all duration-200",
+                postText.trim()
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border/70 bg-card/70 text-foreground/40",
+              ].join(" ")}
               aria-label="Post"
             >
               <Send className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between gap-2">
+          {/* location input */}
+          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+            <MapPin className="h-4 w-4 text-primary shrink-0" />
+            <input
+              value={postLocation}
+              onChange={(e) => setPostLocation(e.target.value)}
+              placeholder="Location (e.g. Thika Road, Mombasa Rd)"
+              className="h-7 w-full bg-transparent text-[13px] font-semibold outline-none placeholder:text-muted-foreground/80"
+            />
+          </div>
+
+          {/* severity picker */}
+          <div className="mt-2 flex items-center gap-1.5">
+            <p className="text-[10px] font-semibold text-muted-foreground mr-1">Level:</p>
+            {(["info", "warning", "critical"] as NoticeSeverity[]).map((sev) => {
+              const meta =
+                sev === "critical"
+                  ? { label: "Critical", icon: <ShieldAlert className="h-3 w-3" />, active: "bg-destructive/14 border-destructive/25 text-destructive", inactive: "border-border/70 bg-card/70 text-foreground/60" }
+                  : sev === "warning"
+                    ? { label: "Warning", icon: <AlertTriangle className="h-3 w-3" />, active: "bg-amber-500/14 border-amber-500/25 text-amber-700 dark:text-amber-300", inactive: "border-border/70 bg-card/70 text-foreground/60" }
+                    : { label: "Info", icon: <TrafficCone className="h-3 w-3" />, active: "bg-primary/14 border-primary/25 text-primary", inactive: "border-border/70 bg-card/70 text-foreground/60" };
+
+              return (
+                <button
+                  key={sev}
+                  type="button"
+                  onClick={() => setPostSeverity(sev)}
+                  className={[
+                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold",
+                    "transition-all duration-200 active:scale-[0.98]",
+                    postSeverity === sev ? meta.active : meta.inactive,
+                  ].join(" ")}
+                >
+                  {meta.icon}
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {postError && (
+            <p className="mt-1.5 text-[11px] text-destructive font-semibold">{postError}</p>
+          )}
+
+          {/* unread count + search */}
+          <div className="mt-3 flex items-center justify-between gap-2">
             <p className="text-[11px] font-semibold text-muted-foreground">
               {loading ? "Loading..." : `${unreadCount} unread`}
             </p>
@@ -637,7 +727,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
             )}
           </div>
 
-          <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
             <Search className="h-4 w-4 text-primary" />
             <input
               value={query}
@@ -721,6 +811,13 @@ export function NotificationsScreen(_props: { role?: Role }) {
         setKinds={setKinds}
         onlyUnread={onlyUnread}
         setOnlyUnread={setOnlyUnread}
+      />
+
+      <AuthDrawer
+        open={authDrawerOpen}
+        onOpenChange={setAuthDrawerOpen}
+        initialView="signin"
+        selectedRole="passenger"
       />
     </div>
   );

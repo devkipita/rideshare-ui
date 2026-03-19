@@ -18,11 +18,8 @@ type Notice = {
   read?: boolean;
 };
 
-/** GET /api/notifications — composite feed of rides + announcements */
+/** GET /api/notifications — composite feed of rides + announcements (public) */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 

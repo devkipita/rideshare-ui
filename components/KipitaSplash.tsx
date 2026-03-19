@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { useAppMode } from "@/app/context";
+import { useRouter } from "next/navigation";
 
 // --- ANIMATION UTILS ---
 
@@ -31,8 +31,6 @@ declare global {
 
 // ---------------------------------------------------------------------------
 // SESSION-AWARE USER BUTTON
-// Shows: avatar image → initials fallback → generic User icon (logged out)
-// Green presence dot when authenticated.
 // ---------------------------------------------------------------------------
 
 function UserButton({ onClick }: { onClick: () => void }) {
@@ -56,7 +54,6 @@ function UserButton({ onClick }: { onClick: () => void }) {
     );
   }, [session?.user, isLoggedIn]);
 
-  // Reset avatar error whenever the URL changes
   useEffect(() => {
     setAvatarFailed(false);
   }, [avatarUrl]);
@@ -68,7 +65,6 @@ function UserButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="relative h-11 w-11 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm flex items-center justify-center text-emerald-800 hover:bg-white transition-colors active:scale-95 overflow-hidden"
     >
-      {/* Avatar image */}
       {isLoggedIn && avatarUrl && !avatarFailed ? (
         <Image
           src={avatarUrl}
@@ -79,16 +75,13 @@ function UserButton({ onClick }: { onClick: () => void }) {
           onError={() => setAvatarFailed(true)}
         />
       ) : isLoggedIn && initials ? (
-        /* Initials fallback */
         <span className="text-[13px] font-black text-emerald-800 leading-none select-none">
           {initials}
         </span>
       ) : (
-        /* Logged-out generic icon */
         <User size={20} strokeWidth={2.25} />
       )}
 
-      {/* Green presence dot — only when authenticated */}
       {isLoggedIn && (
         <span
           aria-hidden
@@ -154,7 +147,8 @@ function SelectionCard({
 // ---------------------------------------------------------------------------
 
 export function SplashScreen() {
-  const { setMode } = useAppMode();
+  const router = useRouter();
+  const { status } = useSession();
   const reduceMotion = useReducedMotion();
 
   const REVEAL_DELAY_MS = 1800;
@@ -217,15 +211,26 @@ export function SplashScreen() {
     delay,
   });
 
-  /**
-   * Sets a pending tab hint on window so AppContent picks it up
-   * on the very first render after the mode switch.
-   */
-  const handleGoToProfile = () => {
-    if (typeof window !== "undefined") {
-      window.__kipita_initial_tab = "profile";
+  const handleSelectRole = (role: "passenger" | "driver") => {
+    // Save the chosen role to localStorage so the app shell picks it up
+    try {
+      localStorage.setItem("kipita_active_role", role);
+    } catch {}
+
+    // If already authenticated, go straight to home
+    if (status === "authenticated") {
+      router.push("/home");
+    } else {
+      router.push("/auth/signin");
     }
-    setMode("passenger");
+  };
+
+  const handleGoToProfile = () => {
+    if (status === "authenticated") {
+      router.push("/profile");
+    } else {
+      router.push("/auth/signin");
+    }
   };
 
   return (
@@ -383,14 +388,14 @@ export function SplashScreen() {
                     title="Find a ride"
                     subtitle="Find a seat nearby"
                     delay={0.4}
-                    onClick={() => setMode("passenger")}
+                    onClick={() => handleSelectRole("passenger")}
                   />
                   <SelectionCard
                     icon={Navigation}
                     title="Offer a Ride"
                     subtitle="Share your empty seats"
                     delay={0.5}
-                    onClick={() => setMode("driver")}
+                    onClick={() => handleSelectRole("driver")}
                   />
                 </div>
 

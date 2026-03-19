@@ -1,30 +1,20 @@
 "use client";
 
-import { useOptionalAppMode } from "@/app/context";
+import { useOptionalRole } from "@/app/context";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Moon, Sun } from "lucide-react";
+import { ArrowLeft, Moon, Sun, ArrowLeftRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-type TopNavBase = {
+type TopNavProps = {
+  variant: "default" | "chat";
   onBack?: () => void;
   className?: string;
+  title?: string;
+  user?: { name: string; role: string };
 };
-
-type TopNavProps =
-  | ({ variant: "default"; title?: string } & TopNavBase)
-  | ({ variant: "chat"; user: { name: string; role: string } } & TopNavBase);
-
-type NavSnapshot = {
-  mode?: string;
-  activeTab?: string;
-  searchResults?: boolean;
-  selectedRide?: unknown;
-};
-
-const SNAP_KEY = "kipita_nav_snapshot";
 
 function readInitialTheme() {
   const saved =
@@ -52,26 +42,30 @@ function AppLogo() {
   );
 }
 
-function readSnapshot(): NavSnapshot | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(SNAP_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as NavSnapshot;
-  } catch {
-    return null;
-  }
-}
+function RoleToggle() {
+  const role = useOptionalRole();
+  if (!role) return null;
 
-function emitRestore(s: NavSnapshot) {
-  if (typeof window === "undefined") return;
-  try {
-    window.dispatchEvent(new CustomEvent("kipita:restore", { detail: s }));
-  } catch {}
+  return (
+    <button
+      type="button"
+      onClick={role.toggleRole}
+      className={cn(
+        "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+        "border transition-all duration-200 active:scale-[0.97]",
+        role.activeRole === "passenger"
+          ? "bg-primary/10 border-primary/30 text-primary"
+          : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400",
+      )}
+      aria-label={`Switch to ${role.activeRole === "passenger" ? "driver" : "passenger"} mode`}
+    >
+      <ArrowLeftRight className="h-3 w-3" />
+      <span>{role.activeRole === "passenger" ? "Rider" : "Driver"}</span>
+    </button>
+  );
 }
 
 export function TopNav(props: TopNavProps) {
-  const appMode = useOptionalAppMode();
   const router = useRouter();
   const [isDark, setIsDark] = useState(false);
 
@@ -90,29 +84,7 @@ export function TopNav(props: TopNavProps) {
       props.onBack();
       return;
     }
-
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-      return;
-    }
-
-    const snap = readSnapshot();
-
-    if (snap) emitRestore(snap);
-
-    if (snap?.mode && appMode?.setMode) {
-      if (snap.mode !== "splash") appMode.setMode(snap.mode as any);
-      else appMode.setMode("passenger" as any);
-      return;
-    }
-
-    if (appMode?.mode && appMode?.setMode) {
-      if (appMode.mode === "splash") appMode.setMode("passenger" as any);
-      else appMode.setMode(appMode.mode as any);
-      return;
-    }
-
-    router.push("/");
+    router.back();
   };
 
   return (
@@ -137,20 +109,24 @@ export function TopNav(props: TopNavProps) {
           >
             <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className={cn(
-                "h-10 w-10 rounded-full",
-                "hover:bg-primary/10 active:scale-[0.98]",
-                "transition-all duration-300 ease-app",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
-              )}
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBack}
+                className={cn(
+                  "h-10 w-10 rounded-full",
+                  "hover:bg-primary/10 active:scale-[0.98]",
+                  "transition-all duration-300 ease-app",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
+                )}
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+
+              <RoleToggle />
+            </div>
 
             <AppLogo />
 
@@ -175,10 +151,10 @@ export function TopNav(props: TopNavProps) {
           </div>
         </div>
 
-        {props.variant === "default" ? (
-            <p className="text-center text-[13px] font-semibold text-white/90">
-              {props.title}
-            </p>
+        {props.variant === "default" && props.title ? (
+          <p className="text-center text-[13px] font-semibold text-white/90">
+            {props.title}
+          </p>
         ) : null}
       </div>
     </header>

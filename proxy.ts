@@ -1,23 +1,31 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default withAuth(function middleware(req) {
-  const { pathname } = req.nextUrl;
+export default function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/proxy")) {
-    const url = req.nextUrl.clone();
-    url.hostname = "api.yourbackend.com";
-    url.protocol = "https";
+  // Skip API routes, static files
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/Kipita")
+  ) {
+    return NextResponse.next();
+  }
 
-    return NextResponse.rewrite(url);
+  const token =
+    request.cookies.get("next-auth.session-token")?.value ||
+    request.cookies.get("__Secure-next-auth.session-token")?.value;
+
+  // Authenticated user hitting the landing page → redirect to home
+  if (pathname === "/" && token) {
+    return NextResponse.redirect(new URL("/home", request.url));
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
-  matcher: [
-    "/profile/:path*",
-    "/api/proxy/:path*",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon).*)"],
 };

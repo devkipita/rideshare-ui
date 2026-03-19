@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git -C \"c:/Users/Admin/Desktop/carpool-app-design\" rm -f middleware.ts)"
     ]
   }
 }

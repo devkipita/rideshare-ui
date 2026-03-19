@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Surface, FormDivider, PillButton } from "@/components/ui-parts";
+import { Surface, FormDivider, PillButton, ShimmerCard } from "@/components/ui-parts";
 import {
   BadgeCheck,
   CalendarDays,
@@ -14,129 +14,147 @@ import {
   Phone,
   ShieldCheck,
   Star,
-  User,
   Users2,
   XCircle,
+  ArrowRight,
+  Dot,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/* ── types ─────────────────────────────────────────── */
+
 type RequestStatus = "pending" | "accepted" | "rejected";
 
-type Trip = {
-  driverName: string;
-  driverRating: number;
-  driverTrips: number;
-  from: string;
-  to: string;
-  pickup: string;
-  dropoff: string;
-  dateLabel: string;
-  timeLabel: string;
-  availableSeats: number;
-};
-
-type Request = {
+type RideRequest = {
   id: string;
   passengerName: string;
-  rating: number;
-  trips: number;
+  passengerImage?: string;
+  origin: string;
+  destination: string;
+  preferredDate: string;
   seatsNeeded: number;
+  allowsPets: boolean;
+  allowsPackages: boolean;
+  pickupStation?: string;
+  dropoffStation?: string;
+  note?: string;
   status: RequestStatus;
-  verified: boolean;
-  phone?: string;
+  createdAt: string;
 };
 
-const mockTrip: Trip = {
-  driverName: "Ngeni K.",
-  driverRating: 4.8,
-  driverTrips: 126,
-  from: "Nairobi",
-  to: "Nakuru",
-  pickup: "Westlands, Shell (Nairobi)",
-  dropoff: "Nakuru CBD (Nakuru)",
-  dateLabel: "Today",
-  timeLabel: "2:30 PM",
-  availableSeats: 3,
-};
+/* ── helpers ───────────────────────────────────────── */
 
-const mockRequests: Request[] = [
-  {
-    id: "req-1",
-    passengerName: "Alice K.",
-    rating: 4.9,
-    trips: 18,
-    seatsNeeded: 1,
-    status: "pending",
-    verified: true,
-    phone: "+254700000001",
-  },
-  {
-    id: "req-2",
-    passengerName: "Bob J.",
-    rating: 4.7,
-    trips: 11,
-    seatsNeeded: 2,
-    status: "pending",
-    verified: false,
-    phone: "+254700000002",
-  },
-  {
-    id: "req-3",
-    passengerName: "Carol M.",
-    rating: 5.0,
-    trips: 24,
-    seatsNeeded: 1,
-    status: "accepted",
-    verified: true,
-    phone: "+254700000003",
-  },
-];
+function initials(name: string) {
+  const parts = name.replace(/\./g, "").split(" ").filter(Boolean);
+  const a = parts[0]?.[0] ?? "U";
+  const b = parts[1]?.[0] ?? "";
+  return (a + b).toUpperCase();
+}
 
-const STORE_KEY = "kipita_driver_requests_v1";
-
-function safeRead<T>(key: string): T | null {
-  if (typeof window === "undefined") return null;
+function formatDate(iso: string) {
   try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
+    const d = new Date(iso);
+    const today = new Date();
+    if (d.toDateString() === today.toDateString()) return "Today";
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+    return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
   } catch {
-    return null;
+    return iso;
   }
 }
 
-function safeWrite(key: string, value: unknown) {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.setItem(key, JSON.stringify(value));
-  } catch {}
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
+
+const SELECTED_REQUEST_KEY = "kipita_selected_request";
+
+/* ── data fetching ─────────────────────────────────── */
+
+function useRideRequests() {
+  const [requests, setRequests] = useState<RideRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRequests = useCallback(() => {
+    fetch("/api/ride-requests")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!json?.ride_requests) return;
+        const mapped: RideRequest[] = json.ride_requests.map(
+          (r: Record<string, unknown>) => {
+            const passenger = r.passenger as Record<string, unknown> | null;
+            return {
+              id: r.id as string,
+              passengerName: (passenger?.name as string) ?? "Passenger",
+              passengerImage: (passenger?.image as string) ?? undefined,
+              origin: r.origin as string,
+              destination: r.destination as string,
+              preferredDate: (r.preferred_date as string) ?? "",
+              seatsNeeded: (r.seats_needed as number) ?? 1,
+              allowsPets: Boolean(r.allows_pets),
+              allowsPackages: Boolean(r.allows_packages),
+              pickupStation: (r.pickup_station as string) ?? undefined,
+              dropoffStation: (r.dropoff_station as string) ?? undefined,
+              note: (r.note as string) ?? undefined,
+              status: "pending" as RequestStatus,
+              createdAt: (r.created_at as string) ?? new Date().toISOString(),
+            };
+          },
+        );
+        setRequests(mapped);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  return { requests, setRequests, loading, refetch: fetchRequests };
+}
+
+/* ── main component ────────────────────────────────── */
 
 export function DriverRequests({
   onOpenChat,
 }: {
   onOpenChat?: (payload: { requestId: string; passengerName: string }) => void;
 }) {
-  const [trip, setTrip] = useState<Trip>(mockTrip);
-  const [requests, setRequests] = useState<Request[]>(mockRequests);
+  const { requests, setRequests, loading } = useRideRequests();
   const [view, setView] = useState<RequestStatus>("pending");
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
 
+  // Pick up selected request from carousel navigation
   useEffect(() => {
-    const saved = safeRead<{
-      trip: Trip;
-      requests: Request[];
-      view: RequestStatus;
-    }>(STORE_KEY);
-    if (!saved) return;
-    if (saved.trip) setTrip(saved.trip);
-    if (Array.isArray(saved.requests) && saved.requests.length)
-      setRequests(saved.requests);
-    if (saved.view) setView(saved.view);
+    if (typeof window === "undefined") return;
+    const selectedId = sessionStorage.getItem(SELECTED_REQUEST_KEY);
+    if (selectedId) {
+      setHighlightId(selectedId);
+      setView("pending");
+      sessionStorage.removeItem(SELECTED_REQUEST_KEY);
+    }
   }, []);
 
+  // Scroll to highlighted request when data loads
   useEffect(() => {
-    safeWrite(STORE_KEY, { trip, requests, view });
-  }, [trip, requests, view]);
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Clear highlight after 3 seconds
+      const t = window.setTimeout(() => setHighlightId(null), 3000);
+      return () => window.clearTimeout(t);
+    }
+  }, [highlightId, requests]);
 
   const pending = useMemo(
     () => requests.filter((r) => r.status === "pending"),
@@ -151,28 +169,21 @@ export function DriverRequests({
     [requests],
   );
 
-  const acceptedSeats = useMemo(
-    () => accepted.reduce((sum, r) => sum + (r.seatsNeeded ?? 0), 0),
-    [accepted],
-  );
-  const seatsLeft = Math.max(0, (trip.availableSeats ?? 0) - acceptedSeats);
-
   const accept = useCallback((id: string) => {
     setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "accepted" } : r)),
+      prev.map((r) => (r.id === id ? { ...r, status: "accepted" as RequestStatus } : r)),
     );
-  }, []);
+  }, [setRequests]);
 
   const decline = useCallback((id: string) => {
     setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "rejected" } : r)),
+      prev.map((r) => (r.id === id ? { ...r, status: "rejected" as RequestStatus } : r)),
     );
-  }, []);
+  }, [setRequests]);
 
   const openChat = useCallback(
-    (req: Request) => {
+    (req: RideRequest) => {
       onOpenChat?.({ requestId: req.id, passengerName: req.passengerName });
-
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("kipita:chat", {
@@ -188,24 +199,38 @@ export function DriverRequests({
     [onOpenChat],
   );
 
-  const callPassenger = useCallback((req: Request) => {
-    const phone = req.phone?.trim();
-    if (!phone) return;
-    if (typeof window !== "undefined") window.location.href = `tel:${phone}`;
-  }, []);
-
   const activeList =
     view === "pending" ? pending : view === "accepted" ? accepted : rejected;
 
   return (
     <div className="w-full">
       <p className="text-sm font-semibold text-center text-[#fff] py-1">
-        Manage your ride requests
+        Manage ride requests
       </p>
 
       <div className="pb-[calc(120px+env(safe-area-inset-bottom))] space-y-3">
-        <TripSummaryCard trip={trip} seatsLeft={seatsLeft} />
+        {/* summary strip */}
+        <Surface tone="sheet" elevated className="overflow-hidden">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[12px] font-semibold text-muted-foreground">
+                  Passenger demand
+                </p>
+                <p className="mt-0.5 text-[16px] font-extrabold tracking-tight">
+                  {loading ? "Loading…" : `${requests.length} active request${requests.length === 1 ? "" : "s"}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Chip icon={CheckCircle2} tone="primary">
+                  {accepted.length} matched
+                </Chip>
+              </div>
+            </div>
+          </div>
+        </Surface>
 
+        {/* tab bar + list */}
         <Surface tone="sheet" elevated className="overflow-hidden">
           <div className="px-4 pt-4 pb-3">
             <p className="text-[12px] font-extrabold tracking-tight text-foreground/80">
@@ -219,9 +244,7 @@ export function DriverRequests({
                 className="h-10"
               >
                 Pending
-                <span className="ml-2 text-foreground/70">
-                  ({pending.length})
-                </span>
+                <span className="ml-2 text-foreground/70">({pending.length})</span>
               </PillButton>
               <PillButton
                 type="button"
@@ -229,10 +252,8 @@ export function DriverRequests({
                 active={view === "accepted"}
                 className="h-10"
               >
-                Accepted
-                <span className="ml-2 text-foreground/70">
-                  ({accepted.length})
-                </span>
+                Matched
+                <span className="ml-2 text-foreground/70">({accepted.length})</span>
               </PillButton>
               <PillButton
                 type="button"
@@ -240,10 +261,8 @@ export function DriverRequests({
                 active={view === "rejected"}
                 className="h-10"
               >
-                Rejected
-                <span className="ml-2 text-foreground/70">
-                  ({rejected.length})
-                </span>
+                Declined
+                <span className="ml-2 text-foreground/70">({rejected.length})</span>
               </PillButton>
             </div>
           </div>
@@ -251,23 +270,28 @@ export function DriverRequests({
           <FormDivider />
 
           <div className="px-4 py-4">
-            {activeList.length ? (
+            {loading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <ShimmerCard key={i} />
+                ))}
+              </div>
+            ) : activeList.length ? (
               <div className="space-y-3">
                 {activeList.map((req) => (
-                  <RequestCard
+                  <div
                     key={req.id}
-                    req={req}
-                    tone={view === "accepted" ? "accepted" : "pending"}
-                    showDecision={view === "pending"}
-                    onChat={() => openChat(req)}
-                    onCall={() => callPassenger(req)}
-                    onAccept={() => accept(req.id)}
-                    onDecline={() => decline(req.id)}
-                    disabledAccept={
-                      view === "pending" && req.seatsNeeded > seatsLeft
-                    }
-                    seatsLeft={seatsLeft}
-                  />
+                    ref={req.id === highlightId ? highlightRef : undefined}
+                  >
+                    <RequestCard
+                      req={req}
+                      highlighted={req.id === highlightId}
+                      showDecision={view === "pending"}
+                      onChat={() => openChat(req)}
+                      onAccept={() => accept(req.id)}
+                      onDecline={() => decline(req.id)}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -277,21 +301,21 @@ export function DriverRequests({
                     ? Check
                     : view === "rejected"
                       ? XCircle
-                      : Clock3
+                      : Inbox
                 }
                 title={
                   view === "accepted"
-                    ? "No accepted passengers yet"
+                    ? "No matched passengers yet"
                     : view === "rejected"
-                      ? "No rejected requests"
+                      ? "No declined requests"
                       : "No pending requests"
                 }
                 desc={
                   view === "accepted"
-                    ? "Accepted passengers will show here with chat and call actions."
+                    ? "Matched passengers will show here with chat actions."
                     : view === "rejected"
                       ? "Declined requests will show here for reference."
-                      : "When someone requests to join your carpool, they’ll appear here."
+                      : "Passenger ride requests from the home page will appear here."
                 }
               />
             )}
@@ -304,163 +328,96 @@ export function DriverRequests({
   );
 }
 
-function TripSummaryCard({
-  trip,
-  seatsLeft,
-}: {
-  trip: Trip;
-  seatsLeft: number;
-}) {
-  return (
-    <Surface tone="sheet" elevated className="overflow-hidden">
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[12px] font-semibold text-muted-foreground">
-              Manage requests
-            </p>
-            <h1 className="mt-0.5 text-[18px] font-extrabold tracking-tight">
-              {trip.from} → {trip.to}
-            </h1>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Chip icon={CalendarDays}>{trip.dateLabel}</Chip>
-              <Chip icon={Clock3}>{trip.timeLabel}</Chip>
-              <Chip icon={Users2} tone="primary">
-                {seatsLeft} seat{seatsLeft === 1 ? "" : "s"} left
-              </Chip>
-            </div>
-          </div>
-
-          <div className="shrink-0 text-right">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl border border-primary/15 bg-primary/10">
-              <User className="h-4.5 w-4.5 text-primary" />
-            </span>
-            <p className="mt-2 text-[13px] font-extrabold tracking-tight">
-              {trip.driverName}
-            </p>
-            <div className="mt-0.5 flex items-center justify-end gap-2 text-[12px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 text-primary fill-primary" />
-                <span className="font-semibold text-foreground/85">
-                  {trip.driverRating.toFixed(1)}
-                </span>
-              </span>
-              <span className="opacity-60">•</span>
-              <span>{trip.driverTrips} trips</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 grid gap-3">
-          <IconField icon={MapPin} label="Pick up" value={trip.pickup} />
-          <IconField icon={MapPin} label="Drop off" value={trip.dropoff} />
-        </div>
-      </div>
-    </Surface>
-  );
-}
+/* ── request card ──────────────────────────────────── */
 
 function RequestCard({
   req,
-  tone,
+  highlighted,
   showDecision,
   onAccept,
   onDecline,
   onChat,
-  onCall,
-  disabledAccept,
-  seatsLeft,
 }: {
-  req: Request;
-  tone: "pending" | "accepted";
+  req: RideRequest;
+  highlighted?: boolean;
   showDecision: boolean;
   onAccept?: () => void;
   onDecline?: () => void;
   onChat: () => void;
-  onCall: () => void;
-  disabledAccept?: boolean;
-  seatsLeft: number;
 }) {
-  const seatsText =
-    req.seatsNeeded > seatsLeft && showDecision
-      ? `Needs ${req.seatsNeeded} seats (only ${seatsLeft} left)`
-      : `${req.seatsNeeded} seat${req.seatsNeeded === 1 ? "" : "s"}`;
+  const isAccepted = req.status === "accepted";
 
   return (
     <div
       className={cn(
-        "rounded-3xl border border-border/70 overflow-hidden",
+        "rounded-3xl border overflow-hidden",
         "supports-[backdrop-filter]:backdrop-blur-xl",
         "shadow-[0_10px_28px_-22px_oklch(var(--brand-primary)/0.18)]",
-        tone === "pending"
-          ? "bg-[color-mix(in_oklch,var(--surface-low)_88%,var(--primary)_12%)]"
-          : "bg-[color-mix(in_oklch,var(--surface-low)_90%,var(--ring)_10%)]",
+        "transition-all duration-500",
+        highlighted
+          ? "border-primary/40 bg-[color-mix(in_oklch,var(--surface-low)_82%,var(--primary)_18%)] ring-2 ring-primary/30"
+          : isAccepted
+            ? "border-border/70 bg-[color-mix(in_oklch,var(--surface-low)_90%,var(--ring)_10%)]"
+            : "border-border/70 bg-[color-mix(in_oklch,var(--surface-low)_88%,var(--primary)_12%)]",
       )}
     >
       <div className="px-3.5 pt-3.5 pb-3">
+        {/* passenger info row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <Avatar name={req.passengerName} tone={tone} />
+            <Avatar name={req.passengerName} image={req.passengerImage} tone={isAccepted ? "accepted" : "pending"} />
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-[15px] font-extrabold tracking-tight">
-                  {req.passengerName}
-                </p>
+              <p className="truncate text-[15px] font-extrabold tracking-tight">
+                {req.passengerName}
+              </p>
 
-                <Chip
-                  icon={Users2}
-                  tone={disabledAccept ? "soft" : "soft"}
-                  className={cn(
-                    "shrink-0",
-                    disabledAccept && "text-foreground/70",
-                  )}
-                >
-                  {seatsText}
+              {/* route */}
+              <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                <Dot className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="truncate">{req.origin}</span>
+                <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
+                <MapPin className="h-3 w-3 text-primary shrink-0" />
+                <span className="truncate">{req.destination}</span>
+              </div>
+
+              {/* meta chips */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <Chip icon={CalendarDays}>{formatDate(req.preferredDate)}</Chip>
+                <Chip icon={Users2} tone="primary">
+                  {req.seatsNeeded} seat{req.seatsNeeded === 1 ? "" : "s"}
                 </Chip>
+                <span className="text-[10px] text-muted-foreground">{timeAgo(req.createdAt)}</span>
               </div>
 
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <MetricRow rating={req.rating} trips={req.trips} />
-                <span className="opacity-50">•</span>
-                {req.verified ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                    <BadgeCheck className="h-3.5 w-3.5" strokeWidth={2.4} />
-                    Verified
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-[11px] font-semibold text-foreground/70">
-                    <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.2} />
-                    Basic
-                  </span>
-                )}
-              </div>
+              {req.note && (
+                <p className="mt-2 text-[11px] italic text-muted-foreground line-clamp-2">
+                  &quot;{req.note}&quot;
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="shrink-0">
             <ActionIconBtn icon={MessageCircle} label="Chat" onClick={onChat} />
-            <ActionIconBtn icon={Phone} label="Call" onClick={onCall} />
           </div>
         </div>
 
+        {/* actions */}
         {showDecision ? (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Button
               type="button"
               onClick={onAccept}
-              disabled={disabledAccept}
               className={cn(
                 "h-12 rounded-full",
                 "bg-primary text-primary-foreground hover:bg-primary/90",
                 "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_44%,transparent)]",
                 "active:scale-[0.99] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                disabledAccept && "opacity-60 pointer-events-none",
               )}
             >
               <CheckCircle2 className="mr-2 h-4.5 w-4.5" strokeWidth={2.4} />
-              Accept
+              Match ride
             </Button>
 
             <Button
@@ -478,10 +435,16 @@ function RequestCard({
               Decline
             </Button>
           </div>
-        ) : (
+        ) : isAccepted ? (
           <div className="mt-3 flex items-center justify-between">
             <Chip icon={Check} tone="primary" className="px-3.5 py-2">
-              Confirmed
+              Matched
+            </Chip>
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center justify-between">
+            <Chip icon={XCircle} tone="soft" className="px-3.5 py-2">
+              Declined
             </Chip>
           </div>
         )}
@@ -489,6 +452,8 @@ function RequestCard({
     </div>
   );
 }
+
+/* ── small components ──────────────────────────────── */
 
 function TrustReminder() {
   return (
@@ -507,8 +472,8 @@ function TrustReminder() {
               Trust-first reminder
             </p>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              Chat or call to confirm pickup timing before accepting. Accept
-              only passengers whose seat needs match your trip.
+              Chat with the passenger to confirm pickup details before matching.
+              Match passengers whose route aligns with your trip.
             </p>
           </div>
         </div>
@@ -522,7 +487,7 @@ function EmptyInline({
   title,
   desc,
 }: {
-  icon: any;
+  icon: React.ElementType;
   title: string;
   desc: string;
 }) {
@@ -543,23 +508,30 @@ function EmptyInline({
 
 function Avatar({
   name,
+  image,
   tone,
 }: {
   name: string;
+  image?: string;
   tone: "pending" | "accepted";
 }) {
   return (
     <div
       className={cn(
-        "grid h-12 w-12 shrink-0 place-items-center rounded-2xl border",
+        "grid h-12 w-12 shrink-0 place-items-center rounded-2xl border overflow-hidden",
         tone === "pending"
           ? "bg-[color-mix(in_oklch,var(--card)_80%,var(--primary)_20%)] border-primary/15"
           : "bg-[color-mix(in_oklch,var(--card)_82%,var(--ring)_18%)] border-primary/15",
       )}
     >
-      <span className="text-[13px] font-extrabold tracking-tight text-primary">
-        {initials(name)}
-      </span>
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-[13px] font-extrabold tracking-tight text-primary">
+          {initials(name)}
+        </span>
+      )}
     </div>
   );
 }
@@ -570,7 +542,7 @@ function Chip({
   tone = "neutral",
   className,
 }: {
-  icon?: any;
+  icon?: React.ElementType;
   children: React.ReactNode;
   tone?: "neutral" | "primary" | "soft";
   className?: string;
@@ -597,51 +569,12 @@ function Chip({
   );
 }
 
-function MetricRow({ rating, trips }: { rating: number; trips: number }) {
-  return (
-    <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-      <span className="inline-flex items-center gap-1">
-        <Star className="h-3.5 w-3.5 text-primary fill-primary" />
-        <span className="font-semibold text-foreground/85">
-          {rating.toFixed(1)}
-        </span>
-      </span>
-      <span className="opacity-60">•</span>
-      <span>{trips} trips</span>
-    </div>
-  );
-}
-
-function IconField({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <span className="mt-0.5 grid h-9 w-9 place-items-center rounded-2xl border border-primary/15 bg-primary/10">
-        <Icon className="h-4 w-4 text-primary" strokeWidth={2.2} />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-        <p className="truncate text-[13px] font-semibold tracking-tight">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function ActionIconBtn({
   icon: Icon,
   label,
   onClick,
 }: {
-  icon: any;
+  icon: React.ElementType;
   label: string;
   onClick: () => void;
 }) {
@@ -662,11 +595,4 @@ function ActionIconBtn({
       <Icon className="h-4.5 w-4.5 text-primary" strokeWidth={2.3} />
     </button>
   );
-}
-
-function initials(name: string) {
-  const parts = name.replace(/\./g, "").split(" ").filter(Boolean);
-  const a = parts[0]?.[0] ?? "U";
-  const b = parts[1]?.[0] ?? "";
-  return (a + b).toUpperCase();
 }

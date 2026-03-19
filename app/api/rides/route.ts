@@ -74,12 +74,8 @@ export async function POST(req: Request) {
   return NextResponse.json({ ride: data }, { status: 201 });
 }
 
-/** GET /api/rides — search available rides */
+/** GET /api/rides — search available rides (public) */
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const url = new URL(req.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");

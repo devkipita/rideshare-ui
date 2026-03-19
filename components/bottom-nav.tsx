@@ -8,74 +8,82 @@ import {
   User,
   Car,
   ClipboardList,
-  Wallet,
   UserCircle,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type Mode = "passenger" | "driver";
-
-interface BottomNavProps {
-  mode: Mode;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}
+import { useRole } from "@/app/context";
+import { useRouter, usePathname } from "next/navigation";
 
 type TabDef = {
   id: string;
   label: string;
   icon: LucideIcon;
+  route: string;
 };
 
 const PASSENGER_TABS: readonly TabDef[] = [
-  { id: "search", label: "Search", icon: HomeIcon },
-  { id: "trips", label: "Trips", icon: ReceiptText },
-  { id: "messages", label: "Notification", icon: BellDot },
-  { id: "profile", label: "Profile", icon: User },
+  { id: "home", label: "Home", icon: HomeIcon, route: "/home" },
+  { id: "trips", label: "Trips", icon: ReceiptText, route: "/trips" },
+  { id: "notifications", label: "Alerts", icon: BellDot, route: "/notifications" },
+  { id: "profile", label: "Profile", icon: User, route: "/profile" },
 ] as const;
 
 const DRIVER_TABS: readonly TabDef[] = [
-  { id: "rides", label: "My Rides", icon: Car },
-  { id: "requests", label: "Ride Requests", icon: ClipboardList },
-  { id: "earnings", label: "Earnings", icon: Wallet },
-  { id: "profile", label: "Driver Profile", icon: UserCircle },
+  { id: "home", label: "My Rides", icon: Car, route: "/home" },
+  { id: "trips", label: "Requests", icon: ClipboardList, route: "/trips" },
+  { id: "notifications", label: "Alerts", icon: BellDot, route: "/notifications" },
+  { id: "profile", label: "Profile", icon: UserCircle, route: "/profile" },
 ] as const;
 
-export const BottomNav = memo(function BottomNav({
-  mode,
-  activeTab,
-  onTabChange,
-}: BottomNavProps) {
+function routeToTabId(pathname: string): string {
+  if (pathname.startsWith("/home")) return "home";
+  if (pathname.startsWith("/trips")) return "trips";
+  if (pathname.startsWith("/notifications")) return "notifications";
+  if (pathname.startsWith("/profile")) return "profile";
+  if (pathname.startsWith("/earnings")) return "home"; // earnings is driver sub-page
+  return "home";
+}
+
+export const BottomNav = memo(function BottomNav() {
+  const { activeRole } = useRole();
+  const router = useRouter();
+  const pathname = usePathname();
+
   const tabs = useMemo(
-    () => (mode === "passenger" ? PASSENGER_TABS : DRIVER_TABS),
-    [mode],
+    () => (activeRole === "passenger" ? PASSENGER_TABS : DRIVER_TABS),
+    [activeRole],
   );
 
+  const activeTab = useMemo(() => routeToTabId(pathname), [pathname]);
+
   const handleTab = useCallback(
-    (id: string) => {
-      if (id !== activeTab) onTabChange(id);
+    (tab: TabDef) => {
+      if (tab.route !== pathname) {
+        router.push(tab.route);
+      }
     },
-    [activeTab, onTabChange],
+    [pathname, router],
   );
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 glass border-t supports-[padding:env(safe-area-inset-bottom)]:pb-[env(safe-area-inset-bottom)]"
       aria-label={
-        mode === "passenger" ? "Passenger navigation" : "Driver navigation"
+        activeRole === "passenger" ? "Passenger navigation" : "Driver navigation"
       }
     >
       <div className="mx-auto w-full max-w-md">
         <div className="flex h-16 items-stretch justify-around px-1 sm:h-20 sm:px-2">
-          {tabs.map(({ id, label, icon: Icon }) => {
-            const active = activeTab === id;
+          {tabs.map((tab) => {
+            const active = activeTab === tab.id;
+            const Icon = tab.icon;
 
             return (
               <button
-                key={id}
+                key={tab.id}
                 type="button"
-                onClick={() => handleTab(id)}
+                onClick={() => handleTab(tab)}
                 className={cn(
                   "group relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl transition-all duration-200 touch-target active:scale-[0.98]",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -83,7 +91,7 @@ export const BottomNav = memo(function BottomNav({
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
-                aria-label={label}
+                aria-label={tab.label}
                 aria-current={active ? "page" : undefined}
               >
                 <span
@@ -99,7 +107,7 @@ export const BottomNav = memo(function BottomNav({
                   )}
                 />
                 <span className="hidden text-xs font-medium sm:inline">
-                  {label}
+                  {tab.label}
                 </span>
               </button>
             );

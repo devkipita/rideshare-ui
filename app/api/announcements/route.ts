@@ -6,11 +6,11 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** POST /api/announcements — anyone posts a road announcement */
+/** POST /api/announcements — authenticated user posts a road announcement */
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Sign in to post announcements" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   if (!body)
@@ -46,11 +46,8 @@ export async function POST(req: Request) {
   return NextResponse.json({ announcement: data }, { status: 201 });
 }
 
-/** GET /api/announcements — fetch recent announcements */
+/** GET /api/announcements — fetch recent announcements (public) */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabaseAdmin
     .from("announcements")
