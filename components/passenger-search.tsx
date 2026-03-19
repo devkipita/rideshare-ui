@@ -6,6 +6,7 @@ import { RideResults, type Driver } from "./RideResults";
 import { AppBackdrop, BottomSheet, Surface } from "./ui-parts";
 import { MapPreview } from "./ui/MapPreview";
 import { AnnouncementsStrip, useAnnouncements } from "./announcements-strip";
+import { useAuthDrawer } from "./auth-drawer-provider";
 
 type Status = "idle" | "loading" | "ready";
 
@@ -35,6 +36,7 @@ export function PassengerSearch({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [requestPosted, setRequestPosted] = useState(false);
   const [postingRequest, setPostingRequest] = useState(false);
+  const { openAuthDrawer, isSignedIn } = useAuthDrawer();
   const announcements = useAnnouncements();
 
   const canSearch = useMemo(
@@ -51,6 +53,7 @@ export function PassengerSearch({
 
   const postRideRequest = async () => {
     if (postingRequest || requestPosted) return;
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "passenger" }); return; }
     setPostingRequest(true);
     try {
       const res = await fetch("/api/ride-requests", {
@@ -100,17 +103,22 @@ export function PassengerSearch({
 
       if (!res.ok) throw new Error(json.error || "Search failed");
 
-      const rides: Driver[] = (json.rides ?? []).map((r: Record<string, unknown>) => ({
-        id: r.id as string,
-        name: (r.driver as Record<string, unknown>)?.name as string ?? "Unknown",
-        rating: 4.5,
-        trips: 0,
-        price: r.price_per_seat as number,
-        from: r.origin as string,
-        to: r.destination as string,
-        departureTime: r.departure_time as string,
-        seatsLeft: r.available_seats as number,
-      }));
+      const rides: Driver[] = (json.rides ?? []).map((r: Record<string, unknown>) => {
+        const driver = r.driver as Record<string, unknown> | null;
+        return {
+          id: r.id as string,
+          driverId: (driver?.id as string) ?? undefined,
+          name: (driver?.name as string) ?? "Unknown",
+          rating: 4.5,
+          trips: 0,
+          price: r.price_per_seat as number,
+          from: r.origin as string,
+          to: r.destination as string,
+          departureTime: r.departure_time as string,
+          seatsLeft: r.available_seats as number,
+          avatarUrl: (driver?.image as string) ?? undefined,
+        };
+      });
 
       setResults(rides);
     } catch {

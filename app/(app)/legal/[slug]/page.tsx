@@ -1,4 +1,3 @@
-// app/(legal)/legal/[slug]/page.tsx
 import LegalLayout from "@/components/LegalLayout";
 import { notFound } from "next/navigation";
 import { terms } from "@/data/terms";
@@ -7,6 +6,7 @@ import { cookies } from "@/data/cookies";
 
 type PolicySlug = "terms" | "privacy" | "cookies";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const policies: Record<PolicySlug, any> = {
   terms,
   privacy,

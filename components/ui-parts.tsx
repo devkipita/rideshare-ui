@@ -8,8 +8,9 @@ import React, {
   type HTMLAttributes,
 } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Check, MapPin, X } from "lucide-react";
+import { BadgeCheck, Check, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { initials } from "@/lib/format";
 import { createPortal } from "react-dom";
 
 const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
@@ -553,18 +554,30 @@ export function LocationInput({
   );
 }
 
+let sheetLockCount = 0;
+function lockScroll() {
+  sheetLockCount++;
+  if (sheetLockCount === 1) document.body.style.overflow = "hidden";
+}
+function unlockScroll() {
+  sheetLockCount = Math.max(0, sheetLockCount - 1);
+  if (sheetLockCount === 0) document.body.style.overflow = "";
+}
+
 export function BottomSheet({
   open,
   title,
   onOpenChange,
   children,
   headerRight,
+  zIndex,
 }: {
   open: boolean;
   title?: string;
   onOpenChange: (v: boolean) => void;
   children: React.ReactNode;
   headerRight?: React.ReactNode;
+  zIndex?: { backdrop: number; sheet: number };
 }) {
   const startY = useRef<number | null>(null);
   const lastY = useRef(0);
@@ -601,11 +614,8 @@ export function BottomSheet({
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    lockScroll();
+    return () => unlockScroll();
   }, [open]);
 
   const closeByGesture = (dy: number, v: number) => {
@@ -626,6 +636,9 @@ export function BottomSheet({
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   };
 
+  const pendingDrag = useRef<{ pointerId: number; y: number; target: HTMLElement } | null>(null);
+  const DRAG_THRESHOLD = 6; // px before we commit to a drag
+
   const onPointerDownSheet = (e: React.PointerEvent) => {
     if (!open) return;
 
@@ -637,6 +650,15 @@ export function BottomSheet({
     const el = target?.closest?.("[data-sheet-drag-handle]");
     if (el) return;
 
+    // Don't capture immediately — wait for movement past threshold
+    // so clicks on buttons/links still fire
+    const interactive = target?.closest?.("button, a, input, textarea, select, [role=button], [data-no-drag]");
+    if (interactive) {
+      // Store pending drag info — only start drag if user moves enough
+      pendingDrag.current = { pointerId: e.pointerId, y: e.clientY, target: e.currentTarget as HTMLElement };
+      return;
+    }
+
     setDragging(true);
     startY.current = e.clientY;
     lastY.current = 0;
@@ -647,6 +669,25 @@ export function BottomSheet({
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    // Check if we have a pending drag that should now be promoted
+    if (pendingDrag.current && startY.current == null) {
+      const dy = e.clientY - pendingDrag.current.y;
+      if (Math.abs(dy) >= DRAG_THRESHOLD && dy > 0) {
+        // Promote to drag
+        setDragging(true);
+        startY.current = pendingDrag.current.y;
+        lastY.current = Math.max(0, dy);
+        lastT.current = performance.now();
+        velocity.current = 0;
+        canDrag.current = true;
+        pendingDrag.current.target.setPointerCapture?.(e.pointerId);
+        pendingDrag.current = null;
+        setDragY(Math.max(0, dy));
+        return;
+      }
+      return;
+    }
+
     if (!dragging || startY.current == null || !canDrag.current) return;
 
     const sc = scrollRef.current;
@@ -678,6 +719,8 @@ export function BottomSheet({
   };
 
   const onPointerUp = () => {
+    pendingDrag.current = null;
+
     if (!dragging) return;
 
     const dy = lastY.current;
@@ -692,23 +735,28 @@ export function BottomSheet({
     canDrag.current = false;
   };
 
+  const zBackdrop = zIndex?.backdrop ?? 40;
+  const zSheet = zIndex?.sheet ?? 50;
+
   return (
     <div className={cn("md:hidden", open ? "" : "pointer-events-none")}>
       <div
         className={cn(
-          "fixed inset-0 z-40 transition-opacity duration-300",
+          "fixed inset-0 transition-opacity duration-300",
           EASE,
           open ? "opacity-100 bg-black/45" : "opacity-0 bg-transparent",
         )}
+        style={{ zIndex: zBackdrop }}
         onClick={() => onOpenChange(false)}
       />
 
       <div
-        className="fixed left-0 right-0 bottom-0 z-50"
+        className="fixed left-0 right-0 bottom-0"
         role="dialog"
         aria-modal="true"
         aria-label={title ?? "Bottom sheet"}
         style={{
+          zIndex: zSheet,
           transform: open ? `translateY(${dragY}px)` : "translateY(100%)",
           transition: dragging
             ? "none"
@@ -798,3 +846,181 @@ export function ShimmerCard() {
     </Surface>
   );
 }
+
+/* ── Shared small components ─────────────────────────── */
+
+export function UserAvatar({
+  name,
+  src,
+  verified,
+  size = 44,
+  shape = "circle",
+}: {
+  name: string;
+  src?: string;
+  verified?: boolean;
+  size?: number;
+  shape?: "circle" | "rounded";
+}) {
+  const borderRadius = shape === "circle" ? "rounded-full" : "rounded-2xl";
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <div
+        className={cn(
+          "grid place-items-center overflow-hidden border-2 border-primary/50 bg-primary/10 text-primary",
+          borderRadius,
+        )}
+        style={{ width: size, height: size }}
+        aria-label={`Avatar for ${name}`}
+      >
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={name}
+            className="h-full w-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span className="text-sm font-extrabold">{initials(name)}</span>
+        )}
+      </div>
+
+      {verified ? (
+        <div
+          className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background"
+          aria-label="Verified"
+          title="Verified"
+        >
+          <BadgeCheck className="h-3.5 w-3.5" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function SectionHeader({
+  title,
+  count,
+}: {
+  title: string;
+  count?: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-1 py-2">
+      <p className="text-xs font-extrabold tracking-[0.22em] text-primary/90">
+        {title.toUpperCase()}
+      </p>
+      {typeof count === "number" ? (
+        <div className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+          {count}
+        </div>
+      ) : null}
+      <div className="h-px flex-1 bg-gradient-to-r from-primary/25 to-transparent" />
+    </div>
+  );
+}
+
+export function Tag({
+  icon,
+  label,
+  tone = "muted",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  tone?: "muted" | "primary";
+}) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border",
+        "supports-[backdrop-filter]:backdrop-blur-xl",
+        tone === "primary"
+          ? "bg-primary/14 border-primary/20 text-primary"
+          : "bg-card/70 border-border/70 text-foreground/80",
+      )}
+    >
+      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
+        {icon}
+      </span>
+      <span className="leading-none">{label}</span>
+    </div>
+  );
+}
+
+export function MetricPill({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/75 px-3 py-2 text-xs font-semibold text-foreground/85">
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
+        {icon}
+      </span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+export function Chip({
+  icon: Icon,
+  children,
+  tone = "neutral",
+  className,
+}: {
+  icon?: React.ElementType;
+  children: React.ReactNode;
+  tone?: "neutral" | "primary" | "soft";
+  className?: string;
+}) {
+  const toneClass =
+    tone === "primary"
+      ? "border-primary/15 bg-primary/10 text-primary"
+      : tone === "soft"
+        ? "border-border/70 bg-muted/60 text-foreground/80"
+        : "border-border/70 bg-card/70 text-foreground/85";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1",
+        "border text-[12px] font-semibold tracking-tight",
+        toneClass,
+        className,
+      )}
+    >
+      {Icon ? <Icon className="h-3.5 w-3.5" strokeWidth={2.3} /> : null}
+      {children}
+    </span>
+  );
+}
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  desc,
+}: {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--muted)_70%,var(--card)_30%)] px-4 py-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 grid h-11 w-11 place-items-center rounded-2xl border border-border/70 bg-card/70">
+          <Icon className="h-5 w-5 text-muted-foreground" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[14px] font-extrabold tracking-tight">{title}</p>
+          <p className="mt-1 text-[12px] text-muted-foreground">{desc}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export { EASE };

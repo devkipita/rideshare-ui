@@ -26,9 +26,13 @@ import {
 import {
   BottomSheet,
   ChipToggle,
+  MetricPill,
   PillButton,
+  SectionHeader,
   ShimmerCard,
   Surface,
+  Tag,
+  UserAvatar,
 } from "@/components/ui-parts";
 import { Button } from "@/components/ui/button";
 import {
@@ -152,13 +156,7 @@ const pastRidesMock: PastRide[] = [
   },
 ];
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] ?? "D";
-  const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return (a + b).toUpperCase();
-}
-
+/** @deprecated Use UserAvatar from ui-parts — kept as thin wrapper for backwards compatibility */
 function DriverAvatar({
   name,
   src,
@@ -170,91 +168,7 @@ function DriverAvatar({
   verified?: boolean;
   size?: number;
 }) {
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <div
-        className="grid place-items-center overflow-hidden rounded-full border-2 border-primary/50 bg-primary/10 text-primary"
-        style={{ width: size, height: size }}
-        aria-label={`Driver avatar for ${name}`}
-      >
-        {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={src}
-            alt={name}
-            className="h-full w-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <span className="text-sm font-extrabold">{initials(name)}</span>
-        )}
-      </div>
-
-      {verified ? (
-        <div
-          className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background"
-          aria-label="Verified driver"
-          title="Verified driver"
-        >
-          <BadgeCheck className="h-3.5 w-3.5" />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SectionHeader({ title, count }: { title: string; count?: number }) {
-  return (
-    <div className="flex items-center gap-3 px-1 py-2">
-      <p className="text-xs font-extrabold tracking-[0.22em] text-primary/90">
-        {title.toUpperCase()}
-      </p>
-      {typeof count === "number" ? (
-        <div className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
-          {count}
-        </div>
-      ) : null}
-      <div className="h-px flex-1 bg-gradient-to-r from-primary/25 to-transparent" />
-    </div>
-  );
-}
-
-function Tag({
-  icon,
-  label,
-  tone = "muted",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  tone?: "muted" | "primary";
-}) {
-  return (
-    <div
-      className={[
-        "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border",
-        "supports-[backdrop-filter]:backdrop-blur-xl",
-        tone === "primary"
-          ? "bg-primary/14 border-primary/20 text-primary"
-          : "bg-card/70 border-border/70 text-foreground/80",
-      ].join(" ")}
-    >
-      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
-        {icon}
-      </span>
-      <span className="leading-none">{label}</span>
-    </div>
-  );
-}
-
-function MetricPill({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/75 px-3 py-2 text-xs font-semibold text-foreground/85">
-      <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
-        {icon}
-      </span>
-      <span>{label}</span>
-    </div>
-  );
+  return <UserAvatar name={name} src={src} verified={verified} size={size} />;
 }
 
 function PlaceRow({
@@ -1024,26 +938,236 @@ function toHaystackPast(r: PastRide) {
     .toLowerCase();
 }
 
+function SearchRideDetails({
+  ride,
+  onMessage,
+  onBookSeat,
+  booked,
+  booking,
+}: {
+  ride: SearchRide;
+  onMessage: () => void;
+  onBookSeat: () => void;
+  booked: boolean;
+  booking: boolean;
+}) {
+  const isVerified = !!ride.verified;
+
+  const dateLabel = ride.departureTime
+    ? (() => { try { return new Date(ride.departureTime!).toLocaleDateString([], { month: "short", day: "numeric" }); } catch { return ride.departureTime; } })()
+    : null;
+  const timeLabel = ride.departureTime
+    ? (() => { try { return new Date(ride.departureTime!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch { return ""; } })()
+    : null;
+
+  return (
+    <div className="space-y-3">
+      {/* ===== Tags ===== */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Tag
+          icon={<Footprints className="h-3.5 w-3.5" />}
+          label="Available ride"
+          tone="primary"
+        />
+        {ride.seatsLeft != null && (
+          <Tag
+            icon={<Users2 className="h-3.5 w-3.5" />}
+            label={`${ride.seatsLeft} seat${ride.seatsLeft !== 1 ? "s" : ""} left`}
+          />
+        )}
+      </div>
+
+      {/* ===== Driver info panel ===== */}
+      <Surface tone="panel" className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <DriverAvatar
+              name={ride.name}
+              src={ride.avatarUrl}
+              verified={isVerified}
+              size={44}
+            />
+
+            <div className="min-w-0">
+              <p className="text-[11px] font-extrabold tracking-[0.2em] text-muted-foreground">
+                DRIVER
+              </p>
+              <div className="mt-1 flex items-center gap-2 min-w-0">
+                <p className="truncate text-lg font-extrabold text-foreground">
+                  {ride.name}
+                </p>
+                {isVerified ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-extrabold text-primary">
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                    Verified
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
+              <Star className="h-3.5 w-3.5 text-primary" />
+              <span className="text-foreground/85">{ride.rating.toFixed(1)}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
+              <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+              <span className="text-foreground/85">{ride.trips} trips</span>
+            </span>
+          </div>
+        </div>
+      </Surface>
+
+      {/* ===== Route card ===== */}
+      <Surface tone="panel" className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">FROM</p>
+            <p className="mt-1 truncate text-xl font-extrabold text-foreground">{ride.from ?? "—"}</p>
+          </div>
+
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 border border-primary/15 text-primary">
+            <MapPin className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 text-right">
+            <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">TO</p>
+            <p className="mt-1 truncate text-xl font-extrabold text-foreground">{ride.to ?? "—"}</p>
+          </div>
+        </div>
+
+        {(dateLabel || timeLabel) && (
+          <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+            <CalendarDays className="h-4 w-4" />
+            <span>{dateLabel}</span>
+            {timeLabel && (
+              <>
+                <span className="opacity-60">•</span>
+                <Clock3 className="h-4 w-4" />
+                <span>{timeLabel}</span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Price + seats row */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <MetricPill
+            icon={<Star className="h-4 w-4" />}
+            label={`KES ${ride.price.toLocaleString()} / seat`}
+          />
+          {ride.seatsLeft != null && (
+            <MetricPill
+              icon={<Users2 className="h-4 w-4" />}
+              label={`${ride.seatsLeft} seat${ride.seatsLeft > 1 ? "s" : ""} available`}
+            />
+          )}
+        </div>
+      </Surface>
+
+      {/* ===== Actions ===== */}
+      {booked ? (
+        <Surface tone="panel" elevated className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-full grid place-items-center bg-primary/12 border border-primary/15">
+              <BadgeCheck className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[15px] font-extrabold tracking-tight">Seat requested!</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                Message {ride.name.split(" ")[0]} to coordinate pickup details.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onMessage}
+            className={[
+              "mt-4 h-12 w-full rounded-[18px] px-5",
+              "text-sm font-extrabold",
+              "bg-primary text-primary-foreground",
+              "shadow-[0_10px_26px_-18px_oklch(var(--primary)/0.75)]",
+              "hover:brightness-[1.03] active:scale-[0.98]",
+              "transition",
+            ].join(" ")}
+          >
+            <MessageCircle className="inline h-4 w-4 mr-2" />
+            Message {ride.name.split(" ")[0]}
+          </button>
+        </Surface>
+      ) : (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBookSeat}
+            disabled={booking}
+            className={[
+              "flex-1 h-12 rounded-[18px] px-5",
+              "inline-flex items-center justify-center gap-2",
+              "text-sm font-extrabold",
+              "bg-primary text-primary-foreground",
+              "shadow-[0_10px_26px_-18px_oklch(var(--primary)/0.75)]",
+              "hover:brightness-[1.03] active:scale-[0.98]",
+              "transition",
+              booking ? "opacity-70 cursor-not-allowed" : "",
+            ].join(" ")}
+          >
+            <Users2 className="h-4 w-4" />
+            {booking ? "Requesting…" : "Request Seat"}
+          </button>
+          <button
+            type="button"
+            onClick={onMessage}
+            className={[
+              "flex-1 h-12 rounded-[18px] px-5",
+              "inline-flex items-center justify-center gap-2",
+              "text-sm font-extrabold text-foreground",
+              "bg-background/55 dark:bg-card/55",
+              "border border-border/60 dark:border-border/80",
+              "backdrop-blur-md",
+              "hover:bg-primary/8 hover:border-primary/20",
+              "active:scale-[0.98] transition",
+            ].join(" ")}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Message
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RideDetailsSheet({
   open,
   onOpenChange,
   selected,
   onMessage,
+  onBookSeat,
+  booked,
+  booking,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   selected:
     | { kind: "requested"; ride: RequestedRide }
     | { kind: "past"; ride: PastRide }
+    | { kind: "search"; ride: SearchRide }
     | null;
   onMessage: () => void;
+  onBookSeat?: () => void;
+  booked?: boolean;
+  booking?: boolean;
 }) {
   const title =
     selected?.kind === "requested"
       ? "Ride request"
       : selected?.kind === "past"
         ? "Ride details"
-        : "Ride";
+        : selected?.kind === "search"
+          ? "Ride details"
+          : "Ride";
 
   return (
     <BottomSheet
@@ -1064,6 +1188,14 @@ function RideDetailsSheet({
       {selected ? (
         selected.kind === "requested" ? (
           <RequestedRideDetails ride={selected.ride} onMessage={onMessage} />
+        ) : selected.kind === "search" ? (
+          <SearchRideDetails
+            ride={selected.ride}
+            onMessage={onMessage}
+            onBookSeat={onBookSeat ?? (() => {})}
+            booked={booked ?? false}
+            booking={booking ?? false}
+          />
         ) : (
           <PastRideDetails ride={selected.ride} />
         )
@@ -1093,6 +1225,27 @@ function toChatDriver(d: Driver): ChatDriver {
 function toChatTripState(s: TripState | undefined): ChatTripState {
   return (s ?? "not_started") as ChatTripState;
 }
+
+/* ── exported types + components for reuse ──────────── */
+
+export type { Driver as RideDriver };
+export { DriverAvatar, DriverSummaryCard, PlaceRow, RideDetailsSheet };
+// MetricPill, Tag, SectionHeader now live in ui-parts.tsx
+
+export type SearchRide = {
+  id?: string;
+  driverId?: string;
+  name: string;
+  rating: number;
+  trips: number;
+  price: number;
+  from?: string;
+  to?: string;
+  departureTime?: string;
+  seatsLeft?: number;
+  avatarUrl?: string;
+  verified?: boolean;
+};
 
 export function MyRides() {
   const { openChat } = useChat();

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useCallback } from "react";
+import { memo, useMemo } from "react";
 import {
   HomeIcon,
   ReceiptText,
@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/app/context";
-import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type TabDef = {
   id: string;
@@ -47,7 +48,6 @@ function routeToTabId(pathname: string): string {
 
 export const BottomNav = memo(function BottomNav() {
   const { activeRole } = useRole();
-  const router = useRouter();
   const pathname = usePathname();
 
   const tabs = useMemo(
@@ -56,15 +56,6 @@ export const BottomNav = memo(function BottomNav() {
   );
 
   const activeTab = useMemo(() => routeToTabId(pathname), [pathname]);
-
-  const handleTab = useCallback(
-    (tab: TabDef) => {
-      if (tab.route !== pathname) {
-        router.push(tab.route);
-      }
-    },
-    [pathname, router],
-  );
 
   return (
     <nav
@@ -80,10 +71,10 @@ export const BottomNav = memo(function BottomNav() {
             const Icon = tab.icon;
 
             return (
-              <button
+              <Link
                 key={tab.id}
-                type="button"
-                onClick={() => handleTab(tab)}
+                href={tab.route}
+                prefetch
                 className={cn(
                   "group relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl transition-all duration-200 touch-target active:scale-[0.98]",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -109,7 +100,7 @@ export const BottomNav = memo(function BottomNav() {
                 <span className="hidden text-xs font-medium sm:inline">
                   {tab.label}
                 </span>
-              </button>
+              </Link>
             );
           })}
         </div>

@@ -2,7 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Surface, FormDivider, PillButton, ShimmerCard } from "@/components/ui-parts";
+import {
+  Surface,
+  FormDivider,
+  PillButton,
+  ShimmerCard,
+  Chip,
+  EmptyState,
+  UserAvatar,
+} from "@/components/ui-parts";
 import {
   BadgeCheck,
   CalendarDays,
@@ -21,6 +29,9 @@ import {
   Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDate, timeAgo } from "@/lib/format";
+import { useAuthDrawer } from "./auth-drawer-provider";
+import { useChat } from "./global-chat";
 
 /* ── types ─────────────────────────────────────────── */
 
@@ -42,39 +53,6 @@ type RideRequest = {
   status: RequestStatus;
   createdAt: string;
 };
-
-/* ── helpers ───────────────────────────────────────── */
-
-function initials(name: string) {
-  const parts = name.replace(/\./g, "").split(" ").filter(Boolean);
-  const a = parts[0]?.[0] ?? "U";
-  const b = parts[1]?.[0] ?? "";
-  return (a + b).toUpperCase();
-}
-
-function formatDate(iso: string) {
-  try {
-    const d = new Date(iso);
-    const today = new Date();
-    if (d.toDateString() === today.toDateString()) return "Today";
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
-    return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
-  } catch {
-    return iso;
-  }
-}
-
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
 
 const SELECTED_REQUEST_KEY = "kipita_selected_request";
 
@@ -131,6 +109,8 @@ export function DriverRequests({
   onOpenChat?: (payload: { requestId: string; passengerName: string }) => void;
 }) {
   const { requests, setRequests, loading } = useRideRequests();
+  const { openAuthDrawer, isSignedIn } = useAuthDrawer();
+  const chat = useChat();
   const [view, setView] = useState<RequestStatus>("pending");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const highlightRef = useRef<HTMLDivElement | null>(null);
@@ -170,33 +150,36 @@ export function DriverRequests({
   );
 
   const accept = useCallback((id: string) => {
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "accepted" as RequestStatus } : r)),
     );
-  }, [setRequests]);
+  }, [setRequests, isSignedIn, openAuthDrawer]);
 
   const decline = useCallback((id: string) => {
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "rejected" as RequestStatus } : r)),
     );
-  }, [setRequests]);
+  }, [setRequests, isSignedIn, openAuthDrawer]);
 
   const openChat = useCallback(
     (req: RideRequest) => {
+      if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
       onOpenChat?.({ requestId: req.id, passengerName: req.passengerName });
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("kipita:chat", {
-            detail: {
-              rideId: req.id,
-              peerName: req.passengerName,
-              peerRole: "passenger",
-            },
-          }),
-        );
-      }
+      chat.openChat({
+        rideId: req.id,
+        tripState: "not_started",
+        driver: {
+          id: req.id,
+          name: req.passengerName,
+          rating: 0,
+          trips: 0,
+          avatarUrl: req.passengerImage,
+        },
+      });
     },
-    [onOpenChat],
+    [onOpenChat, isSignedIn, openAuthDrawer, chat],
   );
 
   const activeList =
@@ -295,7 +278,7 @@ export function DriverRequests({
                 ))}
               </div>
             ) : (
-              <EmptyInline
+              <EmptyState
                 icon={
                   view === "accepted"
                     ? Check
@@ -365,7 +348,7 @@ function RequestCard({
         {/* passenger info row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <Avatar name={req.passengerName} image={req.passengerImage} tone={isAccepted ? "accepted" : "pending"} />
+            <UserAvatar name={req.passengerName} src={req.passengerImage} size={48} shape="rounded" />
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-[15px] font-extrabold tracking-tight">
@@ -479,93 +462,6 @@ function TrustReminder() {
         </div>
       </div>
     </Surface>
-  );
-}
-
-function EmptyInline({
-  icon: Icon,
-  title,
-  desc,
-}: {
-  icon: React.ElementType;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--muted)_70%,var(--card)_30%)] px-4 py-4">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 grid h-11 w-11 place-items-center rounded-2xl border border-border/70 bg-card/70">
-          <Icon className="h-5 w-5 text-muted-foreground" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[14px] font-extrabold tracking-tight">{title}</p>
-          <p className="mt-1 text-[12px] text-muted-foreground">{desc}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Avatar({
-  name,
-  image,
-  tone,
-}: {
-  name: string;
-  image?: string;
-  tone: "pending" | "accepted";
-}) {
-  return (
-    <div
-      className={cn(
-        "grid h-12 w-12 shrink-0 place-items-center rounded-2xl border overflow-hidden",
-        tone === "pending"
-          ? "bg-[color-mix(in_oklch,var(--card)_80%,var(--primary)_20%)] border-primary/15"
-          : "bg-[color-mix(in_oklch,var(--card)_82%,var(--ring)_18%)] border-primary/15",
-      )}
-    >
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt={name} className="h-full w-full object-cover" />
-      ) : (
-        <span className="text-[13px] font-extrabold tracking-tight text-primary">
-          {initials(name)}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function Chip({
-  icon: Icon,
-  children,
-  tone = "neutral",
-  className,
-}: {
-  icon?: React.ElementType;
-  children: React.ReactNode;
-  tone?: "neutral" | "primary" | "soft";
-  className?: string;
-}) {
-  const toneClass =
-    tone === "primary"
-      ? "border-primary/15 bg-primary/10 text-primary"
-      : tone === "soft"
-        ? "border-border/70 bg-muted/60 text-foreground/80"
-        : "border-border/70 bg-card/70 text-foreground/85";
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1",
-        "border text-[12px] font-semibold tracking-tight",
-        toneClass,
-        className,
-      )}
-    >
-      {Icon ? <Icon className="h-3.5 w-3.5" strokeWidth={2.3} /> : null}
-      {children}
-    </span>
   );
 }
 

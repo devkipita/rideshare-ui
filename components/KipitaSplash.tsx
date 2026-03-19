@@ -212,25 +212,14 @@ export function SplashScreen() {
   });
 
   const handleSelectRole = (role: "passenger" | "driver") => {
-    // Save the chosen role to localStorage so the app shell picks it up
     try {
       localStorage.setItem("kipita_active_role", role);
     } catch {}
-
-    // If already authenticated, go straight to home
-    if (status === "authenticated") {
-      router.push("/home");
-    } else {
-      router.push("/auth/signin");
-    }
+    router.push("/home");
   };
 
   const handleGoToProfile = () => {
-    if (status === "authenticated") {
-      router.push("/profile");
-    } else {
-      router.push("/auth/signin");
-    }
+    router.push("/profile");
   };
 
   return (

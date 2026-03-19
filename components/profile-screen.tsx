@@ -27,7 +27,7 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { StateFeedback } from "@/components/state-feedback";
-import { AuthDrawer } from "@/components/auth-drawer";
+import { useAuthDrawer } from "@/components/auth-drawer-provider";
 
 interface ProfileScreenProps {
   userMode: "passenger" | "driver";
@@ -530,7 +530,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [authDrawerOpen, setAuthDrawerOpen] = useState(false);
+  const { openAuthDrawer } = useAuthDrawer();
 
   const [editOpen, setEditOpen] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -562,7 +562,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
   const [driverSaveError, setDriverSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") setAuthDrawerOpen(true);
+    if (status === "unauthenticated") openAuthDrawer({ selectedRole: userMode });
   }, [status]);
 
   useEffect(() => {
@@ -894,21 +894,13 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
 
             <button
               type="button"
-              onClick={() => setAuthDrawerOpen(true)}
+              onClick={() => openAuthDrawer({ selectedRole: userMode })}
               className="mt-4 w-full rounded-2xl bg-primary py-3 text-sm font-black uppercase tracking-wide text-primary-foreground transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:opacity-95"
             >
               Sign In / Sign Up
             </button>
           </GlassCard>
 
-          <AuthDrawer
-            open={authDrawerOpen}
-            onOpenChange={setAuthDrawerOpen}
-            initialView="signin"
-            selectedRole={userMode}
-            callbackUrl="/"
-            navigateOnSuccess={false}
-          />
         </div>
       </div>
     );
@@ -1337,14 +1329,6 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
           </div>
         </SheetDrawer>
 
-        <AuthDrawer
-          open={authDrawerOpen}
-          onOpenChange={setAuthDrawerOpen}
-          initialView="signin"
-          selectedRole={userMode}
-          callbackUrl="/"
-          navigateOnSuccess={false}
-        />
       </div>
     </div>
   );

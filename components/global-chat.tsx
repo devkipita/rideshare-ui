@@ -107,7 +107,7 @@ function ChatSheet({
   }, [open]);
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} title="Messages">
+    <BottomSheet open={open} onOpenChange={onOpenChange} title="Messages" zIndex={{ backdrop: 60, sheet: 70 }}>
       <div className="space-y-3">
         {driver ? (
           <Surface tone="panel" className="p-4">

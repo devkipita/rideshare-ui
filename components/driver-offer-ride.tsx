@@ -19,23 +19,29 @@ import {
   Dot,
   ArrowRight,
   Star,
+  MessageCircle,
+  BadgeCheck,
+  Footprints,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { filterTowns } from "@/lib/kenyan-towns";
 import {
+  BottomSheet,
   ChipToggle,
   FormDivider,
   LocationInput,
   PillButton,
   Surface,
 } from "./ui-parts";
+import { useChat } from "./global-chat";
 import { DatePickerCard } from "./ui/date-picker";
 import {
   AnnouncementsStrip,
   useAnnouncements,
 } from "./announcements-strip";
+import { useAuthDrawer } from "./auth-drawer-provider";
 
 /* ── types ─────────────────────────────────────────── */
 
@@ -58,6 +64,7 @@ type LocationField = "from" | "to";
 
 type PassengerRequest = {
   id: string;
+  passengerId?: string;
   name: string;
   from: string;
   to: string;
@@ -136,6 +143,7 @@ function usePassengerRequests(): { requests: PassengerRequest[]; loading: boolea
             const passenger = r.passenger as Record<string, unknown> | null;
             return {
               id: r.id as string,
+              passengerId: (passenger?.id as string) ?? undefined,
               name: (passenger?.name as string) ?? "Passenger",
               from: r.origin as string,
               to: r.destination as string,
@@ -288,12 +296,12 @@ const RequestCard = React.memo(function RequestCard({
   onTap,
 }: {
   req: PassengerRequest;
-  onTap: (id: string) => void;
+  onTap: (req: PassengerRequest) => void;
 }) {
   return (
     <button
       type="button"
-      onClick={() => onTap(req.id)}
+      onClick={() => onTap(req)}
       className={cn(
         "snap-start shrink-0 text-left",
         "w-[72vw] min-w-[220px] max-w-[300px]",
@@ -334,51 +342,275 @@ const RequestCard = React.memo(function RequestCard({
 
 /* ── passenger requests carousel ───────────────────── */
 
-function navigateToRequest(requestId: string) {
-  // Store selected request for driver-requests to pick up
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem("kipita_selected_request", requestId);
-    window.location.href = "/trips";
-  }
+function PassengerAvatar({
+  name,
+  src,
+  size = 52,
+}: {
+  name: string;
+  src?: string;
+  size?: number;
+}) {
+  const c = avatarColors(name);
+  const ini = name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("");
+  return (
+    <div
+      className="rounded-full grid place-items-center overflow-hidden border-2 shrink-0"
+      style={{ width: size, height: size, background: c.bg, borderColor: c.border }}
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <span className="font-extrabold" style={{ fontSize: size * 0.3, color: c.text }}>{ini}</span>
+      )}
+    </div>
+  );
+}
+
+function MetricPill({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+  return (
+    <div className={cn(
+      "flex items-center gap-2 rounded-2xl px-3.5 py-2",
+      "bg-background/50 dark:bg-background/20",
+      "border border-border/40 dark:border-border/60",
+      "backdrop-blur-md",
+    )}>
+      <div className="grid h-7 w-7 place-items-center rounded-xl bg-primary/12 border border-primary/15">
+        <Icon className="h-3.5 w-3.5 text-primary" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold text-muted-foreground leading-tight">{label}</p>
+        <p className="text-[13px] font-extrabold tracking-tight leading-tight">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function RequestDetailSheet({
+  request,
+  onClose,
+}: {
+  request: PassengerRequest | null;
+  onClose: () => void;
+}) {
+  const chat = useChat();
+  const { openAuthDrawer, isSignedIn } = useAuthDrawer();
+  const [matched, setMatched] = useState(false);
+
+  // Reset matched state when request changes
+  useEffect(() => { setMatched(false); }, [request?.id]);
+
+  if (!request) return null;
+
+  const handleMessage = () => {
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
+    chat.openChat({
+      rideId: request.id,
+      tripState: "not_started",
+      driver: {
+        id: request.passengerId ?? request.id,
+        name: request.name,
+        rating: 0,
+        trips: 0,
+        avatarUrl: request.avatarUrl,
+      },
+    });
+    onClose();
+  };
+
+  const handleMatch = () => {
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
+    setMatched(true);
+  };
+
+  return (
+    <BottomSheet open title="Ride Request" onOpenChange={(v) => { if (!v) onClose(); }}>
+      <div className="space-y-3">
+        {/* ===== Passenger summary card (branded design) ===== */}
+        <Surface
+          tone="panel"
+          className={cn(
+            "relative overflow-hidden rounded-[28px] p-5",
+            "bg-[oklch(var(--secondary)/0.92)] dark:bg-[oklch(var(--secondary)/0.22)]",
+            "bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.18),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.92),oklch(var(--secondary)/0.86))]",
+            "dark:bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.22),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.26),oklch(var(--secondary)/0.18))]",
+            "border border-border/60 dark:border-border/80",
+            "shadow-[0_10px_34px_-18px_rgba(0,0,0,0.22)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.75)]",
+          )}
+        >
+          {/* Header: avatar + name + seats badge */}
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="relative shrink-0">
+                <div className="rounded-full p-[3px]">
+                  <PassengerAvatar name={request.name} src={request.avatarUrl} size={52} />
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold tracking-[0.18em] uppercase text-foreground/60 dark:text-foreground/70">
+                  Passenger
+                </p>
+                <p className="truncate text-xl font-extrabold text-foreground">
+                  {request.name}
+                </p>
+              </div>
+            </div>
+
+            {/* Seats badge */}
+            <div className={cn(
+              "flex items-center gap-1.5 rounded-full px-3.5 py-2",
+              "bg-primary/14 dark:bg-primary/20",
+              "border border-primary/22 dark:border-primary/28",
+              "backdrop-blur-md",
+            )}>
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-lg font-black text-primary tracking-tight">
+                {request.seats}
+              </span>
+              <span className="text-[11px] font-semibold text-primary/80">
+                seat{request.seats !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+
+          {/* Metric pills */}
+          <div className="mt-4 flex gap-2">
+            <MetricPill icon={CalendarDays} label="Date" value={formatDate(request.date)} />
+            <MetricPill icon={Footprints} label="Seats" value={`${request.seats} seat${request.seats !== 1 ? "s" : ""}`} />
+          </div>
+        </Surface>
+
+        {/* ===== Route card ===== */}
+        <Surface tone="panel" elevated className="rounded-[22px] overflow-hidden">
+          <div className="px-4 pt-3.5 pb-1">
+            <p className="text-[10px] font-extrabold tracking-[0.15em] uppercase text-muted-foreground">
+              Route
+            </p>
+          </div>
+          <div className="px-4 pb-4 flex items-center gap-3">
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="h-3 w-3 rounded-full bg-primary ring-2 ring-primary/20" />
+              <div className="w-[2px] h-7 bg-gradient-to-b from-primary/60 to-primary/20 rounded-full" />
+              <div className="h-3 w-3 rounded-full bg-primary/50 ring-2 ring-primary/15" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2.5">
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground">FROM</p>
+                <p className="text-[14px] font-extrabold tracking-tight truncate">{request.from}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground">TO</p>
+                <p className="text-[14px] font-extrabold tracking-tight truncate">{request.to}</p>
+              </div>
+            </div>
+          </div>
+        </Surface>
+
+        {/* ===== Actions ===== */}
+        {matched ? (
+          <Surface tone="panel" elevated className="rounded-[22px] p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full grid place-items-center bg-primary/12 border border-primary/15">
+                <BadgeCheck className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[14px] font-extrabold tracking-tight">Matched!</p>
+                <p className="mt-0.5 text-[12px] text-muted-foreground">
+                  Send a message to coordinate pickup details.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleMessage}
+              className={cn(
+                "mt-3 h-11 w-full rounded-2xl font-semibold tracking-tight",
+                "bg-primary text-primary-foreground active:scale-[0.99]",
+                "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_44%,transparent)]",
+              )}
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Message {request.name.split(" ")[0]}
+            </Button>
+          </Surface>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              onClick={handleMatch}
+              className={cn(
+                "h-12 rounded-2xl font-extrabold tracking-tight",
+                "bg-primary text-primary-foreground",
+                "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_44%,transparent)]",
+                "active:scale-[0.99] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              )}
+            >
+              <Star className="h-4 w-4 mr-2" />
+              Match ride
+            </Button>
+            <Button
+              onClick={handleMessage}
+              variant="outline"
+              className={cn(
+                "h-12 rounded-2xl font-extrabold tracking-tight",
+                "border-border/70 bg-card/80",
+                "hover:bg-primary/8 hover:border-primary/20",
+                "active:scale-[0.99] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              )}
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Message
+            </Button>
+          </div>
+        )}
+      </div>
+    </BottomSheet>
+  );
 }
 
 function RequestsCarousel({ requests }: { requests: PassengerRequest[] }) {
+  const [selectedRequest, setSelectedRequest] = useState<PassengerRequest | null>(null);
+
   const { scrollerRef, active, scrollToIndex, onPointerDown, onPointerUp, onScroll } =
-    useAutoCarousel({ count: requests.length, enabled: true, intervalMs: 4200 });
+    useAutoCarousel({ count: requests.length, enabled: !selectedRequest, intervalMs: 4200 });
 
   return (
-    <Surface elevated className="p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[12px] font-semibold tracking-tight">Passenger requests</p>
-          <p className="text-[11px] text-muted-foreground">Riders looking for a lift</p>
+    <>
+      <Surface elevated className="p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold tracking-tight">Passenger requests</p>
+            <p className="text-[11px] text-muted-foreground">Riders looking for a lift</p>
+          </div>
+          <div className="grid h-7 w-7 place-items-center rounded-xl bg-primary/10 border border-primary/15 text-primary">
+            <Star className="h-3.5 w-3.5" />
+          </div>
         </div>
-        <div className="grid h-7 w-7 place-items-center rounded-xl bg-primary/10 border border-primary/15 text-primary">
-          <Star className="h-3.5 w-3.5" />
+
+        <div
+          ref={scrollerRef}
+          onScroll={onScroll}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          className={cn(
+            "mt-2 w-full flex gap-2 overflow-x-auto overscroll-x-contain",
+            "snap-x snap-mandatory pb-1 touch-pan-x select-none",
+            "-mx-3 px-3 scroll-px-3 pr-3",
+            HIDE_SCROLLBAR,
+          )}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {requests.map((r) => (
+            <RequestCard key={r.id} req={r} onTap={setSelectedRequest} />
+          ))}
         </div>
-      </div>
 
-      <div
-        ref={scrollerRef}
-        onScroll={onScroll}
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        className={cn(
-          "mt-2 w-full flex gap-2 overflow-x-auto overscroll-x-contain",
-          "snap-x snap-mandatory pb-1 touch-pan-x select-none",
-          "-mx-3 px-3 scroll-px-3 pr-3",
-          HIDE_SCROLLBAR,
-        )}
-        style={{ WebkitOverflowScrolling: "touch" }}
-      >
-        {requests.map((r) => (
-          <RequestCard key={r.id} req={r} onTap={navigateToRequest} />
-        ))}
-      </div>
+        <Dots count={requests.length} active={active} onDot={(i) => scrollToIndex(i)} />
+      </Surface>
 
-      <Dots count={requests.length} active={active} onDot={(i) => scrollToIndex(i)} />
-    </Surface>
+      <RequestDetailSheet request={selectedRequest} onClose={() => setSelectedRequest(null)} />
+    </>
   );
 }
 
@@ -591,6 +823,7 @@ function TripDetailsSection({
 /* ── main component ────────────────────────────────── */
 
 export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
+  const { openAuthDrawer, isSignedIn } = useAuthDrawer();
   const [form, setForm] = useState<OfferRideForm>({
     from: "",
     to: "",
@@ -693,6 +926,7 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
 
   const handleSubmit = async () => {
     if (!canPost || isPosting) return;
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
     setIsPosting(true);
     setPostError(null);
 

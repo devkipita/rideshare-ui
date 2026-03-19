@@ -36,6 +36,9 @@ import {
   Surface,
 } from "./ui-parts";
 import { DatePickerCard } from "./ui/date-picker";
+import { RideDetailsSheet, type SearchRide } from "./my-rides";
+import { useChat } from "./global-chat";
+import { useAuthDrawer } from "./auth-drawer-provider";
 
 export interface SearchFilters {
   from: string;
@@ -63,6 +66,7 @@ type SetSug = Dispatch<SetStateAction<string[]>>;
 
 type TodayRide = {
   id: string;
+  driverId?: string;
   name: string;
   from: string;
   to: string;
@@ -158,6 +162,7 @@ function useTodayRides(): TodayRide[] {
             const dt = r.departure_time ? new Date(r.departure_time as string) : null;
             return {
               id: r.id as string,
+              driverId: (driver?.id as string) ?? undefined,
               name: (driver?.name as string) ?? "Driver",
               from: r.origin as string,
               to: r.destination as string,
@@ -379,23 +384,27 @@ function RoutePill({
 const RideCard = React.memo(function RideCard({
   ride,
   fallbackFrom,
+  onTap,
 }: {
   ride: TodayRide;
   fallbackFrom?: string;
+  onTap: (ride: TodayRide) => void;
 }) {
   const from = fallbackFrom?.trim() ? fallbackFrom.trim() : ride.from;
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onTap(ride)}
       className={cn(
-        "snap-start shrink-0",
+        "snap-start shrink-0 text-left",
         "w-[78vw] min-w-[240px] max-w-[340px]",
         "rounded-3xl border border-border/70 bg-card/60",
         "p-3.5 transition-transform duration-200",
         "active:scale-[0.99]",
+        "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
       )}
-      role="group"
-      aria-label={`Ride ${from} to ${ride.to}`}
+      aria-label={`View ride ${from} to ${ride.to}`}
     >
       <div className="flex items-center gap-3">
         <Avatar name={ride.name} url={ride.avatarUrl} />
@@ -423,7 +432,7 @@ const RideCard = React.memo(function RideCard({
           KES {ride.price.toLocaleString()}
         </p>
       </div>
-    </div>
+    </button>
   );
 });
 
@@ -456,6 +465,21 @@ function Dots({
   );
 }
 
+function toSearchRide(r: TodayRide): SearchRide {
+  return {
+    id: r.id,
+    driverId: r.driverId,
+    name: r.name,
+    rating: r.rating,
+    trips: 0,
+    price: r.price,
+    from: r.from,
+    to: r.to,
+    departureTime: `${r.dateISO}T${r.time}:00`,
+    avatarUrl: r.avatarUrl,
+  };
+}
+
 function TodayRidesCarousel({
   rides,
   hint,
@@ -465,6 +489,63 @@ function TodayRidesCarousel({
   hint?: string;
   fallbackFrom?: string;
 }) {
+  const chat = useChat();
+  const { openAuthDrawer, isSignedIn } = useAuthDrawer();
+
+  const [selectedRide, setSelectedRide] = useState<TodayRide | null>(null);
+  const [booked, setBooked] = useState(false);
+  const [booking, setBooking] = useState(false);
+
+  useEffect(() => {
+    setBooked(false);
+    setBooking(false);
+  }, [selectedRide?.id]);
+
+  const searchRide = selectedRide ? toSearchRide(selectedRide) : null;
+
+  const handleMessage = useCallback(() => {
+    if (!selectedRide) return;
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "passenger" }); return; }
+    const dId = selectedRide.driverId ?? selectedRide.id;
+    chat.openChat({
+      rideId: selectedRide.id,
+      tripState: "not_started",
+      driver: {
+        id: dId,
+        name: selectedRide.name,
+        rating: selectedRide.rating,
+        trips: 0,
+        avatarUrl: selectedRide.avatarUrl,
+      },
+    });
+    setSelectedRide(null);
+  }, [selectedRide, isSignedIn, openAuthDrawer, chat]);
+
+  const handleBookSeat = useCallback(async () => {
+    if (!selectedRide) return;
+    if (!isSignedIn) { openAuthDrawer({ selectedRole: "passenger" }); return; }
+    if (booking) return;
+    setBooking(true);
+    try {
+      const res = await fetch("/api/ride-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: selectedRide.from,
+          destination: selectedRide.to,
+          preferred_date: selectedRide.dateISO,
+          seats_needed: 1,
+          note: `Requesting seat on ride ${selectedRide.id}`,
+        }),
+      });
+      if (res.ok) setBooked(true);
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setBooking(false);
+    }
+  }, [selectedRide, isSignedIn, openAuthDrawer, booking]);
+
   const {
     scrollerRef,
     active,
@@ -475,58 +556,71 @@ function TodayRidesCarousel({
     onScroll,
   } = useAutoCarousel({
     count: rides.length,
-    enabled: true,
+    enabled: !selectedRide,
     intervalMs: 4200,
     pauseMsAfterInteract: 2400,
   });
 
   return (
-    <Surface elevated className="p-4 relative">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold tracking-tight">
-            Available rides
-          </p>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">
-            Swipe to browse what’s already posted near you
-          </p>
+    <>
+      <Surface elevated className="p-4 relative">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold tracking-tight">
+              Available rides
+            </p>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              Swipe to browse what’s already posted near you
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div
-        ref={scrollerRef}
-        onScroll={onScroll}
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        className={cn(
-          "mt-3 w-full",
-          "flex gap-2 overflow-x-auto overscroll-x-contain",
-          "snap-x snap-mandatory pb-1",
-          "touch-pan-x select-none",
-          "-mx-4 px-4",
-          "scroll-px-4 pr-4",
-          HIDE_SCROLLBAR,
-        )}
-        style={{ WebkitOverflowScrolling: "touch" }}
-      >
-        {rides.map((r) => (
-          <RideCard key={r.id} ride={r} fallbackFrom={fallbackFrom} />
-        ))}
-      </div>
+        <div
+          ref={scrollerRef}
+          onScroll={onScroll}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          className={cn(
+            "mt-3 w-full",
+            "flex gap-2 overflow-x-auto overscroll-x-contain",
+            "snap-x snap-mandatory pb-1",
+            "touch-pan-x select-none",
+            "-mx-4 px-4",
+            "scroll-px-4 pr-4",
+            HIDE_SCROLLBAR,
+          )}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {rides.map((r) => (
+            <RideCard key={r.id} ride={r} fallbackFrom={fallbackFrom} onTap={setSelectedRide} />
+          ))}
+        </div>
 
-      <Dots
-        count={rides.length}
-        active={active}
-        onDot={(i) => scrollToIndex(i)}
+        <Dots
+          count={rides.length}
+          active={active}
+          onDot={(i) => scrollToIndex(i)}
+        />
+
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {hint ?? "Enter your route to unlock date, seats, and preferences."}
+        </p>
+      </Surface>
+
+      <RideDetailsSheet
+        open={!!selectedRide}
+        onOpenChange={(v) => { if (!v) setSelectedRide(null); }}
+        selected={searchRide ? { kind: "search", ride: searchRide } : null}
+        onMessage={handleMessage}
+        onBookSeat={handleBookSeat}
+        booked={booked}
+        booking={booking}
       />
-
-      <p className="mt-2 text-[11px] text-muted-foreground">
-        {hint ?? "Enter your route to unlock date, seats, and preferences."}
-      </p>
-    </Surface>
+    </>
   );
 }
+
 
 function RouteCard({
   filters,

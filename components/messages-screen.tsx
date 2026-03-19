@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSession } from "next-auth/react";
-import { AuthDrawer } from "@/components/auth-drawer";
+import { useAuthDrawer } from "@/components/auth-drawer-provider";
 import {
   AlertTriangle,
   Bell,
@@ -17,6 +16,14 @@ import {
   Send,
   Pencil,
 } from "lucide-react";
+import {
+  BottomSheet,
+  EASE,
+  SectionHeader,
+  ShimmerCard,
+  Surface,
+} from "@/components/ui-parts";
+import { formatTimestamp, formatDay } from "@/lib/format";
 
 type Role = "driver" | "passenger";
 type NoticeKind = "system" | "ride" | "announcement";
@@ -34,217 +41,6 @@ type Notice = {
   read?: boolean;
 };
 
-const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
-
-function Surface({
-  children,
-  className,
-  tone = "panel",
-  elevated,
-  interactive,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  tone?: "base" | "raised" | "sheet" | "panel";
-  elevated?: boolean;
-  interactive?: boolean;
-}) {
-  const toneClass =
-    tone === "sheet"
-      ? "bg-card/92 border-border/70"
-      : tone === "panel"
-        ? "bg-card/88 border-border/70"
-        : tone === "raised"
-          ? "bg-card/86 border-border/70"
-          : "bg-card/82 border-border/70";
-
-  const shadowClass = elevated
-    ? "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_28%,transparent)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.85)]"
-    : "shadow-[0_12px_30px_-34px_color-mix(in_oklch,var(--primary)_18%,transparent)] dark:shadow-[0_14px_40px_-38px_rgba(0,0,0,0.80)]";
-
-  return (
-    <div
-      className={[
-        "relative rounded-3xl border",
-        "supports-[backdrop-filter]:backdrop-blur-xl",
-        toneClass,
-        shadowClass,
-        "transition-all duration-300",
-        EASE,
-        interactive
-          ? [
-              "hover:-translate-y-[1px]",
-              "hover:shadow-[0_26px_62px_-48px_color-mix(in_oklch,var(--primary)_32%,transparent)]",
-              "active:translate-y-0 active:scale-[0.99]",
-            ].join(" ")
-          : "",
-        className ?? "",
-      ].join(" ")}
-    >
-      <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-55 bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
-      <div className="relative">{children}</div>
-    </div>
-  );
-}
-
-function BottomSheet({
-  open,
-  title,
-  onOpenChange,
-  children,
-}: {
-  open: boolean;
-  title?: string;
-  onOpenChange: (v: boolean) => void;
-  children: React.ReactNode;
-}) {
-  const startY = React.useRef<number | null>(null);
-  const lastY = React.useRef(0);
-  const [dragY, setDragY] = React.useState(0);
-  const [dragging, setDragging] = React.useState(false);
-
-  React.useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onOpenChange(false);
-    }
-    if (open) document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
-
-  React.useEffect(() => {
-    if (!open) {
-      setDragY(0);
-      setDragging(false);
-      startY.current = null;
-      lastY.current = 0;
-    }
-  }, [open]);
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    setDragging(true);
-    startY.current = e.clientY;
-    lastY.current = 0;
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging || startY.current == null) return;
-    const dy = Math.max(0, e.clientY - startY.current);
-    lastY.current = dy;
-    setDragY(dy);
-  };
-
-  const onPointerUp = () => {
-    if (!dragging) return;
-    const dy = lastY.current;
-    setDragging(false);
-    if (dy > 90) onOpenChange(false);
-    else setDragY(0);
-    startY.current = null;
-    lastY.current = 0;
-  };
-
-  return (
-    <div className={[open ? "" : "pointer-events-none"].join(" ")}>
-      <div
-        className={[
-          "fixed inset-0 z-40 transition-all duration-300",
-          EASE,
-          open ? "bg-black/45" : "bg-transparent",
-        ].join(" ")}
-        onClick={() => onOpenChange(false)}
-      />
-      <div
-        className="fixed left-0 right-0 bottom-0 z-50"
-        role="dialog"
-        aria-modal="true"
-        style={{
-          transform: open ? `translateY(${dragY}px)` : "translateY(100%)",
-          transition: dragging
-            ? "none"
-            : "transform 320ms cubic-bezier(0.22,1,0.36,1)",
-        }}
-      >
-        <div className="py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-          <Surface elevated className="rounded-3xl overflow-hidden">
-            <div className="px-4 pt-3 pb-2">
-              <div
-                className="mx-auto h-1.5 w-12 rounded-full bg-primary/20"
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-                style={{ touchAction: "none" }}
-              />
-              {title ? (
-                <p className="mt-3 text-sm font-extrabold tracking-tight">
-                  {title}
-                </p>
-              ) : null}
-            </div>
-            <div className="px-3 pb-3 max-h-[78vh] overflow-auto scrollbar-hide">
-              {children}
-            </div>
-          </Surface>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ShimmerCard() {
-  return (
-    <Surface className="p-3">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-2xl bg-primary/10 relative overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/45 to-transparent dark:via-white/15" />
-        </div>
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-40 rounded-xl bg-primary/10 relative overflow-hidden">
-            <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/45 to-transparent dark:via-white/15" />
-          </div>
-          <div className="h-3 w-full rounded-xl bg-primary/10 relative overflow-hidden">
-            <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/45 to-transparent dark:via-white/15" />
-          </div>
-          <div className="h-3 w-48 rounded-xl bg-primary/10 relative overflow-hidden">
-            <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/45 to-transparent dark:via-white/15" />
-          </div>
-        </div>
-      </div>
-    </Surface>
-  );
-}
-
-function formatTime(ts: number) {
-  return new Date(ts).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDay(ts: number) {
-  return new Date(ts).toLocaleDateString([], {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function SectionHeader({ title, count }: { title: string; count?: number }) {
-  return (
-    <div className="flex items-center gap-2 px-1">
-      <p className="text-[11px] font-extrabold tracking-[0.22em] text-primary/90">
-        {title.toUpperCase()}
-      </p>
-      {typeof count === "number" ? (
-        <div className="grid h-5 w-5 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
-          {count}
-        </div>
-      ) : null}
-      <div className="h-px flex-1 bg-gradient-to-r from-primary/25 to-transparent" />
-    </div>
-  );
-}
 
 function KindPill({ kind }: { kind: NoticeKind }) {
   const meta =
@@ -345,7 +141,7 @@ function NoticeCard({
             <span>{formatDay(n.timestamp)}</span>
             <span className="opacity-60">•</span>
             <Clock3 className="h-3.5 w-3.5" />
-            <span>{formatTime(n.timestamp)}</span>
+            <span>{formatTimestamp(n.timestamp)}</span>
           </div>
         </div>
 
@@ -474,9 +270,7 @@ function FiltersSheet({
 }
 
 export function NotificationsScreen(_props: { role?: Role }) {
-  const { status: sessionStatus } = useSession();
-  const isSignedIn = sessionStatus === "authenticated";
-  const [authDrawerOpen, setAuthDrawerOpen] = React.useState(false);
+  const { isSignedIn, openAuthDrawer } = useAuthDrawer();
 
   const [query, setQuery] = React.useState("");
   const [filtersOpen, setFiltersOpen] = React.useState(false);
@@ -566,7 +360,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
 
     // Require sign-in before posting
     if (!isSignedIn) {
-      setAuthDrawerOpen(true);
+      openAuthDrawer({ selectedRole: "passenger" });
       return;
     }
 
@@ -586,7 +380,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
       if (!res.ok) {
         if (res.status === 401) {
           // Session expired or not signed in — open auth drawer
-          setAuthDrawerOpen(true);
+          openAuthDrawer({ selectedRole: "passenger" });
           return;
         }
         const err = await res.json().catch(() => ({ error: "Failed to post" }));
@@ -813,12 +607,6 @@ export function NotificationsScreen(_props: { role?: Role }) {
         setOnlyUnread={setOnlyUnread}
       />
 
-      <AuthDrawer
-        open={authDrawerOpen}
-        onOpenChange={setAuthDrawerOpen}
-        initialView="signin"
-        selectedRole="passenger"
-      />
     </div>
   );
 }

@@ -84,7 +84,11 @@ export function TopNav(props: TopNavProps) {
       props.onBack();
       return;
     }
-    router.back();
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/home");
+    }
   };
 
   return (
