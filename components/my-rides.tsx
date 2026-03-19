@@ -114,40 +114,6 @@ const driversMock: Driver[] = [
   },
 ];
 
-const requestedRidesMock: RequestedRide[] = [
-  {
-    id: "req-1",
-    from: "Nairobi",
-    to: "Thika",
-    timing: "scheduled",
-    dateLabel: "Tomorrow",
-    timeLabel: "6:40 PM",
-    seatsNeeded: 1,
-    luggage: false,
-    pets: true,
-    pickupStation: "Westlands, Sarit Centre",
-    dropoffStation: "Thika, Makongeni",
-    note: "Small pet in carrier.",
-    status: "active",
-    tripState: "not_started",
-  },
-  {
-    id: "req-2",
-    from: "Nanyuki",
-    to: "Nairobi",
-    timing: "now",
-    dateLabel: "Today",
-    timeLabel: "Leaving soon",
-    seatsNeeded: 2,
-    luggage: true,
-    pets: false,
-    pickupStation: "Nanyuki Town, Next to Equity Bank",
-    dropoffStation: "Nairobi CBD, Railway Station",
-    status: "matched",
-    driver: driversMock[0],
-    tripState: "not_started",
-  },
-];
 
 const pastRidesMock: PastRide[] = [
   {
@@ -1147,13 +1113,45 @@ export function MyRides() {
     | null
   >(null);
 
-  const [ridesRequested] = React.useState<RequestedRide[]>(requestedRidesMock);
+  const [ridesRequested, setRidesRequested] = React.useState<RequestedRide[]>([]);
 
   React.useEffect(() => {
-    const t1 = window.setTimeout(() => setLoadingRequested(false), 650);
+    let cancelled = false;
+
+    fetch("/api/ride-requests")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.ride_requests) return;
+        const mapped: RequestedRide[] = json.ride_requests.map(
+          (r: Record<string, unknown>) => ({
+            id: r.id as string,
+            from: r.origin as string,
+            to: r.destination as string,
+            timing: "scheduled" as RideTiming,
+            dateLabel: r.preferred_date as string,
+            timeLabel: "—",
+            seatsNeeded: (r.seats_needed as number) ?? 1,
+            luggage: (r.allows_packages as boolean) ?? false,
+            pets: (r.allows_pets as boolean) ?? false,
+            pickupStation: (r.pickup_station as string) ?? undefined,
+            dropoffStation: (r.dropoff_station as string) ?? undefined,
+            note: (r.note as string) ?? undefined,
+            status: (r.status as RideStatus) ?? "active",
+            tripState: "not_started" as TripState,
+          }),
+        );
+        setRidesRequested(mapped);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingRequested(false);
+      });
+
+    // Past rides: keep mock for now (requires bookings integration)
     const t2 = window.setTimeout(() => setLoadingPast(false), 850);
+
     return () => {
-      window.clearTimeout(t1);
+      cancelled = true;
       window.clearTimeout(t2);
     };
   }, []);

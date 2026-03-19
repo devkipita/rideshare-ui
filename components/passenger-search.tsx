@@ -19,6 +19,9 @@ export function PassengerSearch({
   const [filters, setFilters] = useState<SearchFilters>({
     from: "",
     to: "",
+    pickup: "",
+    dropoff: "",
+    note: "",
     date: "",
     seats: 2,
     pets: true,
@@ -29,28 +32,90 @@ export function PassengerSearch({
   const [status, setStatus] = useState<Status>("idle");
   const [results, setResults] = useState<Driver[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [requestPosted, setRequestPosted] = useState(false);
+  const [postingRequest, setPostingRequest] = useState(false);
 
   const canSearch = useMemo(
-    () => Boolean(filters.from && filters.to && filters.date),
-    [filters.from, filters.to, filters.date],
+    () =>
+      Boolean(
+        filters.from.trim() &&
+        filters.to.trim() &&
+        filters.pickup.trim() &&
+        filters.dropoff.trim() &&
+        filters.date,
+      ),
+    [filters.from, filters.to, filters.pickup, filters.dropoff, filters.date],
   );
 
-  const runSearch = () => {
+  const postRideRequest = async () => {
+    if (postingRequest || requestPosted) return;
+    setPostingRequest(true);
+    try {
+      const res = await fetch("/api/ride-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: filters.from.trim(),
+          destination: filters.to.trim(),
+          preferred_date: filters.date,
+          seats_needed: filters.seats,
+          allows_pets: filters.pets,
+          allows_packages: filters.luggage,
+          pickup_station: filters.pickup.trim() || null,
+          dropoff_station: filters.dropoff.trim() || null,
+          note: filters.note.trim() || null,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setRequestPosted(true);
+    } catch {
+      // silently fail
+    } finally {
+      setPostingRequest(false);
+    }
+  };
+
+  const runSearch = async () => {
     if (!canSearch || status === "loading") return;
+
     onSearch?.(filters);
 
     setStatus("loading");
     setResults([]);
     setSheetOpen(true);
 
-    window.setTimeout(() => {
-      setResults([
-        { name: "James K.", rating: 4.8, trips: 120, price: 1200 },
-        { name: "Amina W.", rating: 4.9, trips: 88, price: 1350 },
-        { name: "Peter M.", rating: 4.7, trips: 210, price: 1100 },
-      ]);
+    try {
+      const params = new URLSearchParams();
+      if (filters.from) params.set("from", filters.from.trim());
+      if (filters.to) params.set("to", filters.to.trim());
+      if (filters.date) params.set("date", filters.date);
+      if (filters.seats) params.set("seats", String(filters.seats));
+      if (filters.pets) params.set("pets", "true");
+      if (filters.luggage) params.set("luggage", "true");
+
+      const res = await fetch(`/api/rides?${params.toString()}`);
+      const json = await res.json();
+
+      if (!res.ok) throw new Error(json.error || "Search failed");
+
+      const rides: Driver[] = (json.rides ?? []).map((r: Record<string, unknown>) => ({
+        id: r.id as string,
+        name: (r.driver as Record<string, unknown>)?.name as string ?? "Unknown",
+        rating: 4.5,
+        trips: 0,
+        price: r.price_per_seat as number,
+        from: r.origin as string,
+        to: r.destination as string,
+        departureTime: r.departure_time as string,
+        seatsLeft: r.available_seats as number,
+      }));
+
+      setResults(rides);
+    } catch {
+      setResults([]);
+    } finally {
       setStatus("ready");
-    }, 850);
+    }
   };
 
   return (
@@ -84,7 +149,11 @@ export function PassengerSearch({
                 <Surface elevated className="p-3">
                   <MapPreview from={filters.from} to={filters.to} />
                 </Surface>
-                <RideResults status={status} results={results} />
+                <RideResults
+                  status={status}
+                  results={results}
+                  onPostRequest={postRideRequest}
+                />
               </div>
             </BottomSheet>
           </div>

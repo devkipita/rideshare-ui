@@ -1,22 +1,31 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { useState } from "react";
+import { Star, SendHorizonal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ShimmerCard, Surface } from "./ui-parts";
 
 export interface Driver {
+  id?: string;
   name: string;
   rating: number;
   trips: number;
   price: number;
+  from?: string;
+  to?: string;
+  departureTime?: string;
+  seatsLeft?: number;
 }
 
 export function RideResults({
   status,
   results,
+  onPostRequest,
 }: {
   status: "idle" | "loading" | "ready";
   results: Driver[];
+  onPostRequest?: () => void;
 }) {
   if (status === "loading") {
     return (
@@ -35,8 +44,21 @@ export function RideResults({
           No rides found
         </p>
         <p className="text-[12px] mt-1 text-muted-foreground">
-          Try different towns or dates.
+          Try different towns or dates, or post a request so drivers can find you.
         </p>
+        {onPostRequest && (
+          <Button
+            onClick={onPostRequest}
+            className={cn(
+              "mt-3 h-10 w-full rounded-2xl font-semibold tracking-tight text-[13px]",
+              "bg-primary text-primary-foreground",
+              "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.99]",
+            )}
+          >
+            <SendHorizonal className="h-4 w-4 mr-2" />
+            Post a Ride Request
+          </Button>
+        )}
       </Surface>
     );
   }
@@ -77,6 +99,11 @@ export function RideResults({
                 KES {r.price.toLocaleString()}
               </p>
               <p className="text-[12px] text-muted-foreground">per seat</p>
+              {r.seatsLeft != null && (
+                <p className="text-[11px] text-muted-foreground">
+                  {r.seatsLeft} seat{r.seatsLeft !== 1 ? "s" : ""} left
+                </p>
+              )}
             </div>
           </div>
         </Surface>

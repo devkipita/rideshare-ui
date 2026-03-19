@@ -119,7 +119,7 @@ export function PillButton({
   children,
   onClick,
   className,
-  type
+  type,
 }: {
   active?: boolean;
   children: React.ReactNode;
@@ -285,6 +285,7 @@ export function LocationInput({
   compact,
   rightSlot,
   nextFocusId,
+  icon: Icon = MapPin,
 }: {
   id: string;
   label: string;
@@ -300,51 +301,69 @@ export function LocationInput({
   compact?: boolean;
   rightSlot?: React.ReactNode;
   nextFocusId?: string;
+  icon?: any;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
-  const [pos, setPos] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    place: Placement;
-  }>({
+  const [pos, setPos] = useState({
     left: 0,
     top: 0,
     width: 0,
-    place: placement,
+    place: placement as Placement,
   });
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const popRef = useRef<HTMLDivElement | null>(null);
 
-  const q = value.trim();
+  const q = (value ?? "").trim();
   const canQuery = q.length >= minChars;
 
   const items =
     q && canQuery && suggestions.length > 0
       ? suggestions
       : q
-        ? fallbackSuggestions
-        : [];
+      ? fallbackSuggestions
+      : [];
 
   const hasItems = items.length > 0;
-
   const listId = useMemo(() => `${id}-list`, [id]);
-  const state = open ? "open" : "closed";
+
+  /* ---------------- helpers ---------------- */
+
+  const clearSelection = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    const end = el.value.length;
+    el.setSelectionRange(end, end);
+    window.getSelection?.()?.removeAllRanges?.();
+  };
 
   const focusNext = () => {
     if (!nextFocusId) return;
-    window.setTimeout(() => {
-      const el = document.getElementById(
-        nextFocusId,
-      ) as HTMLInputElement | null;
-      el?.focus();
-      el?.select?.();
-    }, 0);
+    requestAnimationFrame(() => {
+      const el = document.getElementById(nextFocusId) as HTMLInputElement | null;
+      if (!el) return;
+      el.focus();
+      const end = el.value.length;
+      el.setSelectionRange(end, end);
+    });
   };
+
+  const commitSelect = (town: string) => {
+    onSelect(town);
+    setOpen(false);
+    setActiveIndex(-1);
+
+    requestAnimationFrame(() => {
+      clearSelection();
+      inputRef.current?.blur();
+      focusNext();
+    });
+  };
+
+  /* ---------------- open / close logic ---------------- */
 
   useEffect(() => {
     if (!q) {
@@ -366,6 +385,8 @@ export function LocationInput({
     }
   }, [open, mounted]);
 
+  /* ---------------- positioning ---------------- */
+
   const measure = () => {
     const el = wrapRef.current;
     if (!el) return;
@@ -373,30 +394,21 @@ export function LocationInput({
     const r = el.getBoundingClientRect();
     const gap = 10;
     const maxH = 264;
+
     const spaceBelow = window.innerHeight - r.bottom;
     const spaceAbove = r.top;
 
-    let nextPlace: Placement = placement;
-    if (
-      placement === "bottom" &&
-      spaceBelow < maxH + gap &&
-      spaceAbove > spaceBelow
-    )
-      nextPlace = "top";
-    if (
-      placement === "top" &&
-      spaceAbove < maxH + gap &&
-      spaceBelow > spaceAbove
-    )
-      nextPlace = "bottom";
-
-    const top = nextPlace === "bottom" ? r.bottom + gap : r.top - gap;
+    let place: Placement = placement;
+    if (placement === "bottom" && spaceBelow < maxH && spaceAbove > spaceBelow)
+      place = "top";
+    if (placement === "top" && spaceAbove < maxH && spaceBelow > spaceAbove)
+      place = "bottom";
 
     setPos({
-      left: Math.max(10, Math.min(r.left, window.innerWidth - r.width - 10)),
-      top,
+      left: r.left,
+      top: place === "bottom" ? r.bottom + gap : r.top - gap,
       width: r.width,
-      place: nextPlace,
+      place,
     });
   };
 
@@ -404,37 +416,32 @@ export function LocationInput({
     if (!mounted) return;
     measure();
 
-    const onResize = () => measure();
-    const onScroll = () => measure();
-
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
     return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
     };
-  }, [mounted, placement, value]);
+  }, [mounted, value]);
+
+  /* ---------------- outside click ---------------- */
 
   useEffect(() => {
     if (!mounted) return;
-
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
-      const inWrap = !!wrapRef.current?.contains(t);
-      const inPop = !!popRef.current?.contains(t);
-      if (!inWrap && !inPop) setOpen(false);
+      if (
+        !wrapRef.current?.contains(t) &&
+        !popRef.current?.contains(t)
+      ) {
+        setOpen(false);
+      }
     };
-
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [mounted]);
 
-  const commitSelect = (town: string) => {
-    onSelect(town);
-    setOpen(false);
-    inputRef.current?.blur();
-    focusNext();
-  };
+  /* ---------------- render ---------------- */
 
   return (
     <div ref={wrapRef} className="relative">
@@ -444,10 +451,9 @@ export function LocationInput({
             compact ? "h-10 w-10" : "h-11 w-11",
             "rounded-2xl grid place-items-center",
             "bg-primary/10 border border-primary/15",
-            "shadow-[0_10px_24px_-20px_color-mix(in_oklch,var(--primary)_22%,transparent)]",
           )}
         >
-          <MapPin className="h-4 w-4 text-primary" />
+          <Icon className="h-4 w-4 text-primary" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -456,20 +462,14 @@ export function LocationInput({
           </p>
 
           <input
-            id={id}
             ref={inputRef}
-            value={value}
+            value={value ?? ""}
             placeholder={placeholder}
             onChange={(e) => {
               onChange(e.target.value);
               setActiveIndex(-1);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Tab") {
-                setOpen(false);
-                return;
-              }
-
               if (!hasItems) return;
 
               if (e.key === "ArrowDown") {
@@ -480,41 +480,40 @@ export function LocationInput({
                 e.preventDefault();
                 setActiveIndex((i) => Math.max(i - 1, 0));
               }
-              if (e.key === "Enter") {
-                if (activeIndex >= 0) {
-                  e.preventDefault();
-                  commitSelect(items[activeIndex]);
-                }
+              if (e.key === "Enter" && activeIndex >= 0) {
+                e.preventDefault();
+                commitSelect(items[activeIndex]);
               }
               if (e.key === "Escape") {
                 setOpen(false);
                 inputRef.current?.blur();
               }
             }}
-            aria-expanded={open}
-            aria-controls={listId}
             className={cn(
               compact ? "h-7" : "h-8",
               "w-full bg-transparent outline-none",
-              "text-[15px] font-semibold tracking-tight text-foreground",
+              "text-[15px] font-semibold tracking-tight",
               "placeholder:text-muted-foreground/80",
             )}
           />
         </div>
 
-        {rightSlot ? rightSlot : null}
-
-        {!value ? null : (
-          <ClearBtn
+        {rightSlot}
+        {value && (
+          <button
+            type="button"
             onClick={() => {
               onClear();
-              inputRef.current?.focus();
+              requestAnimationFrame(() => inputRef.current?.focus());
             }}
-          />
+            className="text-muted-foreground px-1"
+          >
+            ×
+          </button>
         )}
       </div>
 
-      {mounted && hasItems && typeof document !== "undefined"
+      {mounted && hasItems
         ? createPortal(
             <div
               ref={popRef}
@@ -523,62 +522,28 @@ export function LocationInput({
                 left: pos.left,
                 top: pos.top,
                 width: pos.width,
-                zIndex: 9999,
                 transform:
                   pos.place === "top" ? "translateY(-100%)" : undefined,
+                zIndex: 9999,
               }}
-              data-state={state}
-              className={cn(
-                "rounded-[26px] border border-border/70",
-                "bg-[color-mix(in_oklch,var(--card)_92%,var(--primary)_8%)]",
-                "supports-[backdrop-filter]:backdrop-blur-xl",
-                "shadow-[0_28px_90px_-70px_color-mix(in_oklch,var(--primary)_55%,transparent)] dark:shadow-[0_34px_120px_-86px_rgba(0,0,0,0.92)]",
-                "overflow-hidden",
-                "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1",
-                "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-1",
-              )}
+              className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl"
             >
-              <div className="px-3 pt-2.5 pb-2 flex items-center justify-between">
-                <p className="text-[11px] font-medium text-muted-foreground">
-                  Suggestions
-                </p>
-                <p className="text-[11px] text-muted-foreground/80">
-                  Enter to select
-                </p>
-              </div>
-
-              <div className="max-h-[264px] overflow-y-auto px-2 pb-2 overscroll-contain">
-                <div id={listId} role="listbox" className="space-y-1.5">
-                  {items.map((town, idx) => (
-                    <button
-                      key={`${town}-${idx}`}
-                      type="button"
-                      role="option"
-                      aria-selected={idx === activeIndex}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      onClick={() => commitSelect(town)}
-                      className={cn(
-                        "w-full text-left rounded-full px-4 py-3",
-                        "transition-all duration-200",
-                        EASE,
-                        "active:scale-[0.99]",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
-                        idx === activeIndex
-                          ? "bg-primary/14 border border-primary/18 shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_32%,transparent)]"
-                          : "border border-transparent hover:bg-primary/10 hover:border-primary/14",
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[13px] font-medium tracking-tight">
-                          {highlightMatch(town, q)}
-                        </p>
-                        <span className="text-[11px] text-muted-foreground/70">
-                          Select
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+              <div className="max-h-[264px] overflow-y-auto p-2">
+                {items.map((town, idx) => (
+                  <button
+                    key={town + idx}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                    onClick={() => commitSelect(town)}
+                    className={cn(
+                      "w-full text-left px-4 py-3 rounded-full",
+                      idx === activeIndex
+                        ? "bg-primary/15"
+                        : "hover:bg-primary/10",
+                    )}
+                  >
+                    {town}
+                  </button>
+                ))}
               </div>
             </div>,
             document.body,

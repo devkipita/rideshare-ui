@@ -367,76 +367,6 @@ function NoticeCard({
   );
 }
 
-const now = Date.now();
-const DEMO_NOTICES: Notice[] = [
-  {
-    id: "n1",
-    kind: "announcement",
-    severity: "warning",
-    title: "Protest alert may affect routes tomorrow",
-    body: "Expect delays around Nairobi CBD. Consider leaving earlier or choosing an alternate pickup.",
-    location: "Nairobi CBD",
-    timestamp: now - 1000 * 60 * 12,
-    read: false,
-  },
-  {
-    id: "n2",
-    kind: "announcement",
-    severity: "critical",
-    title: "Matatu operators strike expected",
-    body: "Reduced public transport may increase demand. Drivers: expect higher requests. Passengers: plan ahead.",
-    location: "Nairobi Metropolitan",
-    timestamp: now - 1000 * 60 * 46,
-    read: false,
-  },
-  {
-    id: "n3",
-    kind: "ride",
-    severity: "info",
-    title: "Ride request matched",
-    body: "A driver has accepted your ride request. Coordinate pickup using ride details.",
-    timestamp: now - 1000 * 60 * 90,
-    read: true,
-  },
-  {
-    id: "n4",
-    kind: "ride",
-    severity: "warning",
-    title: "Route advisory: police roadblocks reported",
-    body: "Possible checks along Thika Road. Add 15–25 minutes buffer time.",
-    location: "Thika Road",
-    timestamp: now - 1000 * 60 * 160,
-    read: true,
-  },
-  {
-    id: "n5",
-    kind: "system",
-    severity: "info",
-    title: "New safety guidelines",
-    body: "Verify pickup points before boarding. Use in-app check-in when you arrive.",
-    timestamp: now - 1000 * 60 * 280,
-    read: true,
-  },
-  {
-    id: "n6",
-    kind: "announcement",
-    severity: "warning",
-    title: "Heavy traffic expected on Mombasa Road",
-    body: "Road construction ongoing. Allow extra 30 minutes for your journey.",
-    location: "Mombasa Road",
-    timestamp: now - 1000 * 60 * 320,
-    read: true,
-  },
-  {
-    id: "n7",
-    kind: "ride",
-    severity: "info",
-    title: "Your ride was completed successfully",
-    body: "Thank you for using Kipita. Rate your experience to help us improve.",
-    timestamp: now - 1000 * 60 * 480,
-    read: true,
-  },
-];
 
 function groupByDay(items: Notice[]) {
   const m = new Map<string, Notice[]>();
@@ -541,11 +471,7 @@ function FiltersSheet({
   );
 }
 
-export function NotificationsScreen({
-  role = "passenger" as Role,
-}: {
-  role?: Role;
-}) {
+export function NotificationsScreen(_props: { role?: Role }) {
   const [query, setQuery] = React.useState("");
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
@@ -560,23 +486,31 @@ export function NotificationsScreen({
   const [items, setItems] = React.useState<Notice[]>([]);
   const [postText, setPostText] = React.useState("");
 
-  React.useEffect(() => {
-    const t = window.setTimeout(() => {
-      const seeded = DEMO_NOTICES.map((n) => {
-        if (role === "driver" && n.kind === "ride" && n.severity === "info") {
-          return {
+  const fetchNotifications = React.useCallback(() => {
+    fetch("/api/notifications")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!json?.notifications) return;
+        setItems((prev) => {
+          // Merge: keep locally-read status, add new items
+          const readIds = new Set(prev.filter((n) => n.read).map((n) => n.id));
+          const merged: Notice[] = (json.notifications as Notice[]).map((n) => ({
             ...n,
-            title: "New ride request",
-            body: "A passenger posted a request matching your route. Review and respond.",
-          };
-        }
-        return n;
-      });
-      setItems(seeded.sort((a, b) => b.timestamp - a.timestamp));
-      setLoading(false);
-    }, 700);
-    return () => window.clearTimeout(t);
-  }, [role]);
+            read: readIds.has(n.id) ? true : n.read ?? false,
+          }));
+          return merged.sort((a, b) => b.timestamp - a.timestamp);
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => {
+    fetchNotifications();
+    // Poll every 30 seconds for new notifications
+    const interval = window.setInterval(fetchNotifications, 30_000);
+    return () => window.clearInterval(interval);
+  }, [fetchNotifications]);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -615,22 +549,42 @@ export function NotificationsScreen({
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const postUpdate = () => {
+  const [posting, setPosting] = React.useState(false);
+
+  const postUpdate = async () => {
     const body = postText.trim();
-    if (!body) return;
+    if (!body || posting) return;
 
-    const newNotice: Notice = {
-      id: `local-${Date.now()}`,
-      kind: "announcement",
-      severity: "info",
-      title: "Update",
-      body,
-      timestamp: Date.now(),
-      read: false,
-    };
+    setPosting(true);
+    try {
+      const res = await fetch("/api/announcements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: body }),
+      });
 
-    setItems((prev) => [newNotice, ...prev]);
-    setPostText("");
+      if (!res.ok) throw new Error("Failed");
+
+      // Optimistically add to the list
+      const newNotice: Notice = {
+        id: `local-${Date.now()}`,
+        kind: "announcement",
+        severity: "info",
+        title: "Road update from you",
+        body,
+        timestamp: Date.now(),
+        read: false,
+      };
+      setItems((prev) => [newNotice, ...prev]);
+      setPostText("");
+
+      // Refetch to get server data
+      setTimeout(fetchNotifications, 1500);
+    } catch {
+      // silently fail
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (

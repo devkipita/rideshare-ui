@@ -1,15 +1,27 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowUpDown,
   CalendarDays,
-  Clock,
-  DollarSign,
+  Clock3,
+  Banknote,
   Users,
   PawPrint,
-  LuggageIcon,
-  PlaneTakeoff,
+  Package,
+  MapPin,
+  Dot,
+  ArrowRight,
+  Star,
+  AlertTriangle,
+  Megaphone,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,17 +36,17 @@ import {
 } from "./ui-parts";
 import { DatePickerCard } from "./ui/date-picker";
 
+/* ── types ─────────────────────────────────────────── */
+
 interface OfferRideForm {
   from: string;
   to: string;
   date: string;
   departTime: string;
-  arrivalTime: string;
   seats: number;
   pricePerSeat: number;
   pets: boolean;
   luggage: boolean;
-  airport: boolean;
 }
 
 interface DriverOfferRideProps {
@@ -42,7 +54,33 @@ interface DriverOfferRideProps {
 }
 
 type LocationField = "from" | "to";
+
+type PassengerRequest = {
+  id: string;
+  name: string;
+  from: string;
+  to: string;
+  date: string;
+  seats: number;
+  avatarUrl?: string;
+};
+
+type Announcement = {
+  id: string;
+  message: string;
+  severity: "info" | "warning" | "critical";
+  posterName: string;
+  location?: string;
+  createdAt: number;
+};
+
+/* ── constants ─────────────────────────────────────── */
+
 const MIN_TOWN_CHARS = 2;
+const HIDE_SCROLLBAR =
+  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
+
+/* ── utilities ─────────────────────────────────────── */
 
 function todayISO() {
   const d = new Date();
@@ -52,26 +90,634 @@ function todayISO() {
   return `${y}-${m}-${day}`;
 }
 
+function formatDate(iso: string) {
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
+
+function clamp(n: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function hashString(input: string) {
+  let h = 0;
+  for (let i = 0; i < input.length; i++)
+    h = (h * 31 + input.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function avatarColors(name: string) {
+  const h = hashString(name) % 360;
+  return {
+    bg: `hsl(${h} 70% 55% / 0.18)`,
+    border: `hsl(${h} 70% 55% / 0.45)`,
+    text: `hsl(${h} 55% 28% / 0.95)`,
+  };
+}
+
+function timeAgo(ts: number) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+/* ── hooks ─────────────────────────────────────────── */
+
+const FALLBACK_REQUESTS: PassengerRequest[] = [
+  { id: "fr1", name: "Sarah M.", from: "Nairobi", to: "Nakuru", date: todayISO(), seats: 2 },
+  { id: "fr2", name: "Brian O.", from: "Mombasa", to: "Nairobi", date: todayISO(), seats: 1 },
+];
+
+function usePassengerRequests(): { requests: PassengerRequest[]; loading: boolean } {
+  const [requests, setRequests] = useState<PassengerRequest[]>(FALLBACK_REQUESTS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/ride-requests")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.ride_requests?.length) {
+          setLoading(false);
+          return;
+        }
+        const mapped: PassengerRequest[] = json.ride_requests.map(
+          (r: Record<string, unknown>) => {
+            const passenger = r.passenger as Record<string, unknown> | null;
+            return {
+              id: r.id as string,
+              name: (passenger?.name as string) ?? "Passenger",
+              from: r.origin as string,
+              to: r.destination as string,
+              date: (r.preferred_date as string) ?? todayISO(),
+              seats: (r.seats_needed as number) ?? 1,
+              avatarUrl: (passenger?.image as string) ?? undefined,
+            };
+          },
+        );
+        setRequests(mapped.length ? mapped : FALLBACK_REQUESTS);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  return { requests, loading };
+}
+
+function useAnnouncements(): Announcement[] {
+  const [items, setItems] = useState<Announcement[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/announcements")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.announcements?.length) return;
+        const mapped: Announcement[] = json.announcements
+          .slice(0, 5)
+          .map((a: Record<string, unknown>) => {
+            const poster = a.poster as Record<string, unknown> | null;
+            return {
+              id: a.id as string,
+              message: a.message as string,
+              severity: (a.severity as string) ?? "info",
+              posterName: (poster?.name as string) ?? "User",
+              location: (a.location as string) ?? undefined,
+              createdAt: new Date(a.created_at as string).getTime(),
+            };
+          });
+        setItems(mapped);
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, []);
+
+  return items;
+}
+
+function useAutoCarousel({
+  count,
+  enabled,
+  intervalMs = 4200,
+  pauseMsAfterInteract = 2400,
+}: {
+  count: number;
+  enabled: boolean;
+  intervalMs?: number;
+  pauseMsAfterInteract?: number;
+}) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [active, setActive] = useState(0);
+  const isDraggingRef = useRef(false);
+  const pauseUntilRef = useRef<number>(0);
+  const rafRef = useRef<number | null>(null);
+
+  const pauseNow = useCallback(() => {
+    pauseUntilRef.current = Date.now() + pauseMsAfterInteract;
+  }, [pauseMsAfterInteract]);
+
+  const scrollToIndex = useCallback(
+    (index: number, behavior: ScrollBehavior = "smooth") => {
+      const el = scrollerRef.current;
+      if (!el) return;
+      const i = clamp(index, 0, Math.max(0, count - 1));
+      const child = el.children.item(i) as HTMLElement | null;
+      if (!child) return;
+      pauseNow();
+      el.scrollTo({ left: child.offsetLeft, behavior });
+    },
+    [count, pauseNow],
+  );
+
+  const onPointerDown = useCallback(() => { isDraggingRef.current = true; pauseNow(); }, [pauseNow]);
+  const onPointerUp = useCallback(() => { isDraggingRef.current = false; pauseNow(); }, [pauseNow]);
+
+  const computeActive = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el || count <= 1) return;
+    const center = el.scrollLeft + el.clientWidth / 2;
+    let bestIdx = 0;
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < el.children.length; i++) {
+      const child = el.children.item(i) as HTMLElement | null;
+      if (!child) continue;
+      const childCenter = child.offsetLeft + child.offsetWidth / 2;
+      const dist = Math.abs(childCenter - center);
+      if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+    }
+    setActive(bestIdx);
+  }, [count]);
+
+  const onScroll = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      computeActive();
+    });
+  }, [computeActive]);
+
+  useEffect(() => {
+    if (!enabled || count <= 1) return;
+    const id = window.setInterval(() => {
+      if (isDraggingRef.current) return;
+      if (Date.now() < pauseUntilRef.current) return;
+      const next = (active + 1) % count;
+      scrollToIndex(next, "smooth");
+    }, intervalMs);
+    return () => window.clearInterval(id);
+  }, [enabled, count, intervalMs, active, scrollToIndex]);
+
+  useEffect(() => { return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }; }, []);
+  useEffect(() => { computeActive(); }, [computeActive]);
+
+  return { scrollerRef, active, scrollToIndex, onPointerDown, onPointerUp, onScroll };
+}
+
+/* ── small components ──────────────────────────────── */
+
+const Avatar = React.memo(function Avatar({ name, url }: { name: string; url?: string }) {
+  const initials = useMemo(() => {
+    const parts = name.trim().split(/\s+/).slice(0, 2);
+    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
+  }, [name]);
+  const c = useMemo(() => avatarColors(name), [name]);
+
+  return (
+    <div
+      className="h-9 w-9 rounded-2xl overflow-hidden grid place-items-center border shrink-0"
+      style={{ background: c.bg, borderColor: c.border }}
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-[11px] font-extrabold" style={{ color: c.text }}>{initials}</span>
+      )}
+    </div>
+  );
+});
+
+function Dots({ count, active, onDot }: { count: number; active: number; onDot: (i: number) => void }) {
+  if (count <= 1) return null;
+  return (
+    <div className="mt-1.5 flex items-center justify-center gap-1.5">
+      {Array.from({ length: count }).map((_, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onDot(i)}
+          aria-label={`Go to item ${i + 1}`}
+          className={cn(
+            "h-1.5 rounded-full transition-all duration-200",
+            i === active ? "w-5 bg-primary" : "w-2 bg-muted-foreground/30",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── request card ──────────────────────────────────── */
+
+const RequestCard = React.memo(function RequestCard({ req }: { req: PassengerRequest }) {
+  return (
+    <div
+      className={cn(
+        "snap-start shrink-0",
+        "w-[72vw] min-w-[220px] max-w-[300px]",
+        "rounded-3xl border border-border/70 bg-card/60",
+        "p-3 transition-transform duration-200",
+        "active:scale-[0.99]",
+      )}
+      role="group"
+      aria-label={`Request ${req.from} to ${req.to}`}
+    >
+      <div className="flex items-center gap-2.5">
+        <Avatar name={req.name} url={req.avatarUrl} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold tracking-tight truncate">{req.name}</p>
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Dot className="h-3.5 w-3.5 text-primary" />
+            <span className="truncate">{req.from}</span>
+            <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
+            <MapPin className="h-3 w-3 text-primary" />
+            <span className="truncate">{req.to}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <CalendarDays className="h-3 w-3" />
+          {formatDate(req.date)}
+        </span>
+        <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+          <Users className="h-3 w-3 text-primary" />
+          {req.seats} seat{req.seats !== 1 ? "s" : ""}
+        </span>
+      </div>
+    </div>
+  );
+});
+
+/* ── passenger requests carousel ───────────────────── */
+
+function RequestsCarousel({ requests }: { requests: PassengerRequest[] }) {
+  const { scrollerRef, active, scrollToIndex, onPointerDown, onPointerUp, onScroll } =
+    useAutoCarousel({ count: requests.length, enabled: true, intervalMs: 4200 });
+
+  return (
+    <Surface elevated className="p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold tracking-tight">Passenger requests</p>
+          <p className="text-[11px] text-muted-foreground">Riders looking for a lift</p>
+        </div>
+        <div className="grid h-7 w-7 place-items-center rounded-xl bg-primary/10 border border-primary/15 text-primary">
+          <Star className="h-3.5 w-3.5" />
+        </div>
+      </div>
+
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className={cn(
+          "mt-2 w-full flex gap-2 overflow-x-auto overscroll-x-contain",
+          "snap-x snap-mandatory pb-1 touch-pan-x select-none",
+          "-mx-3 px-3 scroll-px-3 pr-3",
+          HIDE_SCROLLBAR,
+        )}
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {requests.map((r) => (
+          <RequestCard key={r.id} req={r} />
+        ))}
+      </div>
+
+      <Dots count={requests.length} active={active} onDot={(i) => scrollToIndex(i)} />
+    </Surface>
+  );
+}
+
+/* ── announcements strip ───────────────────────────── */
+
+function AnnouncementsStrip({ announcements }: { announcements: Announcement[] }) {
+  const navigate = () => {
+    window.dispatchEvent(
+      new CustomEvent("kipita:nav", { detail: { activeTab: "messages" } }),
+    );
+  };
+
+  const important = announcements.filter(
+    (a) => a.severity === "critical" || a.severity === "warning",
+  );
+  const display = important.length ? important.slice(0, 3) : announcements.slice(0, 2);
+
+  if (!display.length) return null;
+
+  const severityIcon = (s: string) =>
+    s === "critical" ? (
+      <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+    ) : s === "warning" ? (
+      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+    ) : (
+      <Megaphone className="h-3.5 w-3.5 text-primary" />
+    );
+
+  return (
+    <Surface elevated className="p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[12px] font-semibold tracking-tight">Road updates</p>
+        <button
+          type="button"
+          onClick={navigate}
+          className="text-[11px] font-bold text-primary flex items-center gap-0.5 active:opacity-70"
+        >
+          View all <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="mt-2 space-y-1.5">
+        {display.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={navigate}
+            className={cn(
+              "w-full text-left rounded-2xl border px-2.5 py-2",
+              "transition-all duration-200 active:scale-[0.99]",
+              a.severity === "critical"
+                ? "border-destructive/20 bg-destructive/5"
+                : a.severity === "warning"
+                  ? "border-amber-500/20 bg-amber-500/5"
+                  : "border-border/70 bg-card/60",
+            )}
+          >
+            <div className="flex items-start gap-2">
+              <div className="mt-0.5 shrink-0">{severityIcon(a.severity)}</div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-semibold leading-tight line-clamp-2">
+                  {a.message}
+                </p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  {a.posterName} · {timeAgo(a.createdAt)}
+                  {a.location ? ` · ${a.location}` : ""}
+                </p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </Surface>
+  );
+}
+
+/* ── trip details toggle ───────────────────────────── */
+
+function TripDetailsSection({
+  form,
+  update,
+  minDate,
+  dateOpen,
+  setDateOpen,
+  canPost,
+  isPosting,
+  postError,
+  onSubmit,
+}: {
+  form: OfferRideForm;
+  update: <K extends keyof OfferRideForm>(k: K, v: OfferRideForm[K]) => void;
+  minDate: string;
+  dateOpen: boolean;
+  setDateOpen: (v: boolean) => void;
+  canPost: boolean;
+  isPosting: boolean;
+  postError: string | null;
+  onSubmit: () => void;
+}) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <Surface elevated className="p-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "w-full flex items-start justify-between gap-3",
+          "rounded-2xl transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
+        )}
+        aria-expanded={open}
+      >
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold tracking-tight">Trip details</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Date, time, seats, price &amp; preferences
+          </p>
+        </div>
+        <div className="h-8 w-8 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15 shrink-0">
+          <span className="text-[12px] font-bold text-primary">{open ? "–" : "+"}</span>
+        </div>
+      </button>
+
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          open
+            ? "grid-rows-[1fr] opacity-100 translate-y-0"
+            : "grid-rows-[0fr] opacity-0 -translate-y-1",
+        )}
+      >
+        <div className="overflow-hidden">
+          {/* date + time row */}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Surface elevated className="p-2.5" focusRing>
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] font-semibold tracking-tight">Date</p>
+                <button
+                  type="button"
+                  onClick={() => setDateOpen(true)}
+                  className={cn(
+                    "h-8 w-8 rounded-2xl grid place-items-center",
+                    "hover:bg-primary/10 active:scale-[0.98]",
+                    "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
+                  )}
+                  aria-label="Open calendar"
+                >
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                </button>
+              </div>
+              <div className="mt-1">
+                <DatePickerCard
+                  label="Travel date"
+                  value={form.date}
+                  min={minDate}
+                  onChange={(iso) => update("date", iso)}
+                  variant="embedded"
+                  open={dateOpen}
+                  onOpenChange={setDateOpen}
+                />
+              </div>
+            </Surface>
+
+            <div className="space-y-2">
+              {/* departure time */}
+              <Surface elevated className="p-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15">
+                    <Clock3 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium text-muted-foreground">Departure</p>
+                    <Input
+                      type="time"
+                      value={form.departTime}
+                      onChange={(e) => update("departTime", e.target.value)}
+                      className="mt-0.5 h-7 border-0 bg-transparent p-0 text-[14px] font-semibold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                </div>
+              </Surface>
+
+              {/* seats */}
+              <Surface elevated className="p-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground">Seats</p>
+                    <p className="text-[14px] font-semibold tracking-tight">{form.seats}</p>
+                  </div>
+                </div>
+                <div className="mt-1.5 grid grid-cols-4 gap-1">
+                  {[1, 2, 3, 4].map((n) => (
+                    <PillButton
+                      key={n}
+                      active={form.seats === n}
+                      onClick={() => update("seats", n)}
+                      className="h-8 rounded-2xl px-0 text-[12px] font-semibold"
+                    >
+                      {n}
+                    </PillButton>
+                  ))}
+                </div>
+              </Surface>
+            </div>
+          </div>
+
+          {/* price */}
+          <div className="mt-2">
+            <Surface elevated className="p-2.5">
+              <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+                    <Banknote className="h-3.5 w-3.5 text-primary" />
+                    Price per seat
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">KES</span>
+                </div>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={form.pricePerSeat}
+                  onChange={(e) => update("pricePerSeat", Number(e.target.value))}
+                  className="mt-0.5 h-7 border-0 bg-transparent p-0 text-[14px] font-semibold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+            </Surface>
+          </div>
+
+          {/* amenities + submit */}
+          <div className="mt-2">
+            <Surface elevated className="p-2.5">
+              <div className="flex flex-wrap gap-2">
+                <ChipToggle
+                  icon={PawPrint}
+                  label="Pets OK"
+                  active={form.pets}
+                  onClick={() => update("pets", !form.pets)}
+                  size="sm"
+                />
+                <ChipToggle
+                  icon={Package}
+                  label="Luggage"
+                  active={form.luggage}
+                  onClick={() => update("luggage", !form.luggage)}
+                  size="sm"
+                />
+              </div>
+
+              {postError && (
+                <p className="mt-2 text-[12px] text-destructive text-center">{postError}</p>
+              )}
+
+              <Button
+                onClick={onSubmit}
+                disabled={!canPost || isPosting}
+                className={cn(
+                  "mt-2.5 h-11 w-full rounded-2xl font-semibold tracking-tight",
+                  "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.99]",
+                  "bg-primary text-primary-foreground",
+                  "shadow-[0_18px_44px_-34px_rgba(6,78,59,0.55)]",
+                  "disabled:opacity-100 disabled:bg-primary/35 disabled:text-primary-foreground/80 disabled:shadow-none",
+                )}
+              >
+                {isPosting ? "Posting…" : "Post ride"}
+              </Button>
+            </Surface>
+          </div>
+        </div>
+      </div>
+    </Surface>
+  );
+}
+
+/* ── main component ────────────────────────────────── */
+
 export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
   const [form, setForm] = useState<OfferRideForm>({
     from: "",
     to: "",
     date: "",
     departTime: "",
-    arrivalTime: "",
     seats: 4,
     pricePerSeat: 1200,
     pets: false,
     luggage: false,
-    airport: false,
   });
 
   const [fromSuggestions, setFromSuggestions] = useState<string[]>([]);
   const [toSuggestions, setToSuggestions] = useState<string[]>([]);
   const [dateOpen, setDateOpen] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+
+  const { requests } = usePassengerRequests();
+  const announcements = useAnnouncements();
 
   const minDate = useMemo(() => todayISO(), []);
+
+  const hasLocations = useMemo(
+    () => Boolean(form.from.trim() && form.to.trim()),
+    [form.from, form.to],
+  );
 
   const canPost = useMemo(() => {
     return Boolean(
@@ -85,46 +731,44 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
     );
   }, [form]);
 
-  const update = <K extends keyof OfferRideForm>(k: K, v: OfferRideForm[K]) =>
-    setForm((p) => ({ ...p, [k]: v }));
+  const update = useCallback(
+    <K extends keyof OfferRideForm>(k: K, v: OfferRideForm[K]) =>
+      setForm((p) => ({ ...p, [k]: v })),
+    [],
+  );
 
-  const handleLocationChange = (
-    field: LocationField,
-    v: string,
-    setSug: React.Dispatch<React.SetStateAction<string[]>>,
-  ) => {
-    update(field, v);
-    const q = v.trim();
-    if (q.length < MIN_TOWN_CHARS) return setSug([]);
-    setSug(filterTowns(q));
-  };
-
-  const handleLocationSelect =
-    (
-      field: LocationField,
-      setSug: React.Dispatch<React.SetStateAction<string[]>>,
-    ) =>
-    (v: string) => {
+  const handleLocationChange = useCallback(
+    (field: LocationField, v: string, setSug: React.Dispatch<React.SetStateAction<string[]>>) => {
       update(field, v);
-      setSug([]);
-    };
+      const q = v.trim();
+      if (q.length < MIN_TOWN_CHARS) return setSug([]);
+      setSug(filterTowns(q));
+    },
+    [update],
+  );
 
-  const handleLocationClear =
-    (
-      field: LocationField,
-      setSug: React.Dispatch<React.SetStateAction<string[]>>,
-    ) =>
-    () => {
-      update(field, "");
-      setSug([]);
-    };
+  const handleLocationSelect = useCallback(
+    (field: LocationField, setSug: React.Dispatch<React.SetStateAction<string[]>>) =>
+      (v: string) => {
+        update(field, v);
+        setSug([]);
+      },
+    [update],
+  );
 
-  const swap = () =>
-    setForm((p) => ({
-      ...p,
-      from: p.to,
-      to: p.from,
-    }));
+  const handleLocationClear = useCallback(
+    (field: LocationField, setSug: React.Dispatch<React.SetStateAction<string[]>>) =>
+      () => {
+        update(field, "");
+        setSug([]);
+      },
+    [update],
+  );
+
+  const swap = useCallback(
+    () => setForm((p) => ({ ...p, from: p.to, to: p.from })),
+    [],
+  );
 
   useEffect(() => {
     if (!isSubmitted) return;
@@ -135,27 +779,55 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
         to: "",
         date: "",
         departTime: "",
-        arrivalTime: "",
         seats: 4,
         pricePerSeat: 1200,
         pets: false,
         luggage: false,
-        airport: false,
       });
       setFromSuggestions([]);
       setToSuggestions([]);
       setDateOpen(false);
     }, 1800);
-
     return () => window.clearTimeout(t);
   }, [isSubmitted]);
 
-  const handleSubmit = () => {
-    if (!canPost) return;
-    setIsSubmitted(true);
-    onSubmit?.(form);
+  const handleSubmit = async () => {
+    if (!canPost || isPosting) return;
+    setIsPosting(true);
+    setPostError(null);
+
+    try {
+      const departureTime = new Date(`${form.date}T${form.departTime}:00`).toISOString();
+
+      const res = await fetch("/api/rides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: form.from.trim(),
+          destination: form.to.trim(),
+          departure_time: departureTime,
+          total_seats: form.seats,
+          price_per_seat: form.pricePerSeat,
+          allows_pets: form.pets,
+          allows_packages: form.luggage,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to post ride" }));
+        throw new Error(err.error || "Failed to post ride");
+      }
+
+      setIsSubmitted(true);
+      onSubmit?.(form);
+    } catch (e: unknown) {
+      setPostError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setIsPosting(false);
+    }
   };
 
+  /* ── success state ── */
   if (isSubmitted) {
     return (
       <div className="w-full overflow-x-hidden">
@@ -179,9 +851,7 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-[15px] font-extrabold tracking-tight">
-                  Ride posted
-                </p>
+                <p className="text-[15px] font-extrabold tracking-tight">Ride posted</p>
                 <p className="mt-0.5 text-[12px] text-muted-foreground">
                   Your ride is live. Requests will appear in your inbox.
                 </p>
@@ -193,37 +863,29 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
     );
   }
 
-  const routeLine =
-    form.from || form.to
-      ? `${form.from || "From where?"} → ${form.to || "To where?"}`
-      : "From where? → To where?";
-
+  /* ── main render ── */
   return (
     <div className="w-full overflow-x-hidden">
-      <div className="mx-auto max-w-screen-sm px-2 pb-[calc(env(safe-area-inset-bottom)+96px)] space-y-3">
-        <p className="mt-1 p-1 text-[18px] font-semibold leading-tight tracking-tight text-accent">
+      <div className="mx-auto max-w-screen-sm px-2 pb-[calc(env(safe-area-inset-bottom)+96px)] space-y-2.5">
+        {/* header */}
+        <p className="mt-1 px-1 text-[16px] font-semibold leading-tight tracking-tight text-accent">
           Share your route{" "}
           <span className="text-secondary">fill your empty seats</span>.
         </p>
 
-        <Surface elevated className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[12px] font-medium text-muted-foreground">
-                Route
-              </p>
-              <p className="mt-1 text-[15px] font-semibold tracking-tight truncate">
-                {routeLine}
-              </p>
-            </div>
+        {/* route input */}
+        <Surface elevated className="p-3 relative isolate z-10 focus-within:z-50">
+          <p className="text-[11px] font-medium text-muted-foreground">Route</p>
 
+          <div className="mt-2 relative z-10 focus-within:z-50 rounded-3xl border border-border/70 bg-card/60 overflow-visible">
             <button
               type="button"
               onClick={swap}
               className={cn(
+                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20",
                 "h-10 w-10 rounded-2xl grid place-items-center",
                 "bg-primary text-primary-foreground",
-                "shadow-[0_18px_44px_-34px_rgba(6,78,59,0.55)]",
+                "shadow-[0_18px_44px_-30px_rgba(6,78,59,0.55)]",
                 "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
               )}
@@ -231,20 +893,16 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
             >
               <ArrowUpDown className="h-4 w-4" />
             </button>
-          </div>
 
-          <div className="mt-3 rounded-3xl border border-border/70 bg-card/60 overflow-visible">
             <div className="p-3">
               <LocationInput
                 id="offer-from"
                 label="From"
                 value={form.from}
-                placeholder="Leaving From"
+                placeholder="Leaving from"
                 suggestions={fromSuggestions}
                 minChars={MIN_TOWN_CHARS}
-                onChange={(v) =>
-                  handleLocationChange("from", v, setFromSuggestions)
-                }
+                onChange={(v) => handleLocationChange("from", v, setFromSuggestions)}
                 onSelect={handleLocationSelect("from", setFromSuggestions)}
                 onClear={handleLocationClear("from", setFromSuggestions)}
                 compact
@@ -259,12 +917,10 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
                 id="offer-to"
                 label="To"
                 value={form.to}
-                placeholder="Going To"
+                placeholder="Going to"
                 suggestions={toSuggestions}
                 minChars={MIN_TOWN_CHARS}
-                onChange={(v) =>
-                  handleLocationChange("to", v, setToSuggestions)
-                }
+                onChange={(v) => handleLocationChange("to", v, setToSuggestions)}
                 onSelect={handleLocationSelect("to", setToSuggestions)}
                 onClear={handleLocationClear("to", setToSuggestions)}
                 compact
@@ -273,165 +929,37 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
           </div>
         </Surface>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Surface elevated className="p-4" focusRing>
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[13px] font-semibold tracking-tight">Date</p>
-              <button
-                type="button"
-                onClick={() => setDateOpen(true)}
-                className={cn(
-                  "h-10 w-10 rounded-2xl grid place-items-center",
-                  "hover:bg-primary/10 active:scale-[0.98]",
-                  "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
-                )}
-                aria-label="Open calendar"
-              >
-                <CalendarDays className="h-4 w-4 text-primary" />
-              </button>
-            </div>
-
-            <div className="mt-3">
-              <DatePickerCard
-                label="Travel date"
-                value={form.date}
-                min={minDate}
-                onChange={(iso) => update("date", iso)}
-                variant="embedded"
-                open={dateOpen}
-                onOpenChange={setDateOpen}
+        {/* trip details — revealed when both locations filled */}
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+            hasLocations
+              ? "grid-rows-[1fr] opacity-100 translate-y-0"
+              : "grid-rows-[0fr] opacity-0 -translate-y-1",
+          )}
+        >
+          <div className="overflow-hidden">
+            {hasLocations ? (
+              <TripDetailsSection
+                form={form}
+                update={update}
+                minDate={minDate}
+                dateOpen={dateOpen}
+                setDateOpen={setDateOpen}
+                canPost={canPost}
+                isPosting={isPosting}
+                postError={postError}
+                onSubmit={handleSubmit}
               />
-            </div>
-          </Surface>
-
-          <Surface elevated className="p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15">
-                <Users className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-[12px] font-medium text-muted-foreground">
-                  Seats
-                </p>
-                <p className="mt-0.5 text-[15px] font-semibold tracking-tight">
-                  {form.seats}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <PillButton
-                  key={n}
-                  active={form.seats === n}
-                  onClick={() => update("seats", n)}
-                  className="h-10 px-4"
-                >
-                  {n}
-                </PillButton>
-              ))}
-            </div>
-          </Surface>
+            ) : null}
+          </div>
         </div>
 
-        <Surface elevated className="p-4">
-          <p className="text-[13px] font-semibold tracking-tight">Time</p>
+        {/* passenger requests carousel */}
+        <RequestsCarousel requests={requests} />
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2.5">
-              <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 text-primary" />
-                Depart
-              </div>
-              <Input
-                type="time"
-                value={form.departTime}
-                onChange={(e) => update("departTime", e.target.value)}
-                className="mt-1 h-8 border-0 bg-transparent p-0 text-[15px] font-semibold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
-
-            <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2.5">
-              <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 text-primary" />
-                Arrive
-              </div>
-              <Input
-                type="time"
-                value={form.arrivalTime}
-                onChange={(e) => update("arrivalTime", e.target.value)}
-                className="mt-1 h-8 border-0 bg-transparent p-0 text-[15px] font-semibold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
-          </div>
-        </Surface>
-
-        <Surface elevated className="p-4">
-          <p className="text-[13px] font-semibold tracking-tight">Price</p>
-
-          <div className="mt-3 rounded-2xl border border-border/70 bg-card/70 px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
-                <DollarSign className="h-3.5 w-3.5 text-primary" />
-                Per seat
-              </div>
-              <span className="text-[11px] text-muted-foreground">KES</span>
-            </div>
-
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={form.pricePerSeat}
-              onChange={(e) => update("pricePerSeat", Number(e.target.value))}
-              className="mt-1 h-8 border-0 bg-transparent p-0 text-[15px] font-semibold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-          </div>
-        </Surface>
-
-        <Surface elevated className="p-3">
-          <p className="px-1 text-[13px] font-semibold tracking-tight">
-            Amenities
-          </p>
-
-          <div className="mt-2 flex flex-wrap gap-2">
-            <ChipToggle
-              icon={PawPrint}
-              label="Pets OK"
-              active={form.pets}
-              onClick={() => update("pets", !form.pets)}
-              size="sm"
-            />
-            <ChipToggle
-              icon={LuggageIcon}
-              label="Luggage"
-              active={form.luggage}
-              onClick={() => update("luggage", !form.luggage)}
-              size="sm"
-            />
-            <ChipToggle
-              icon={PlaneTakeoff}
-              label="Airport"
-              active={form.airport}
-              onClick={() => update("airport", !form.airport)}
-              size="sm"
-            />
-          </div>
-
-          <Button
-            onClick={handleSubmit}
-            disabled={!canPost}
-            className={cn(
-              "mt-3 h-12 w-full rounded-2xl font-semibold tracking-tight",
-              "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.99]",
-              "bg-primary text-primary-foreground",
-              "shadow-[0_18px_44px_-34px_rgba(6,78,59,0.55)]",
-              "disabled:opacity-100 disabled:bg-primary/35 disabled:text-primary-foreground/80 disabled:shadow-none",
-            )}
-          >
-            Post ride
-          </Button>
-        </Surface>
+        {/* announcements */}
+        <AnnouncementsStrip announcements={announcements} />
       </div>
     </div>
   );
