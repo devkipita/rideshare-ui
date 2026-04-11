@@ -63,7 +63,7 @@ function UserButton({ onClick }: { onClick: () => void }) {
       type="button"
       aria-label="Go to profile"
       onClick={onClick}
-      className="relative h-11 w-11 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm flex items-center justify-center text-emerald-800 hover:bg-white transition-colors active:scale-95 overflow-hidden"
+      className="relative h-11 w-11 rounded-full bg-card/90 backdrop-blur border border-border shadow-sm flex items-center justify-center text-primary hover:bg-card transition-colors active:scale-95 overflow-hidden"
     >
       {isLoggedIn && avatarUrl && !avatarFailed ? (
         <Image
@@ -75,7 +75,7 @@ function UserButton({ onClick }: { onClick: () => void }) {
           onError={() => setAvatarFailed(true)}
         />
       ) : isLoggedIn && initials ? (
-        <span className="text-[13px] font-black text-emerald-800 leading-none select-none">
+        <span className="text-[13px] font-black text-primary leading-none select-none">
           {initials}
         </span>
       ) : (
@@ -85,7 +85,7 @@ function UserButton({ onClick }: { onClick: () => void }) {
       {isLoggedIn && (
         <span
           aria-hidden
-          className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white"
+          className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-primary border-2 border-card"
         />
       )}
     </button>
@@ -115,27 +115,27 @@ function SelectionCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.6, ease: easeOutCubic }}
       onClick={onClick}
-      className="group relative w-full text-left p-4 sm:p-5 rounded-[1.5rem] bg-white border border-slate-100 hover:border-emerald-400 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-emerald-900/5 overflow-hidden"
+      className="group relative w-full text-left p-4 sm:p-5 rounded-[1.5rem] bg-card border border-border hover:border-primary/40 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-primary/5 overflow-hidden"
     >
-      <div className="absolute inset-0 bg-emerald-50/0 group-hover:bg-emerald-50/30 transition-colors duration-300" />
+      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors duration-300" />
 
       <div className="relative flex items-center gap-4">
-        <div className="flex-shrink-0 p-3 rounded-xl bg-emerald-50 text-emerald-700 group-hover:bg-emerald-100 group-hover:scale-110 transition-all duration-300">
+        <div className="flex-shrink-0 p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
           <Icon size={26} strokeWidth={2} />
         </div>
 
         <div className="flex-1 min-w-0 py-1">
-          <h3 className="text-base sm:text-lg font-bold tracking-tight text-emerald-950 truncate">
+          <h3 className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
             {title}
           </h3>
-          <p className="text-xs sm:text-sm text-slate-500 leading-tight truncate font-medium">
+          <p className="text-xs sm:text-sm text-muted-foreground leading-tight truncate font-medium">
             {subtitle}
           </p>
         </div>
 
         <ChevronRight
           size={20}
-          className="text-slate-300 group-hover:text-emerald-600 transition-colors transform group-hover:translate-x-1"
+          className="text-muted-foreground/40 group-hover:text-primary transition-colors transform group-hover:translate-x-1"
         />
       </div>
     </motion.button>
@@ -223,7 +223,7 @@ export function SplashScreen() {
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-[#F8FAF8] flex flex-col items-center">
+    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background flex flex-col items-center">
       {/* SESSION-AWARE USER BUTTON */}
       <AnimatePresence>
         {phase === "reveal" && (
@@ -256,8 +256,8 @@ export function SplashScreen() {
 
       {/* AMBIENT BACKGROUND */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-emerald-50/20" />
-        <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-emerald-100/30 rounded-full blur-[80px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-card/60 via-transparent to-primary/5" />
+        <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-primary/8 rounded-full blur-[80px]" />
       </div>
 
       {/* MAIN CONTENT */}
@@ -279,7 +279,7 @@ export function SplashScreen() {
           }}
         >
           <div className="relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180px] h-[180px] bg-emerald-400/10 rounded-full blur-2xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180px] h-[180px] bg-primary/10 rounded-full blur-2xl" />
 
             <div className="w-32 h-32 sm:w-40 sm:h-40 relative">
               <svg
@@ -357,16 +357,16 @@ export function SplashScreen() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100/80 text-emerald-800 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border border-emerald-200/50"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border border-primary/20"
                   >
                     <ShieldCheck size={12} strokeWidth={2.5} />
                     <span>Ride-Share-Connect</span>
                   </motion.div>
 
                   <div>
-                    <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-emerald-950 leading-[0.9]">
-                      Share the <span className="text-emerald-600">Ride .</span>{" "}
-                      Save <span className="text-emerald-600">More</span>
+                    <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-foreground leading-[0.9]">
+                      Share the <span className="text-primary">Ride .</span>{" "}
+                      Save <span className="text-primary">More</span>
                     </h1>
                   </div>
                 </div>
@@ -394,7 +394,7 @@ export function SplashScreen() {
                   transition={{ delay: 0.7 }}
                   className="text-center"
                 >
-                  <p className="text-slate-500 font-medium text-sm sm:text-base mt-4 leading-relaxed max-w-[90%] mx-auto sm:mx-0">
+                  <p className="text-muted-foreground font-medium text-sm sm:text-base mt-4 leading-relaxed max-w-[90%] mx-auto sm:mx-0">
                     Connect with people heading your way and save on every trip.
                   </p>
                 </motion.div>
@@ -413,7 +413,7 @@ export function SplashScreen() {
               {[0, 1, 2].map((i) => (
                 <motion.div
                   key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-emerald-900/30"
+                  className="w-1.5 h-1.5 rounded-full bg-foreground/30"
                   animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.8, 0.3] }}
                   transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
                 />

@@ -3,15 +3,11 @@
 import { useMemo, useState } from "react";
 import { PassengerSearchForm, type SearchFilters } from "./PassengerSearchForm";
 import { RideResults, type Driver } from "./RideResults";
-import { AppBackdrop, BottomSheet, Surface } from "./ui-parts";
-import { MapPreview } from "./ui/MapPreview";
+import { BottomSheet, Surface } from "./ui-parts";
 import { AnnouncementsStrip, useAnnouncements } from "./announcements-strip";
 import { useAuthDrawer } from "./auth-drawer-provider";
 
 type Status = "idle" | "loading" | "ready";
-
-const HIDE_SCROLLBAR =
-  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
 export function PassengerSearch({
   onSearch,
@@ -82,9 +78,7 @@ export function PassengerSearch({
 
   const runSearch = async () => {
     if (!canSearch || status === "loading") return;
-
     onSearch?.(filters);
-
     setStatus("loading");
     setResults([]);
     setSheetOpen(true);
@@ -100,7 +94,6 @@ export function PassengerSearch({
 
       const res = await fetch(`/api/rides?${params.toString()}`);
       const json = await res.json();
-
       if (!res.ok) throw new Error(json.error || "Search failed");
 
       const rides: Driver[] = (json.rides ?? []).map((r: Record<string, unknown>) => {
@@ -129,47 +122,30 @@ export function PassengerSearch({
   };
 
   return (
-    <AppBackdrop>
-      <div
-        className={[
-          "h-dvh overflow-y-auto overflow-x-hidden overscroll-y-contain",
-          "touch-pan-y",
-          HIDE_SCROLLBAR,
-        ].join(" ")}
-      >
-        <div className="mx-auto w-full max-w-[520px]">
-          <div className="pb-[calc(env(safe-area-inset-bottom)+24px)]">
-            <div className="space-y-3">
-              <PassengerSearchForm
-                filters={filters}
-                onChange={setFilters}
-                onSearch={runSearch}
-                loading={status === "loading"}
-              />
-              <AnnouncementsStrip announcements={announcements} />
-            </div>
+    <div className="space-y-3">
+      {/* Section 1: Route search + collapsible options */}
+      <PassengerSearchForm
+        filters={filters}
+        onChange={setFilters}
+        onSearch={runSearch}
+        loading={status === "loading"}
+      />
 
-            <BottomSheet
-              open={sheetOpen && status !== "idle"}
-              onOpenChange={setSheetOpen}
-              title={
-                status === "loading" ? "Searching rides…" : "Available rides"
-              }
-            >
-              <div className="space-y-3">
-                <Surface elevated className="p-3">
-                  <MapPreview from={filters.from} to={filters.to} />
-                </Surface>
-                <RideResults
-                  status={status}
-                  results={results}
-                  onPostRequest={postRideRequest}
-                />
-              </div>
-            </BottomSheet>
-          </div>
-        </div>
-      </div>
-    </AppBackdrop>
+      {/* Section 3: Road alerts */}
+      <AnnouncementsStrip announcements={announcements} />
+
+      {/* Search results bottom sheet */}
+      <BottomSheet
+        open={sheetOpen && status !== "idle"}
+        onOpenChange={setSheetOpen}
+        title={status === "loading" ? "Searching rides…" : "Available rides"}
+      >
+        <RideResults
+          status={status}
+          results={results}
+          onPostRequest={postRideRequest}
+        />
+      </BottomSheet>
+    </div>
   );
 }

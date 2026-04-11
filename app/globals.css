@@ -10,6 +10,10 @@
   --brand-primary: 0.378 0.073 169; /* #064e3b */
   --brand-secondary: 0.786 0.064 148; /* #9ec5a2 */
   --brand-accent: 0.601 0.132 162; /* ~#009867 from your lab() */
+  --shell-top: 11 90 70;
+  --shell-canvas: 215 227 221;
+  --shell-bar: 223 233 227;
+  --shell-nav: 243 247 244;
 
   /* -----------------------------
      ✅ M3-ish surfaces (light)
@@ -48,10 +52,11 @@
   /* Focus ring: use your vivid accent so it reads like M3 */
   --ring: var(--brand-accent);
 
-  /* Extra M3 helpers (optional but useful in components) */
-  --surface-low: 0.995 0.005 155;
-  --surface: 0.985 0.01 155;
-  --surface-high: 0.972 0.012 155;
+  /* Forest-green surface hierarchy — soft green tones, never plain white */
+  --canvas: 0.945 0.025 155;        /* Soft forest green page body */
+  --surface-low: 0.965 0.018 155;
+  --surface: 0.955 0.022 155;
+  --surface-high: 0.935 0.028 155;
 
   /* Charts (based on your brand family) */
   --chart-1: var(--brand-primary);
@@ -73,51 +78,53 @@
 }
 
 .dark {
-  /* -----------------------------
-     ✅ M3-ish surfaces (dark)
-     ----------------------------- */
-  --background: 0.14 0.015 170;
-  --foreground: 0.96 0.008 155;
+  /* Dark charcoal base with accent green highlights */
+  --background: 0.15 0.005 0;           /* #1a1a1a charcoal */
+  --foreground: 0.95 0.005 0;           /* near-white text */
+  --shell-top: 7 47 38;
+  --shell-canvas: 16 24 21;
+  --shell-bar: 24 36 31;
+  --shell-nav: 18 28 24;
 
-  --card: 0.18 0.015 170;
+  --card: 0.19 0.005 0;                 /* #252525 raised charcoal */
   --card-foreground: var(--foreground);
 
-  --popover: 0.18 0.015 170;
+  --popover: 0.19 0.005 0;
   --popover-foreground: var(--foreground);
 
-  /* Primary gets brighter in dark (still same hue) */
-  --primary: 0.72 0.075 169;
-  --primary-foreground: 0.14 0.015 170;
+  /* Primary = accent green (bright, punchy) */
+  --primary: 0.72 0.14 155;             /* vivid accent green */
+  --primary-foreground: 0.15 0.005 0;   /* charcoal on green */
 
-  /* Secondary tuned for dark (still your secondary vibe) */
-  --secondary: 0.6 0.055 148;
-  --secondary-foreground: 0.14 0.015 170;
+  --secondary: 0.55 0.08 155;
+  --secondary-foreground: 0.15 0.005 0;
 
-  --accent: 0.22 0.015 170;
+  --accent: 0.22 0.005 0;               /* #2a2a2a subtle lift */
   --accent-foreground: var(--foreground);
 
-  --muted: 0.22 0.015 170;
-  --muted-foreground: 0.72 0.02 160;
+  --muted: 0.22 0.005 0;
+  --muted-foreground: 0.65 0.005 0;     /* gray-400 equivalent */
 
   --destructive: 0.55 0.2 27.325;
   --destructive-foreground: var(--foreground);
 
-  --border: 0.26 0.015 170;
-  --input: 0.22 0.015 170;
+  --border: 0.28 0.005 0;               /* #3a3a3a charcoal border */
+  --input: 0.22 0.005 0;
 
-  --ring: 0.72 0.09 162; /* brighter ring in dark */
+  --ring: 0.72 0.14 155;                /* accent green ring */
 
-  --surface-low: 0.16 0.015 170;
-  --surface: 0.14 0.015 170;
-  --surface-high: 0.22 0.015 170;
+  --canvas: 0.13 0.005 0;               /* #1c1c1c deep charcoal canvas */
+  --surface-low: 0.17 0.005 0;
+  --surface: 0.15 0.005 0;
+  --surface-high: 0.22 0.005 0;
 
   --chart-1: var(--primary);
-  --chart-2: 0.72 0.09 162;
-  --chart-3: 0.68 0.07 170;
-  --chart-4: 0.62 0.08 150;
-  --chart-5: 0.62 0.09 165;
+  --chart-2: 0.72 0.12 155;
+  --chart-3: 0.60 0.08 155;
+  --chart-4: 0.50 0.06 155;
+  --chart-5: 0.45 0.05 155;
 
-  --sidebar: 0.16 0.015 170;
+  --sidebar: 0.17 0.005 0;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -136,6 +143,7 @@
 
   --color-background: oklch(var(--background));
   --color-foreground: oklch(var(--foreground));
+  --color-canvas: oklch(var(--canvas));
 
   --color-card: oklch(var(--card));
   --color-card-foreground: oklch(var(--card-foreground));

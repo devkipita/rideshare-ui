@@ -1,7 +1,6 @@
 "use client";
 
 import LegalContent from "./LegalContent";
-import { TopNav } from "./top-nav";
 
 interface Section {
   id: string;
@@ -18,11 +17,8 @@ interface Policy {
 
 export default function LegalLayout({ policy }: { policy: Policy }) {
   return (
-    <div className="bg-background text-foreground">
-      <TopNav variant="default" title={policy.title} />
-
-      {/* Single-column mobile layout — natural document flow, no overflow clipping */}
-      <div className="px-4 pt-6 pb-24">
+    <div>
+      <div className="pb-4">
         {/* Page header */}
         <header className="mb-8">
           <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-primary mb-2">

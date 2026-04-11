@@ -86,7 +86,6 @@ export function Surface({
         className,
       )}
     >
-      <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-55 bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
       <div className="relative">{children}</div>
     </div>
   );
@@ -739,7 +738,7 @@ export function BottomSheet({
   const zSheet = zIndex?.sheet ?? 50;
 
   return (
-    <div className={cn("md:hidden", open ? "" : "pointer-events-none")}>
+    <div className={cn(open ? "" : "pointer-events-none")}>
       <div
         className={cn(
           "fixed inset-0 transition-opacity duration-300",
@@ -917,7 +916,7 @@ export function SectionHeader({
           {count}
         </div>
       ) : null}
-      <div className="h-px flex-1 bg-gradient-to-r from-primary/25 to-transparent" />
+      <div className="h-px flex-1 bg-border" />
     </div>
   );
 }

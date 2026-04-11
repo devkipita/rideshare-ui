@@ -1,0 +1,109 @@
+{
+  "app": {
+    "name": "Kipita",
+    "tagline": "Shiriki barabara. Gawanya gharama."
+  },
+  "nav": {
+    "home": "Nyumbani",
+    "trips": "Safari",
+    "alerts": "Tahadhari",
+    "profile": "Wasifu",
+    "myRides": "Safari Zangu",
+    "requests": "Maombi"
+  },
+  "role": {
+    "rider": "Abiria",
+    "driver": "Dereva",
+    "switchTo": "Badilisha kuwa {{role}}"
+  },
+  "search": {
+    "from": "Kutoka",
+    "to": "Kwenda",
+    "pickupTown": "Mji wa kupanda",
+    "dropoffTown": "Mji wa kushuka",
+    "departureTown": "Mji wa kuondoka",
+    "destinationTown": "Mji wa kwenda",
+    "searchRides": "Tafuta Safari",
+    "searchRequests": "Tafuta Maombi",
+    "noResults": "Hakuna safari kwenye njia hii.",
+    "postRequest": "Weka Ombi la Safari",
+    "seats": "Viti",
+    "date": "Tarehe",
+    "time": "Muda wa kuondoka",
+    "luggage": "Mizigo",
+    "pets": "Wanyama sawa",
+    "advanced": "Zaidi"
+  },
+  "trip": {
+    "current": "Sasa Hivi",
+    "previous": "Zilizopita",
+    "active": "Hai",
+    "matched": "Imepatana",
+    "started": "Inaendelea",
+    "completed": "Imekamilika",
+    "cancelled": "Imeghairiwa",
+    "noTrips": "Hakuna safari bado.",
+    "perSeat": "kwa kiti",
+    "seatsLeft": "Kiti {{count}} kimebaki",
+    "seatsLeft_plural": "Viti {{count}} vimebaki",
+    "viewDetails": "Ona maelezo",
+    "requestSeat": "Omba Kiti",
+    "startTrip": "Anza Safari",
+    "cancelTrip": "Ghairi Safari"
+  },
+  "notifications": {
+    "title": "Habari za Safari na Barabara",
+    "markAllRead": "Soma zote",
+    "unread": "{{count}} hazijasomwa",
+    "noNotifications": "Hakuna arifa",
+    "postUpdate": "Tuma habari ya barabara",
+    "whatsHappening": "Nini kinatokea barabarani?",
+    "location": "Mahali",
+    "severity": {
+      "info": "Habari",
+      "warning": "Onyo",
+      "critical": "Hatari"
+    }
+  },
+  "profile": {
+    "welcome": "Karibu kwenye Akaunti Yako",
+    "editProfile": "Hariri Wasifu",
+    "settings": "Mipangilio",
+    "theme": "Mandhari",
+    "language": "Lugha",
+    "logout": "Ondoka",
+    "verified": "Imethibitishwa",
+    "totalTrips": "Safari zote",
+    "rating": "Kiwango"
+  },
+  "auth": {
+    "signIn": "Ingia",
+    "signUp": "Jisajili",
+    "email": "Barua pepe",
+    "password": "Nywila",
+    "phone": "Nambari ya simu",
+    "orContinueWith": "au endelea na",
+    "google": "Endelea na Google"
+  },
+  "payment": {
+    "title": "Malipo",
+    "mpesa": "M-Pesa",
+    "card": "Kadi",
+    "checkPhone": "Angalia simu yako kwa M-Pesa",
+    "processing": "Malipo yanashughulikiwa..."
+  },
+  "common": {
+    "back": "Rudi",
+    "close": "Funga",
+    "cancel": "Ghairi",
+    "confirm": "Thibitisha",
+    "save": "Hifadhi",
+    "message": "Ujumbe",
+    "match": "Patanisha",
+    "filters": "Vichujio",
+    "clearFilters": "Ondoa vichujio",
+    "loading": "Inapakia...",
+    "retry": "Jaribu tena",
+    "offline": "Huna mtandao"
+  }
+}

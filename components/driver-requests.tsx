@@ -187,7 +187,7 @@ export function DriverRequests({
 
   return (
     <div className="w-full">
-      <p className="text-sm font-semibold text-center text-[#fff] py-1">
+      <p className="text-sm font-semibold text-center text-foreground py-1">
         Manage ride requests
       </p>
 

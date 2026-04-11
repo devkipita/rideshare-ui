@@ -25,12 +25,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, clamp, todayISO, hashString, avatarColors } from "@/lib/utils";
 import { filterTowns } from "@/lib/kenyan-towns";
+import { useAutoCarousel } from "@/hooks/use-auto-carousel";
 import {
   BottomSheet,
   ChipToggle,
-  FormDivider,
   LocationInput,
   PillButton,
   Surface,
@@ -80,40 +80,12 @@ const MIN_TOWN_CHARS = 2;
 const HIDE_SCROLLBAR =
   "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
-/* ── utilities ─────────────────────────────────────── */
+/* ── utilities (imported from @/lib/utils) ──────── */
 
-function todayISO() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function formatDate(iso: string) {
+function formatDateDMY(iso: string) {
   const [y, m, d] = iso.split("-");
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
-}
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function hashString(input: string) {
-  let h = 0;
-  for (let i = 0; i < input.length; i++)
-    h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-function avatarColors(name: string) {
-  const h = hashString(name) % 360;
-  return {
-    bg: `hsl(${h} 70% 55% / 0.18)`,
-    border: `hsl(${h} 70% 55% / 0.45)`,
-    text: `hsl(${h} 55% 28% / 0.95)`,
-  };
 }
 
 
@@ -167,83 +139,7 @@ function usePassengerRequests(): { requests: PassengerRequest[]; loading: boolea
 }
 
 
-function useAutoCarousel({
-  count,
-  enabled,
-  intervalMs = 4200,
-  pauseMsAfterInteract = 2400,
-}: {
-  count: number;
-  enabled: boolean;
-  intervalMs?: number;
-  pauseMsAfterInteract?: number;
-}) {
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const [active, setActive] = useState(0);
-  const isDraggingRef = useRef(false);
-  const pauseUntilRef = useRef<number>(0);
-  const rafRef = useRef<number | null>(null);
-
-  const pauseNow = useCallback(() => {
-    pauseUntilRef.current = Date.now() + pauseMsAfterInteract;
-  }, [pauseMsAfterInteract]);
-
-  const scrollToIndex = useCallback(
-    (index: number, behavior: ScrollBehavior = "smooth") => {
-      const el = scrollerRef.current;
-      if (!el) return;
-      const i = clamp(index, 0, Math.max(0, count - 1));
-      const child = el.children.item(i) as HTMLElement | null;
-      if (!child) return;
-      pauseNow();
-      el.scrollTo({ left: child.offsetLeft, behavior });
-    },
-    [count, pauseNow],
-  );
-
-  const onPointerDown = useCallback(() => { isDraggingRef.current = true; pauseNow(); }, [pauseNow]);
-  const onPointerUp = useCallback(() => { isDraggingRef.current = false; pauseNow(); }, [pauseNow]);
-
-  const computeActive = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el || count <= 1) return;
-    const center = el.scrollLeft + el.clientWidth / 2;
-    let bestIdx = 0;
-    let bestDist = Number.POSITIVE_INFINITY;
-    for (let i = 0; i < el.children.length; i++) {
-      const child = el.children.item(i) as HTMLElement | null;
-      if (!child) continue;
-      const childCenter = child.offsetLeft + child.offsetWidth / 2;
-      const dist = Math.abs(childCenter - center);
-      if (dist < bestDist) { bestDist = dist; bestIdx = i; }
-    }
-    setActive(bestIdx);
-  }, [count]);
-
-  const onScroll = useCallback(() => {
-    if (rafRef.current) return;
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null;
-      computeActive();
-    });
-  }, [computeActive]);
-
-  useEffect(() => {
-    if (!enabled || count <= 1) return;
-    const id = window.setInterval(() => {
-      if (isDraggingRef.current) return;
-      if (Date.now() < pauseUntilRef.current) return;
-      const next = (active + 1) % count;
-      scrollToIndex(next, "smooth");
-    }, intervalMs);
-    return () => window.clearInterval(id);
-  }, [enabled, count, intervalMs, active, scrollToIndex]);
-
-  useEffect(() => { return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }; }, []);
-  useEffect(() => { computeActive(); }, [computeActive]);
-
-  return { scrollerRef, active, scrollToIndex, onPointerDown, onPointerUp, onScroll };
-}
+/* useAutoCarousel imported from @/hooks/use-auto-carousel */
 
 /* ── small components ──────────────────────────────── */
 
@@ -329,7 +225,7 @@ const RequestCard = React.memo(function RequestCard({
       <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <CalendarDays className="h-3 w-3" />
-          {formatDate(req.date)}
+          {formatDateDMY(req.date)}
         </span>
         <span className="inline-flex items-center gap-1 font-semibold text-foreground">
           <Users className="h-3 w-3 text-primary" />
@@ -432,11 +328,8 @@ function RequestDetailSheet({
           tone="panel"
           className={cn(
             "relative overflow-hidden rounded-[28px] p-5",
-            "bg-[oklch(var(--secondary)/0.92)] dark:bg-[oklch(var(--secondary)/0.22)]",
-            "bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.18),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.92),oklch(var(--secondary)/0.86))]",
-            "dark:bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.22),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.26),oklch(var(--secondary)/0.18))]",
-            "border border-border/60 dark:border-border/80",
-            "shadow-[0_10px_34px_-18px_rgba(0,0,0,0.22)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.75)]",
+            "bg-secondary/15 dark:bg-accent",
+            "border border-border",
           )}
         >
           {/* Header: avatar + name + seats badge */}
@@ -477,7 +370,7 @@ function RequestDetailSheet({
 
           {/* Metric pills */}
           <div className="mt-4 flex gap-2">
-            <MetricPill icon={CalendarDays} label="Date" value={formatDate(request.date)} />
+            <MetricPill icon={CalendarDays} label="Date" value={formatDateDMY(request.date)} />
             <MetricPill icon={Footprints} label="Seats" value={`${request.seats} seat${request.seats !== 1 ? "s" : ""}`} />
           </div>
         </Surface>
@@ -492,7 +385,7 @@ function RequestDetailSheet({
           <div className="px-4 pb-4 flex items-center gap-3">
             <div className="flex flex-col items-center gap-0.5">
               <div className="h-3 w-3 rounded-full bg-primary ring-2 ring-primary/20" />
-              <div className="w-[2px] h-7 bg-gradient-to-b from-primary/60 to-primary/20 rounded-full" />
+              <div className="w-[2px] h-7 bg-primary/30 rounded-full" />
               <div className="h-3 w-3 rounded-full bg-primary/50 ring-2 ring-primary/15" />
             </div>
             <div className="min-w-0 flex-1 space-y-2.5">
@@ -576,16 +469,10 @@ function RequestsCarousel({ requests }: { requests: PassengerRequest[] }) {
 
   return (
     <>
-      <Surface elevated className="p-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[12px] font-semibold tracking-tight">Passenger requests</p>
-            <p className="text-[11px] text-muted-foreground">Riders looking for a lift</p>
-          </div>
-          <div className="grid h-7 w-7 place-items-center rounded-xl bg-primary/10 border border-primary/15 text-primary">
-            <Star className="h-3.5 w-3.5" />
-          </div>
-        </div>
+      <div>
+        <p className="text-[12px] font-semibold tracking-tight text-muted-foreground px-1">
+          Passenger requests
+        </p>
 
         <div
           ref={scrollerRef}
@@ -594,9 +481,8 @@ function RequestsCarousel({ requests }: { requests: PassengerRequest[] }) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           className={cn(
-            "mt-2 w-full flex gap-2 overflow-x-auto overscroll-x-contain",
+            "mt-2 w-full flex gap-2.5 overflow-x-auto overscroll-x-contain",
             "snap-x snap-mandatory pb-1 touch-pan-x select-none",
-            "-mx-3 px-3 scroll-px-3 pr-3",
             HIDE_SCROLLBAR,
           )}
           style={{ WebkitOverflowScrolling: "touch" }}
@@ -607,7 +493,7 @@ function RequestsCarousel({ requests }: { requests: PassengerRequest[] }) {
         </div>
 
         <Dots count={requests.length} active={active} onDot={(i) => scrollToIndex(i)} />
-      </Surface>
+      </div>
 
       <RequestDetailSheet request={selectedRequest} onClose={() => setSelectedRequest(null)} />
     </>
@@ -964,102 +850,75 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
   /* ── success state ── */
   if (isSubmitted) {
     return (
-      <div className="w-full overflow-x-hidden">
-        <div className="mx-auto max-w-screen-sm px-2 pb-[calc(env(safe-area-inset-bottom)+96px)]">
-          <Surface elevated className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-2xl grid place-items-center bg-primary/12 border border-primary/15">
-                <svg
-                  className="h-6 w-6 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.6}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <p className="text-[15px] font-extrabold tracking-tight">Ride posted</p>
-                <p className="mt-0.5 text-[12px] text-muted-foreground">
-                  Your ride is live. Requests will appear in your inbox.
-                </p>
-              </div>
-            </div>
-          </Surface>
+      <Surface elevated className="p-6">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-2xl grid place-items-center bg-primary/12 border border-primary/15">
+            <svg className="h-6 w-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.6} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[15px] font-extrabold tracking-tight">Ride posted</p>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              Your ride is live. Requests will appear in your inbox.
+            </p>
+          </div>
         </div>
-      </div>
+      </Surface>
     );
   }
 
   /* ── main render ── */
   return (
-    <div className="w-full overflow-x-hidden">
-      <div className="mx-auto max-w-screen-sm px-2 pb-[calc(env(safe-area-inset-bottom)+96px)] space-y-2.5">
-        {/* header */}
-        <p className="mt-1 px-1 text-[16px] font-semibold leading-tight tracking-tight text-accent">
-          Share your route{" "}
-          <span className="text-secondary">fill your empty seats</span>.
-        </p>
-
-        {/* route input */}
+    <div className="space-y-3">
+        {/* route input — flat, no card-in-card */}
         <Surface elevated className="p-3 relative isolate z-10 focus-within:z-50">
-          <p className="text-[11px] font-medium text-muted-foreground">Route</p>
+          <button
+            type="button"
+            onClick={swap}
+            className={cn(
+              "absolute right-4 top-1/2 -translate-y-1/2 z-20",
+              "h-10 w-10 rounded-2xl grid place-items-center",
+              "bg-primary text-primary-foreground",
+              "shadow-[0_12px_30px_-20px_rgba(6,78,59,0.55)]",
+              "active:scale-[0.98] transition-all duration-300",
+            )}
+            aria-label="Swap from and to"
+          >
+            <ArrowUpDown className="h-4 w-4" />
+          </button>
 
-          <div className="mt-2 relative z-10 focus-within:z-50 rounded-3xl border border-border/70 bg-card/60 overflow-visible">
-            <button
-              type="button"
-              onClick={swap}
-              className={cn(
-                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20",
-                "h-10 w-10 rounded-2xl grid place-items-center",
-                "bg-primary text-primary-foreground",
-                "shadow-[0_18px_44px_-30px_rgba(6,78,59,0.55)]",
-                "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
-              )}
-              aria-label="Swap from and to"
-            >
-              <ArrowUpDown className="h-4 w-4" />
-            </button>
+          <div className="pr-14">
+            <LocationInput
+              id="offer-from"
+              label="From"
+              value={form.from}
+              placeholder="Leaving from"
+              suggestions={fromSuggestions}
+              minChars={MIN_TOWN_CHARS}
+              onChange={(v) => handleLocationChange("from", v, setFromSuggestions)}
+              onSelect={handleLocationSelect("from", setFromSuggestions)}
+              onClear={handleLocationClear("from", setFromSuggestions)}
+              compact
+              nextFocusId="offer-to"
+            />
+          </div>
 
-            <div className="p-3">
-              <LocationInput
-                id="offer-from"
-                label="From"
-                value={form.from}
-                placeholder="Leaving from"
-                suggestions={fromSuggestions}
-                minChars={MIN_TOWN_CHARS}
-                onChange={(v) => handleLocationChange("from", v, setFromSuggestions)}
-                onSelect={handleLocationSelect("from", setFromSuggestions)}
-                onClear={handleLocationClear("from", setFromSuggestions)}
-                compact
-                nextFocusId="offer-to"
-              />
-            </div>
+          <div className="my-2 h-px bg-border/50" />
 
-            <FormDivider />
-
-            <div className="p-3">
-              <LocationInput
-                id="offer-to"
-                label="To"
-                value={form.to}
-                placeholder="Going to"
-                suggestions={toSuggestions}
-                minChars={MIN_TOWN_CHARS}
-                onChange={(v) => handleLocationChange("to", v, setToSuggestions)}
-                onSelect={handleLocationSelect("to", setToSuggestions)}
-                onClear={handleLocationClear("to", setToSuggestions)}
-                compact
-              />
-            </div>
+          <div className="pr-14">
+            <LocationInput
+              id="offer-to"
+              label="To"
+              value={form.to}
+              placeholder="Going to"
+              suggestions={toSuggestions}
+              minChars={MIN_TOWN_CHARS}
+              onChange={(v) => handleLocationChange("to", v, setToSuggestions)}
+              onSelect={handleLocationSelect("to", setToSuggestions)}
+              onClear={handleLocationClear("to", setToSuggestions)}
+              compact
+            />
           </div>
         </Surface>
 
@@ -1094,7 +953,6 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
 
         {/* announcements */}
         <AnnouncementsStrip announcements={announcements} />
-      </div>
     </div>
   );
 }

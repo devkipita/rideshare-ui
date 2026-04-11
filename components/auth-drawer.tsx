@@ -27,7 +27,7 @@ interface AuthDrawerProps {
 }
 
 const baseInputClassName =
-  'w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200'
+  'w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
 
 const iconInputClassName = `${baseInputClassName} pl-11`
 
@@ -247,7 +247,7 @@ export function AuthDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="bg-white/95 backdrop-blur border-t border-emerald-100 max-h-[92dvh] overflow-hidden">
+      <DrawerContent className="bg-card/95 backdrop-blur border-t border-border max-h-[92dvh] overflow-hidden">
         <div
           className="mx-auto w-full max-w-md px-5 pb-8 overflow-y-auto overscroll-contain"
           style={{
@@ -258,10 +258,10 @@ export function AuthDrawer({
         >
           <div className="flex items-start justify-between pt-2">
             <DrawerHeader className="px-0 pb-2">
-              <DrawerTitle className="text-2xl font-black text-emerald-950">
+              <DrawerTitle className="text-2xl font-black text-foreground">
                 {authTitle}
               </DrawerTitle>
-              <DrawerDescription className="text-sm text-slate-500">
+              <DrawerDescription className="text-sm text-muted-foreground">
                 {authDescription}
               </DrawerDescription>
             </DrawerHeader>
@@ -269,22 +269,22 @@ export function AuthDrawer({
               <button
                 type="button"
                 aria-label="Close"
-                className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-emerald-200 hover:text-emerald-700"
+                className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary/30 hover:text-primary"
               >
                 <X size={16} strokeWidth={2} />
               </button>
             </DrawerClose>
           </div>
 
-          <div className="mt-2 flex rounded-full bg-emerald-50 p-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+          <div className="mt-2 flex rounded-full bg-primary/10 p-1 text-xs font-semibold uppercase tracking-wide text-primary">
             <button
               type="button"
               onClick={() => handleAuthViewChange('signin')}
               aria-pressed={authView === 'signin'}
               className={`flex-1 rounded-full px-3 py-2 transition ${
                 authView === 'signin'
-                  ? 'bg-white text-emerald-800 shadow-sm'
-                  : 'text-emerald-700/80 hover:text-emerald-900'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-primary/70 hover:text-primary'
               }`}
             >
               Sign in
@@ -295,8 +295,8 @@ export function AuthDrawer({
               aria-pressed={authView === 'signup'}
               className={`flex-1 rounded-full px-3 py-2 transition ${
                 authView === 'signup'
-                  ? 'bg-white text-emerald-800 shadow-sm'
-                  : 'text-emerald-700/80 hover:text-emerald-900'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-primary/70 hover:text-primary'
               }`}
             >
               Sign up
@@ -304,18 +304,18 @@ export function AuthDrawer({
           </div>
 
           {authError && (
-            <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
               {authError}
             </div>
           )}
 
           {authView === 'signin' ? (
             <form onSubmit={handleSignIn} className="mt-4 space-y-3">
-              <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+              <label className="block space-y-2 text-sm font-semibold text-foreground">
                 Email or phone
                 <div className="relative">
                   <Mail
-                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"
                   />
                   <input
@@ -335,11 +335,11 @@ export function AuthDrawer({
                 </div>
               </label>
 
-              <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+              <label className="block space-y-2 text-sm font-semibold text-foreground">
                 Password
                 <div className="relative">
                   <Lock
-                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"
                   />
                   <input
@@ -362,7 +362,7 @@ export function AuthDrawer({
                     aria-label={
                       showSignInPassword ? 'Hide password' : 'Show password'
                     }
-                    className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                    className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground"
                   >
                     {showSignInPassword ? (
                       <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -376,18 +376,18 @@ export function AuthDrawer({
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-2xl bg-primary py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {authLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </form>
           ) : (
             <form onSubmit={handleSignUp} className="mt-4 space-y-3">
-              <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+              <label className="block space-y-2 text-sm font-semibold text-foreground">
                 Full name
                 <div className="relative">
                   <UserRound
-                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"
                   />
                   <input
@@ -407,11 +407,11 @@ export function AuthDrawer({
                 </div>
               </label>
 
-              <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+              <label className="block space-y-2 text-sm font-semibold text-foreground">
                 Email
                 <div className="relative">
                   <Mail
-                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"
                   />
                   <input
@@ -431,7 +431,7 @@ export function AuthDrawer({
                 </div>
               </label>
 
-              <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+              <label className="block space-y-2 text-sm font-semibold text-foreground">
                 Phone
                 <input
                   type="tel"
@@ -449,11 +449,11 @@ export function AuthDrawer({
                 />
               </label>
 
-              <label className="block space-y-2 text-sm font-semibold text-emerald-900">
+              <label className="block space-y-2 text-sm font-semibold text-foreground">
                 Password
                 <div className="relative">
                   <Lock
-                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"
                   />
                   <input
@@ -476,7 +476,7 @@ export function AuthDrawer({
                     aria-label={
                       showSignUpPassword ? 'Hide password' : 'Show password'
                     }
-                    className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                    className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground"
                   >
                     {showSignUpPassword ? (
                       <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -490,7 +490,7 @@ export function AuthDrawer({
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-2xl bg-primary py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {authLoading ? 'Creating account...' : 'Create account'}
               </button>
@@ -498,18 +498,18 @@ export function AuthDrawer({
           )}
 
           <div className="mt-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-emerald-100" />
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               Or continue with
             </span>
-            <div className="h-px flex-1 bg-emerald-100" />
+            <div className="h-px flex-1 bg-border" />
           </div>
 
           {googleProvider ? (
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/30 hover:text-primary"
             >
               <GoogleIcon />
               <span>Continue with Google</span>
@@ -518,7 +518,7 @@ export function AuthDrawer({
             <button
               type="button"
               disabled
-              className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-400"
+              className="mt-4 w-full rounded-2xl border border-border bg-muted py-3 text-sm font-semibold text-muted-foreground"
             >
               Google sign-in unavailable
             </button>

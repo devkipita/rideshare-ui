@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 
 import { filterTowns } from "@/lib/kenyan-towns";
-import { cn } from "@/lib/utils";
+import { cn, clamp, todayISO, hashString, avatarColors } from "@/lib/utils";
+import { useAutoCarousel } from "@/hooks/use-auto-carousel";
 import { Button } from "@/components/ui/button";
 import {
   ChipToggle,
@@ -82,44 +83,11 @@ const MIN_TOWN_CHARS = 2;
 const HIDE_SCROLLBAR =
   "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
-const CARD_FOCUS = cn(
-  "focus-within:border-transparent",
-  "focus-within:ring-2 focus-within:ring-primary/55",
-  "transition-[box-shadow,border-color] duration-200 ease-app",
-);
-
-function todayISO() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 function formatISOToDDMMYYYY(iso: string) {
   const [y, m, d] = iso.split("-");
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
-}
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function hashString(input: string) {
-  let h = 0;
-  for (let i = 0; i < input.length; i++)
-    h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-function avatarColors(name: string) {
-  const h = hashString(name) % 360;
-  return {
-    bg: `hsl(${h} 70% 55% / 0.18)`,
-    border: `hsl(${h} 70% 55% / 0.45)`,
-    text: `hsl(${h} 55% 28% / 0.95)`,
-  };
 }
 
 const FALLBACK_RIDES: TodayRide[] = [
@@ -222,122 +190,7 @@ const Avatar = React.memo(function Avatar({
   );
 });
 
-function useAutoCarousel({
-  count,
-  enabled,
-  intervalMs = 4200,
-  pauseMsAfterInteract = 2400,
-}: {
-  count: number;
-  enabled: boolean;
-  intervalMs?: number;
-  pauseMsAfterInteract?: number;
-}) {
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const [active, setActive] = useState(0);
-
-  const isDraggingRef = useRef(false);
-  const pauseUntilRef = useRef<number>(0);
-  const rafRef = useRef<number | null>(null);
-
-  const pauseNow = useCallback(() => {
-    pauseUntilRef.current = Date.now() + pauseMsAfterInteract;
-  }, [pauseMsAfterInteract]);
-
-  const scrollToIndex = useCallback(
-    (index: number, behavior: ScrollBehavior = "smooth") => {
-      const el = scrollerRef.current;
-      if (!el) return;
-
-      const i = clamp(index, 0, Math.max(0, count - 1));
-      const child = el.children.item(i) as HTMLElement | null;
-      if (!child) return;
-
-      pauseNow();
-      el.scrollTo({ left: child.offsetLeft, behavior });
-    },
-    [count, pauseNow],
-  );
-
-  const onPointerDown = useCallback(() => {
-    isDraggingRef.current = true;
-    pauseNow();
-  }, [pauseNow]);
-
-  const onPointerUp = useCallback(() => {
-    isDraggingRef.current = false;
-    pauseNow();
-  }, [pauseNow]);
-
-  const onPointerCancel = useCallback(() => {
-    isDraggingRef.current = false;
-    pauseNow();
-  }, [pauseNow]);
-
-  const computeActive = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el || count <= 1) return;
-
-    const center = el.scrollLeft + el.clientWidth / 2;
-    let bestIdx = 0;
-    let bestDist = Number.POSITIVE_INFINITY;
-
-    for (let i = 0; i < el.children.length; i++) {
-      const child = el.children.item(i) as HTMLElement | null;
-      if (!child) continue;
-      const childCenter = child.offsetLeft + child.offsetWidth / 2;
-      const dist = Math.abs(childCenter - center);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestIdx = i;
-      }
-    }
-
-    setActive(bestIdx);
-  }, [count]);
-
-  const onScroll = useCallback(() => {
-    if (rafRef.current) return;
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null;
-      computeActive();
-    });
-  }, [computeActive]);
-
-  useEffect(() => {
-    if (!enabled || count <= 1) return;
-
-    const id = window.setInterval(() => {
-      if (isDraggingRef.current) return;
-      if (Date.now() < pauseUntilRef.current) return;
-
-      const next = (active + 1) % count;
-      scrollToIndex(next, "smooth");
-    }, intervalMs);
-
-    return () => window.clearInterval(id);
-  }, [enabled, count, intervalMs, active, scrollToIndex]);
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    computeActive();
-  }, [computeActive]);
-
-  return {
-    scrollerRef,
-    active,
-    scrollToIndex,
-    onPointerDown,
-    onPointerUp,
-    onPointerCancel,
-    onScroll,
-  };
-}
+/* useAutoCarousel imported from @/hooks/use-auto-carousel */
 
 function RoutePill({
   from,
@@ -552,7 +405,6 @@ function TodayRidesCarousel({
     scrollToIndex,
     onPointerDown,
     onPointerUp,
-    onPointerCancel,
     onScroll,
   } = useAutoCarousel({
     count: rides.length,
@@ -563,31 +415,22 @@ function TodayRidesCarousel({
 
   return (
     <>
-      <Surface elevated className="p-4 relative">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[13px] font-semibold tracking-tight">
-              Available rides
-            </p>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Swipe to browse what’s already posted near you
-            </p>
-          </div>
-        </div>
+      <div>
+        <p className="text-[12px] font-semibold tracking-tight text-muted-foreground px-1">
+          Available rides
+        </p>
 
         <div
           ref={scrollerRef}
           onScroll={onScroll}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
+          onPointerCancel={onPointerUp}
           className={cn(
-            "mt-3 w-full",
-            "flex gap-2 overflow-x-auto overscroll-x-contain",
+            "mt-2 w-full",
+            "flex gap-2.5 overflow-x-auto overscroll-x-contain",
             "snap-x snap-mandatory pb-1",
             "touch-pan-x select-none",
-            "-mx-4 px-4",
-            "scroll-px-4 pr-4",
             HIDE_SCROLLBAR,
           )}
           style={{ WebkitOverflowScrolling: "touch" }}
@@ -602,11 +445,7 @@ function TodayRidesCarousel({
           active={active}
           onDot={(i) => scrollToIndex(i)}
         />
-
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          {hint ?? "Enter your route to unlock date, seats, and preferences."}
-        </p>
-      </Surface>
+      </div>
 
       <RideDetailsSheet
         open={!!selectedRide}
@@ -646,62 +485,52 @@ function RouteCard({
   onSwap: () => void;
 }) {
   return (
-    <Surface elevated className="p-2 relative isolate z-10 focus-within:z-50">
-      <p className="text-[12px] font-medium text-muted-foreground">Route</p>
-
-      <div
+    <Surface elevated className="p-3 relative isolate z-10 focus-within:z-50">
+      <button
+        type="button"
+        onClick={onSwap}
         className={cn(
-          "mt-3 relative z-10 focus-within:z-50 rounded-3xl border border-border/70 bg-card/60 overflow-visible",
-          CARD_FOCUS,
+          "absolute right-4 top-1/2 -translate-y-1/2 z-20",
+          "h-10 w-10 rounded-2xl grid place-items-center",
+          "bg-primary text-primary-foreground",
+          "shadow-[0_12px_30px_-20px_rgba(6,78,59,0.55)]",
+          "active:scale-[0.98] transition-all duration-300",
         )}
+        aria-label="Swap from and to"
       >
-        <button
-          type="button"
-          onClick={onSwap}
-          className={cn(
-            "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20",
-            "h-11 w-11 rounded-2xl grid place-items-center",
-            "bg-primary text-primary-foreground",
-            "shadow-[0_18px_44px_-30px_rgba(6,78,59,0.55)]",
-            "transition-all duration-300 ease-app active:scale-[0.98]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
-          )}
-          aria-label="Swap from and to"
-        >
-          <ArrowUpDown className="h-4 w-4" />
-        </button>
+        <ArrowUpDown className="h-4 w-4" />
+      </button>
 
-        <div className="p-3 sm:p-3.5">
-          <LocationInput
-            id="from"
-            label="From"
-            value={filters.from}
-            placeholder="Leaving From"
-            suggestions={fromSuggestions}
-            minChars={MIN_TOWN_CHARS}
-            onChange={onFromChange}
-            onSelect={onFromSelect}
-            onClear={onFromClear}
-            compact
-          />
-        </div>
+      <div className="pr-14">
+        <LocationInput
+          id="from"
+          label="From"
+          value={filters.from}
+          placeholder="Leaving From"
+          suggestions={fromSuggestions}
+          minChars={MIN_TOWN_CHARS}
+          onChange={onFromChange}
+          onSelect={onFromSelect}
+          onClear={onFromClear}
+          compact
+        />
+      </div>
 
-        <FormDivider />
+      <div className="my-2 h-px bg-border/50" />
 
-        <div className="p-3 sm:p-3.5">
-          <LocationInput
-            id="to"
-            label="To"
-            value={filters.to}
-            placeholder="Going To"
-            suggestions={toSuggestions}
-            minChars={MIN_TOWN_CHARS}
-            onChange={onToChange}
-            onSelect={onToSelect}
-            onClear={onToClear}
-            compact
-          />
-        </div>
+      <div className="pr-14">
+        <LocationInput
+          id="to"
+          label="To"
+          value={filters.to}
+          placeholder="Going To"
+          suggestions={toSuggestions}
+          minChars={MIN_TOWN_CHARS}
+          onChange={onToChange}
+          onSelect={onToSelect}
+          onClear={onToClear}
+          compact
+        />
       </div>
     </Surface>
   );

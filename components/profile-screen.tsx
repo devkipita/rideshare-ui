@@ -23,6 +23,9 @@ import {
   CalendarDays,
   Trash2,
   Upload,
+  Moon,
+  Sun,
+  Languages,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -269,6 +272,78 @@ function ActionButton({
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </button>
+  );
+}
+
+function SettingsThemeToggle() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  const toggle = () => {
+    const next = !isDark;
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    setIsDark(next);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="w-full h-14 rounded-2xl px-5 flex items-center justify-between text-foreground hover:bg-accent/40 active:scale-[0.985] transition-all duration-300"
+    >
+      <div className="flex items-center gap-3">
+        {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+        <span className="text-sm font-semibold">{isDark ? "Dark mode" : "Light mode"}</span>
+      </div>
+      <div className={`relative h-7 w-12 rounded-full transition-colors duration-200 ${isDark ? "bg-primary" : "bg-muted-foreground/30"}`}>
+        <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ${isDark ? "translate-x-5" : "translate-x-0.5"}`} />
+      </div>
+    </button>
+  );
+}
+
+function SettingsLanguageToggle() {
+  const [lang, setLang] = useState("en");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("kipita-lang");
+    if (saved === "sw" || saved === "en") setLang(saved);
+  }, []);
+
+  const selectLang = (next: "en" | "sw") => {
+    setLang(next);
+    localStorage.setItem("kipita-lang", next);
+    document.documentElement.lang = next;
+    window.dispatchEvent(new StorageEvent("storage", { key: "kipita-lang", newValue: next }));
+  };
+
+  return (
+    <div className="w-full h-14 rounded-2xl px-5 flex items-center justify-between text-foreground">
+      <div className="flex items-center gap-3">
+        <Languages className="h-5 w-5" />
+        <span className="text-sm font-semibold">{lang === "en" ? "English" : "Kiswahili"}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => selectLang("en")}
+          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 active:scale-[0.95] ${lang === "en" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent/40"}`}
+        >
+          EN
+        </button>
+        <button
+          type="button"
+          onClick={() => selectLang("sw")}
+          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 active:scale-[0.95] ${lang === "sw" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent/40"}`}
+        >
+          SW
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -877,7 +952,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
     return (
       <div className="min-h-[100dvh] overflow-y-auto overscroll-contain">
         <div className="px-4 pb-24 space-y-4">
-          <p className="text-sm font-medium text-[#fff] text-center m-0 py-1">
+          <p className="text-sm font-medium text-foreground text-center m-0 py-1">
             Welcome to Your Account
           </p>
           <GlassCard className="p-6 text-center">
@@ -1040,11 +1115,20 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
 
           <section className="space-y-2">
             <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
+              SETTINGS
+            </p>
+            <GlassCard className="p-1">
+              <SettingsThemeToggle />
+              <div className="h-px bg-border mx-4" />
+              <SettingsLanguageToggle />
+            </GlassCard>
+          </section>
+
+          <section className="space-y-2">
+            <p className="px-1 text-[11px] font-black text-muted-foreground tracking-widest">
               ACCOUNT
             </p>
             <GlassCard className="p-1">
-              <ActionButton icon={Settings} label="Settings" disabled />
-              <div className="h-px bg-border mx-4" />
               <ActionButton
                 icon={LogOut}
                 label="Log out"

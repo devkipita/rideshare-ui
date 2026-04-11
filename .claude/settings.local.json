@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(git -C \"c:/Users/Admin/Desktop/carpool-app-design\" rm -f middleware.ts)"
+      "Bash(git -C \"c:/Users/Admin/Desktop/carpool-app-design\" rm -f middleware.ts)",
+      "Bash(npm install:*)",
+      "Bash(while read:*)",
+      "Bash(do wc:*)",
+      "Bash(done)",
+      "Bash(wc -l app/\\\\\\(app\\\\\\)/layout.tsx app/\\\\\\(app\\\\\\)/home/page.tsx app/\\\\\\(app\\\\\\)/trips/page.tsx app/\\\\\\(app\\\\\\)/notifications/page.tsx app/\\\\\\(app\\\\\\)/profile/page.tsx app/page.tsx)",
+      "Bash(grep -E \"^-.*\\\\.\\(tsx|ts\\)$\")",
+      "Read(//c/Users/Admin/Desktop/carpool-app-design/**)"
     ]
   }
 }

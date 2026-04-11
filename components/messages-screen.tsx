@@ -421,7 +421,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
   return (
     <div className="flex-1 w-full overflow-y-auto overflow-x-hidden scrollbar-hide  pb-24">
       <div className="w-full pt-1 space-y-3">
-        <p className="text-center text-sm font-semibold text-white m-0 py-1">Ride and Road Updates</p>
+        <p className="text-center text-sm font-semibold text-foreground m-0 py-1">Ride and Road Updates</p>
 
         <Surface tone="sheet" className="p-3">
           <p className="text-[11px] font-extrabold tracking-[0.15em] text-muted-foreground">

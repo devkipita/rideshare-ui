@@ -1,0 +1,109 @@
+{
+  "app": {
+    "name": "Kipita",
+    "tagline": "Share the road. Split the cost."
+  },
+  "nav": {
+    "home": "Home",
+    "trips": "Trips",
+    "alerts": "Alerts",
+    "profile": "Profile",
+    "myRides": "My Rides",
+    "requests": "Requests"
+  },
+  "role": {
+    "rider": "Rider",
+    "driver": "Driver",
+    "switchTo": "Switch to {{role}}"
+  },
+  "search": {
+    "from": "From",
+    "to": "To",
+    "pickupTown": "Pickup town",
+    "dropoffTown": "Drop-off town",
+    "departureTown": "Departure town",
+    "destinationTown": "Destination town",
+    "searchRides": "Search Rides",
+    "searchRequests": "Search Requests",
+    "noResults": "No rides found on this route.",
+    "postRequest": "Post a Ride Request",
+    "seats": "Seats",
+    "date": "Date",
+    "time": "Departure time",
+    "luggage": "Luggage",
+    "pets": "Pets ok",
+    "advanced": "Advanced"
+  },
+  "trip": {
+    "current": "Current",
+    "previous": "Previous",
+    "active": "Active",
+    "matched": "Matched",
+    "started": "In progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "noTrips": "No trips yet.",
+    "perSeat": "per seat",
+    "seatsLeft": "{{count}} seat left",
+    "seatsLeft_plural": "{{count}} seats left",
+    "viewDetails": "View details",
+    "requestSeat": "Request Seat",
+    "startTrip": "Start Trip",
+    "cancelTrip": "Cancel Trip"
+  },
+  "notifications": {
+    "title": "Ride and Road Updates",
+    "markAllRead": "Mark all read",
+    "unread": "{{count}} unread",
+    "noNotifications": "No notifications",
+    "postUpdate": "Post a road update",
+    "whatsHappening": "What's happening on the road?",
+    "location": "Location",
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
+    }
+  },
+  "profile": {
+    "welcome": "Welcome to Your Account",
+    "editProfile": "Edit Profile",
+    "settings": "Settings",
+    "theme": "Theme",
+    "language": "Language",
+    "logout": "Log out",
+    "verified": "Verified",
+    "totalTrips": "Total trips",
+    "rating": "Rating"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "phone": "Phone number",
+    "orContinueWith": "or continue with",
+    "google": "Continue with Google"
+  },
+  "payment": {
+    "title": "Payment",
+    "mpesa": "M-Pesa",
+    "card": "Card",
+    "checkPhone": "Check your phone for M-Pesa prompt",
+    "processing": "Processing payment..."
+  },
+  "common": {
+    "back": "Back",
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "message": "Message",
+    "match": "Match",
+    "filters": "Filters",
+    "clearFilters": "Clear filters",
+    "loading": "Loading...",
+    "retry": "Retry",
+    "offline": "You're offline"
+  }
+}

@@ -60,7 +60,7 @@ export function DriverEarnings() {
               className="glass-card rounded-2xl p-4 flex items-center justify-between hover:shadow-lg smooth-transition"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-primary/12 flex items-center justify-center">
                   <DollarSign className="w-5 h-5 text-primary" />
                 </div>
                 <div>

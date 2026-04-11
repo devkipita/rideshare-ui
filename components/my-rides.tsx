@@ -156,20 +156,8 @@ const pastRidesMock: PastRide[] = [
   },
 ];
 
-/** @deprecated Use UserAvatar from ui-parts — kept as thin wrapper for backwards compatibility */
-function DriverAvatar({
-  name,
-  src,
-  verified,
-  size = 44,
-}: {
-  name: string;
-  src?: string;
-  verified?: boolean;
-  size?: number;
-}) {
-  return <UserAvatar name={name} src={src} verified={verified} size={size} />;
-}
+/** DriverAvatar is now just UserAvatar — alias kept for export compatibility */
+const DriverAvatar = UserAvatar;
 
 function PlaceRow({
   kind,
@@ -212,17 +200,7 @@ function DriverSummaryCard({
   return (
     <Surface
       tone="panel"
-      className={[
-        "relative overflow-hidden rounded-[28px] p-5",
-        // Brand-secondary base (light = strong secondary, dark = toned secondary wash)
-        "bg-[oklch(var(--secondary)/0.92)] dark:bg-[oklch(var(--secondary)/0.22)]",
-        // Depth gradient (kept subtle + uniform)
-        "bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.18),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.92),oklch(var(--secondary)/0.86))]",
-        "dark:bg-[radial-gradient(900px_420px_at_18%_0%,oklch(var(--brand-accent)/0.22),transparent_62%),linear-gradient(135deg,oklch(var(--secondary)/0.26),oklch(var(--secondary)/0.18))]",
-        // Border + shadow unified
-        "border border-border/60 dark:border-border/80",
-        "shadow-[0_10px_34px_-18px_rgba(0,0,0,0.22)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.75)]",
-      ].join(" ")}
+      className="relative overflow-hidden rounded-[28px] p-5 bg-secondary/15 dark:bg-accent border border-border"
     >
       {/* Soft highlight rim */}
       <div
@@ -1348,7 +1326,7 @@ export function MyRides() {
 
   return (
     <div className="w-full space-y-4 pb-4">
-      <p className="text-sm font-semibold text-center m-0 py-1 text-white">
+      <p className="text-sm font-semibold text-center m-0 py-1 text-foreground">
         My Rides
       </p>
 

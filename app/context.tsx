@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useAuthStore } from "@/store";
 
 export type ActiveRole = "passenger" | "driver";
 
@@ -10,43 +11,20 @@ type RoleContextValue = {
   toggleRole: () => void;
 };
 
-const STORAGE_KEY = "kipita_active_role";
-
 const RoleContext = React.createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
-  const [activeRole, setActiveRoleState] = React.useState<ActiveRole>("passenger");
+  const role = useAuthStore((s) => s.role);
+  const setRole = useAuthStore((s) => s.setRole);
+  const toggle = useAuthStore((s) => s.toggleRole);
 
-  // Hydrate from localStorage after mount to avoid SSR mismatch
-  React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "driver" || stored === "passenger") {
-        setActiveRoleState(stored);
-      }
-    } catch {}
-  }, []);
-
-  const setActiveRole = React.useCallback((role: ActiveRole) => {
-    setActiveRoleState(role);
-    try {
-      localStorage.setItem(STORAGE_KEY, role);
-    } catch {}
-  }, []);
-
-  const toggleRole = React.useCallback(() => {
-    setActiveRoleState((prev) => {
-      const next = prev === "passenger" ? "driver" : "passenger";
-      try {
-        localStorage.setItem(STORAGE_KEY, next);
-      } catch {}
-      return next;
-    });
-  }, []);
-
-  const value = React.useMemo(
-    () => ({ activeRole, setActiveRole, toggleRole }),
-    [activeRole, setActiveRole, toggleRole],
+  const value = React.useMemo<RoleContextValue>(
+    () => ({
+      activeRole: role as ActiveRole,
+      setActiveRole: (r: ActiveRole) => setRole(r),
+      toggleRole: toggle,
+    }),
+    [role, setRole, toggle],
   );
 
   return (
@@ -64,10 +42,7 @@ export function useOptionalRole() {
   return React.useContext(RoleContext);
 }
 
-// ─── Legacy aliases (used by KipitaSplash during transition) ───
-// These are kept so old imports don't break immediately.
-// They should be removed once all consumers are migrated.
-
+// Legacy aliases (used by KipitaSplash)
 export type AppMode = "splash" | "home" | "passenger" | "driver";
 
 type AppModeContextValue = {
