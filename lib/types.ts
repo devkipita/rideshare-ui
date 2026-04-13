@@ -52,6 +52,7 @@ export interface RideRequest {
   origin: string;
   destination: string;
   preferredDate: string;
+  preferredTime?: string;
   seatsNeeded: number;
   allowsPets: boolean;
   allowsPackages: boolean;

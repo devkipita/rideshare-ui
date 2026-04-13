@@ -1,10 +1,45 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { LIMITS } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const KENYA_OFFSET = "+03:00";
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+function buildKenyaDayWindow(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("date must be YYYY-MM-DD");
+  }
+
+  const start = new Date(`${date}T00:00:00${KENYA_OFFSET}`);
+  if (Number.isNaN(start.getTime())) throw new Error("Invalid date");
+
+  return {
+    start,
+    end: new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1),
+  };
+}
+
+function buildKenyaRideSearchWindow(date: string, time?: string | null) {
+  const day = buildKenyaDayWindow(date);
+  if (!time) return day;
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    throw new Error("time must be HH:mm");
+  }
+
+  const center = new Date(`${date}T${time}:00${KENYA_OFFSET}`);
+  if (Number.isNaN(center.getTime())) throw new Error("Invalid time");
+
+  return {
+    start: new Date(Math.max(day.start.getTime(), center.getTime() - TWO_HOURS_MS)),
+    end: new Date(Math.min(day.end.getTime(), center.getTime() + TWO_HOURS_MS)),
+  };
+}
 
 /** POST /api/rides — driver posts a new ride */
 export async function POST(req: Request) {
@@ -40,8 +75,15 @@ export async function POST(req: Request) {
       { status: 400 },
     );
 
-  if (typeof total_seats !== "number" || total_seats < 1)
-    return NextResponse.json({ error: "total_seats must be >= 1" }, { status: 400 });
+  if (
+    typeof total_seats !== "number" ||
+    total_seats < LIMITS.minSeats ||
+    total_seats > LIMITS.maxSeats
+  )
+    return NextResponse.json(
+      { error: `total_seats must be between ${LIMITS.minSeats} and ${LIMITS.maxSeats}` },
+      { status: 400 },
+    );
 
   if (typeof price_per_seat !== "number" || price_per_seat <= 0)
     return NextResponse.json({ error: "price_per_seat must be > 0" }, { status: 400 });
@@ -80,23 +122,40 @@ export async function GET(req: Request) {
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
   const date = url.searchParams.get("date");
+  const time = url.searchParams.get("time");
   const seats = url.searchParams.get("seats");
   const pets = url.searchParams.get("pets");
   const luggage = url.searchParams.get("luggage");
+
+  if (time && !date) {
+    return NextResponse.json(
+      { error: "date is required when time is provided" },
+      { status: 400 },
+    );
+  }
 
   let query = supabaseAdmin
     .from("rides")
     .select("*, driver:users!driver_id(id,name,image,role)")
     .eq("status", "open")
+    .not("notes", "ilike", "Matched passenger request %")
     .order("departure_time", { ascending: true });
 
   if (from) query = query.ilike("origin", `%${from}%`);
   if (to) query = query.ilike("destination", `%${to}%`);
 
   if (date) {
-    const dayStart = `${date}T00:00:00.000Z`;
-    const dayEnd = `${date}T23:59:59.999Z`;
-    query = query.gte("departure_time", dayStart).lte("departure_time", dayEnd);
+    try {
+      const window = buildKenyaRideSearchWindow(date, time);
+      query = query
+        .gte("departure_time", window.start.toISOString())
+        .lte("departure_time", window.end.toISOString());
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Invalid date or time" },
+        { status: 400 },
+      );
+    }
   }
 
   if (seats) {

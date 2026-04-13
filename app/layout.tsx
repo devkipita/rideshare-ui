@@ -5,10 +5,11 @@ import { getServerSession } from 'next-auth'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/components/auth-provider'
 import { authOptions } from '@/lib/auth'
+import { Toaster } from 'sonner'
 import './globals.css'
 
-const APP_NAME = 'RideShare'
-const APP_DESCRIPTION = 'Share the road. Split the cost. Join a community of conscious travelers.'
+const APP_NAME = 'Kipita'
+const APP_DESCRIPTION = 'Share the road. Split the cost.'
 const FAVICON_PATH = '/favicon_io'
 const THEME_COLOR_LIGHT = '#f5f7f4'
 const THEME_COLOR_DARK = '#0f1613'
@@ -112,8 +113,7 @@ export default async function RootLayout({
   const session = await (async () => {
     try {
       return await getServerSession(authOptions)
-    } catch (error) {
-      console.error('getServerSession failed; rendering without session', error)
+    } catch {
       return null
     }
   })()
@@ -141,6 +141,7 @@ export default async function RootLayout({
           <div className="flex flex-col h-screen w-full max-w-md mx-auto relative">
             {children}
           </div>
+          <Toaster position="top-center" richColors closeButton />
         </AuthProvider>
         <Analytics />
       </body>

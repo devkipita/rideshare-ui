@@ -4,10 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
-  type Dispatch,
-  type SetStateAction,
 } from "react";
 import {
   ArrowUpDown,
@@ -15,7 +12,6 @@ import {
   CalendarDays,
   PawPrint,
   LuggageIcon,
-  PlaneIcon,
   Star,
   MapPin,
   Dot,
@@ -25,21 +21,26 @@ import {
   StickyNote,
 } from "lucide-react";
 
-import { filterTowns } from "@/lib/kenyan-towns";
-import { cn, clamp, todayISO, hashString, avatarColors } from "@/lib/utils";
+import { cn, todayISO, hashString, avatarColors } from "@/lib/utils";
 import { useAutoCarousel } from "@/hooks/use-auto-carousel";
+import { usePlaceSuggestions } from "@/hooks/use-place-suggestions";
+import { useTownSuggestions } from "@/hooks/use-town-suggestions";
 import { Button } from "@/components/ui/button";
 import {
   ChipToggle,
   FormDivider,
   LocationInput,
-  PillButton,
+  SeatStepper,
   Surface,
 } from "./ui-parts";
 import { DatePickerCard } from "./ui/date-picker";
+import { TimePickerCard } from "./ui/time-picker";
 import { RideDetailsSheet, type SearchRide } from "./my-rides";
 import { useChat } from "./global-chat";
 import { useAuthDrawer } from "./auth-drawer-provider";
+import { LIMITS } from "@/lib/constants";
+import useSWR from "swr";
+import { PaymentDrawer } from "./shared/payment-drawer";
 
 export interface SearchFilters {
   from: string;
@@ -48,10 +49,10 @@ export interface SearchFilters {
   dropoff: string;
   note: string;
   date: string;
+  departTime: string;
   seats: number;
   pets: boolean;
   luggage: boolean;
-  airport: boolean;
 }
 
 type Props = {
@@ -62,8 +63,7 @@ type Props = {
 };
 
 type LocationField = "from" | "to" | "pickup" | "dropoff";
-type Toggleable = "pets" | "luggage" | "airport";
-type SetSug = Dispatch<SetStateAction<string[]>>;
+type Toggleable = "pets" | "luggage";
 
 type TodayRide = {
   id: string;
@@ -154,6 +154,43 @@ function useTodayRides(): TodayRide[] {
   }, []);
 
   return rides;
+}
+
+function useLiveTodayRides(): TodayRide[] {
+  const today = useMemo(() => todayISO(), []);
+  const { data } = useSWR<{ rides?: Record<string, unknown>[] }>(
+    `/api/rides?date=${today}`,
+    {
+      refreshInterval: LIMITS.pollIntervalMs,
+    },
+  );
+
+  return useMemo(() => {
+    if (!data?.rides?.length) return FALLBACK_RIDES;
+
+    const mapped: TodayRide[] = data.rides.map((r) => {
+      const driver = r.driver as Record<string, unknown> | null;
+      const dt = r.departure_time ? new Date(r.departure_time as string) : null;
+      return {
+        id: r.id as string,
+        driverId: (driver?.id as string) ?? undefined,
+        name: (driver?.name as string) ?? "Driver",
+        from: r.origin as string,
+        to: r.destination as string,
+        price: r.price_per_seat as number,
+        rating: 4.5,
+        avatarUrl: (driver?.image as string) ?? undefined,
+        dateISO: today,
+        time: dt
+          ? `${String(dt.getHours()).padStart(2, "0")}:${String(
+              dt.getMinutes(),
+            ).padStart(2, "0")}`
+          : "â€”",
+      };
+    });
+
+    return mapped.length ? mapped : FALLBACK_RIDES;
+  }, [data?.rides, today]);
 }
 
 const Avatar = React.memo(function Avatar({
@@ -337,10 +374,12 @@ function TodayRidesCarousel({
   rides,
   hint,
   fallbackFrom,
+  seats = 1,
 }: {
   rides: TodayRide[];
   hint?: string;
   fallbackFrom?: string;
+  seats?: number;
 }) {
   const chat = useChat();
   const { openAuthDrawer, isSignedIn } = useAuthDrawer();
@@ -348,6 +387,7 @@ function TodayRidesCarousel({
   const [selectedRide, setSelectedRide] = useState<TodayRide | null>(null);
   const [booked, setBooked] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [payingRide, setPayingRide] = useState<TodayRide | null>(null);
 
   useEffect(() => {
     setBooked(false);
@@ -369,34 +409,17 @@ function TodayRidesCarousel({
         rating: selectedRide.rating,
         trips: 0,
         avatarUrl: selectedRide.avatarUrl,
+        role: "driver",
       },
     });
     setSelectedRide(null);
   }, [selectedRide, isSignedIn, openAuthDrawer, chat]);
 
-  const handleBookSeat = useCallback(async () => {
+  const handleBookSeat = useCallback(() => {
     if (!selectedRide) return;
     if (!isSignedIn) { openAuthDrawer({ selectedRole: "passenger" }); return; }
     if (booking) return;
-    setBooking(true);
-    try {
-      const res = await fetch("/api/ride-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          origin: selectedRide.from,
-          destination: selectedRide.to,
-          preferred_date: selectedRide.dateISO,
-          seats_needed: 1,
-          note: `Requesting seat on ride ${selectedRide.id}`,
-        }),
-      });
-      if (res.ok) setBooked(true);
-    } catch {
-      // silently fail — user can retry
-    } finally {
-      setBooking(false);
-    }
+    setPayingRide(selectedRide);
   }, [selectedRide, isSignedIn, openAuthDrawer, booking]);
 
   const {
@@ -455,6 +478,23 @@ function TodayRidesCarousel({
         onBookSeat={handleBookSeat}
         booked={booked}
         booking={booking}
+      />
+
+      <PaymentDrawer
+        open={!!payingRide}
+        onOpenChange={(v) => {
+          if (!v) setPayingRide(null);
+        }}
+        rideId={payingRide?.id ?? ""}
+        amount={(payingRide?.price ?? 0) * Math.max(1, seats)}
+        seats={seats}
+        routeLabel={
+          payingRide ? `${payingRide.from} -> ${payingRide.to}` : undefined
+        }
+        onSuccess={() => {
+          setBooked(true);
+          setSelectedRide(null);
+        }}
       />
     </>
   );
@@ -569,13 +609,13 @@ function PickupDropoffCard({
         type="button"
         onClick={onToggle}
         className={cn(
-          "w-full flex items-start justify-between gap-3",
+          "w-full flex items-start justify-between gap-3 text-left",
           "rounded-2xl transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
         )}
         aria-expanded={open}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 text-left">
           <p className="text-[13px] font-semibold tracking-tight">
             Pick up & drop-off
           </p>
@@ -606,9 +646,13 @@ function PickupDropoffCard({
                 id="pickup"
                 label="Pick up"
                 value={filters.pickup}
-                placeholder="Pickup location (e.g. Westlands, Sarit Centre)"
+                placeholder={
+                  filters.from
+                    ? `Pickup place in ${filters.from}`
+                    : "Pickup place"
+                }
                 suggestions={pickupSuggestions}
-                minChars={MIN_TOWN_CHARS}
+                minChars={1}
                 onChange={onPickupChange}
                 onSelect={onPickupSelect}
                 onClear={onPickupClear}
@@ -624,9 +668,13 @@ function PickupDropoffCard({
                 id="dropoff"
                 label="Drop-off"
                 value={filters.dropoff}
-                placeholder="Drop-off location (e.g. Thika, Makongeni)"
+                placeholder={
+                  filters.to
+                    ? `Drop-off place in ${filters.to}`
+                    : "Drop-off place"
+                }
                 suggestions={dropoffSuggestions}
-                minChars={MIN_TOWN_CHARS}
+                minChars={1}
                 onChange={onDropoffChange}
                 onSelect={onDropoffSelect}
                 onClear={onDropoffClear}
@@ -697,11 +745,6 @@ function TripOptions({
   canSearch: boolean;
   loading?: boolean;
 }) {
-  const setSeats = useCallback(
-    (n: number) => () => update("seats", n),
-    [update],
-  );
-
   const toggle = useCallback(
     (k: Toggleable) => () => update(k, !filters[k]),
     [filters, update],
@@ -713,18 +756,18 @@ function TripOptions({
         type="button"
         onClick={onToggle}
         className={cn(
-          "w-full flex items-start justify-between gap-3",
+          "w-full flex items-start justify-between gap-3 text-left",
           "rounded-2xl transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
         )}
         aria-expanded={open}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 text-left">
           <p className="text-[13px] font-semibold tracking-tight">
             Trip options
           </p>
           <p className="mt-0.5 text-[12px] text-muted-foreground">
-            Date, seats, and preferences
+            Date, time, seats, and preferences
           </p>
         </div>
 
@@ -779,34 +822,38 @@ function TripOptions({
               </div>
             </Surface>
 
+            <TimePickerCard
+              label="Travel time"
+              value={filters.departTime}
+              onChange={(value) => update("departTime", value)}
+              variant="card"
+              className="p-2.5"
+            />
+          </div>
+
+          <div className="mt-2">
             <Surface elevated className="p-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="h-9 w-9 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15">
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-9 rounded-2xl grid place-items-center bg-primary/10 border border-primary/15 shrink-0">
                   <Users className="h-4 w-4 text-primary" />
                 </div>
-
-                <div className="min-w-0">
+                <div className="min-w-0 text-left">
                   <p className="text-[12px] font-medium text-muted-foreground">
                     Seats
                   </p>
-                  <p className="mt-0.5 text-[15px] font-semibold tracking-tight">
-                    {filters.seats}
+                  <p className="mt-0.5 text-[13px] font-semibold tracking-tight">
+                    Up to {LIMITS.maxSeats}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-2 grid grid-cols-4 gap-1.5">
-                {[1, 2, 3, 4].map((n) => (
-                  <PillButton
-                    key={n}
-                    active={filters.seats === n}
-                    onClick={setSeats(n)}
-                    className="h-9 rounded-2xl px-0 text-[13px] font-semibold"
-                  >
-                    {n}
-                  </PillButton>
-                ))}
-              </div>
+              <SeatStepper
+                value={filters.seats}
+                min={LIMITS.minSeats}
+                max={LIMITS.maxSeats}
+                onChange={(value) => update("seats", value)}
+                className="mt-2"
+              />
             </Surface>
           </div>
 
@@ -825,13 +872,6 @@ function TripOptions({
                   label="Luggage"
                   active={filters.luggage}
                   onClick={toggle("luggage")}
-                  size="sm"
-                />
-                <ChipToggle
-                  icon={PlaneIcon}
-                  label="Airport"
-                  active={filters.airport}
-                  onClick={toggle("airport")}
                   size="sm"
                 />
               </div>
@@ -863,14 +903,21 @@ export function PassengerSearchForm({
   onSearch,
   loading,
 }: Props) {
-  const todayRides = useTodayRides();
-  const [fromSuggestions, setFromSuggestions] = useState<string[]>([]);
-  const [toSuggestions, setToSuggestions] = useState<string[]>([]);
-  const [pickupSuggestions, setPickupSuggestions] = useState<string[]>([]);
-  const [dropoffSuggestions, setDropoffSuggestions] = useState<string[]>([]);
-
+  const todayRides = useLiveTodayRides();
   const minDate = useMemo(() => todayISO(), []);
   const [dateOpen, setDateOpen] = useState(false);
+  const fromSuggestions = useTownSuggestions(filters.from, MIN_TOWN_CHARS);
+  const toSuggestions = useTownSuggestions(filters.to, MIN_TOWN_CHARS);
+  const pickupSuggestions = usePlaceSuggestions(
+    filters.from,
+    filters.pickup,
+    1,
+  );
+  const dropoffSuggestions = usePlaceSuggestions(
+    filters.to,
+    filters.dropoff,
+    1,
+  );
 
   const hasLocations = useMemo(
     () => Boolean(filters.from.trim() && filters.to.trim()),
@@ -887,9 +934,17 @@ export function PassengerSearchForm({
         filters.to.trim() &&
         filters.pickup.trim() &&
         filters.dropoff.trim() &&
-        filters.date,
+        filters.date &&
+        filters.departTime,
       ),
-    [filters.from, filters.to, filters.pickup, filters.dropoff, filters.date],
+    [
+      filters.from,
+      filters.to,
+      filters.pickup,
+      filters.dropoff,
+      filters.date,
+      filters.departTime,
+    ],
   );
 
   const update = useCallback(
@@ -899,67 +954,79 @@ export function PassengerSearchForm({
   );
 
   const handleLocationChange = useCallback(
-    (field: LocationField, v: string, setSug: SetSug) => {
-      update(field, v as any);
-      const q = v.trim();
-      if (q.length < MIN_TOWN_CHARS) {
-        setSug([]);
+    (field: LocationField, v: string) => {
+      if (field === "from") {
+        onChange({ ...filters, from: v, pickup: "" });
         return;
       }
-      setSug(filterTowns(q));
+      if (field === "to") {
+        onChange({ ...filters, to: v, dropoff: "" });
+        return;
+      }
+      update(field, v as any);
     },
-    [update],
+    [filters, onChange, update],
   );
 
   const handleLocationSelect = useCallback(
-    (field: LocationField, setSug: SetSug) => (v: string) => {
-      update(field, v as any);
-      setSug([]);
+    (field: LocationField) => (v: string) => {
+      if (field === "from") {
+        onChange({ ...filters, from: v, pickup: "" });
+      } else if (field === "to") {
+        onChange({ ...filters, to: v, dropoff: "" });
+      } else {
+        update(field, v as any);
+      }
       if (field === "from" || field === "to") {
         setDetailsOpen(true);
         setOptionsOpen(true);
       }
     },
-    [update],
+    [filters, onChange, update],
   );
 
   const handleLocationClear = useCallback(
-    (field: LocationField, setSug: SetSug) => () => {
-      update(field, "" as any);
-      setSug([]);
+    (field: LocationField) => () => {
       if (field === "from" || field === "to") {
-        update("pickup", "");
-        update("dropoff", "");
-        update("note", "");
-        update("date", "");
-        setPickupSuggestions([]);
-        setDropoffSuggestions([]);
+        onChange({
+          ...filters,
+          [field]: "",
+          pickup: field === "from" ? "" : filters.pickup,
+          dropoff: field === "to" ? "" : filters.dropoff,
+        });
+        return;
       }
+      update(field, "" as any);
     },
-    [update],
+    [filters, onChange, update],
   );
 
   const swap = useCallback(
-    () => onChange({ ...filters, from: filters.to, to: filters.from }),
+    () =>
+      onChange({
+        ...filters,
+        from: filters.to,
+        to: filters.from,
+        pickup: filters.dropoff,
+        dropoff: filters.pickup,
+      }),
     [filters, onChange],
   );
 
   return (
     <div className="space-y-3">
-      <RouteCard
-        filters={filters}
-        fromSuggestions={fromSuggestions}
-        toSuggestions={toSuggestions}
-        onFromChange={(v) =>
-          handleLocationChange("from", v, setFromSuggestions)
-        }
-        onToChange={(v) => handleLocationChange("to", v, setToSuggestions)}
-        onFromSelect={handleLocationSelect("from", setFromSuggestions)}
-        onToSelect={handleLocationSelect("to", setToSuggestions)}
-        onFromClear={handleLocationClear("from", setFromSuggestions)}
-        onToClear={handleLocationClear("to", setToSuggestions)}
-        onSwap={swap}
-      />
+        <RouteCard
+          filters={filters}
+          fromSuggestions={fromSuggestions}
+          toSuggestions={toSuggestions}
+          onFromChange={(v) => handleLocationChange("from", v)}
+          onToChange={(v) => handleLocationChange("to", v)}
+          onFromSelect={handleLocationSelect("from")}
+          onToSelect={handleLocationSelect("to")}
+          onFromClear={handleLocationClear("from")}
+          onToClear={handleLocationClear("to")}
+          onSwap={swap}
+        />
 
       <div
         className={cn(
@@ -978,28 +1045,12 @@ export function PassengerSearchForm({
                 filters={filters}
                 pickupSuggestions={pickupSuggestions}
                 dropoffSuggestions={dropoffSuggestions}
-                onPickupChange={(v) =>
-                  handleLocationChange("pickup", v, setPickupSuggestions)
-                }
-                onDropoffChange={(v) =>
-                  handleLocationChange("dropoff", v, setDropoffSuggestions)
-                }
-                onPickupSelect={handleLocationSelect(
-                  "pickup",
-                  setPickupSuggestions,
-                )}
-                onDropoffSelect={handleLocationSelect(
-                  "dropoff",
-                  setDropoffSuggestions,
-                )}
-                onPickupClear={handleLocationClear(
-                  "pickup",
-                  setPickupSuggestions,
-                )}
-                onDropoffClear={handleLocationClear(
-                  "dropoff",
-                  setDropoffSuggestions,
-                )}
+                onPickupChange={(v) => handleLocationChange("pickup", v)}
+                onDropoffChange={(v) => handleLocationChange("dropoff", v)}
+                onPickupSelect={handleLocationSelect("pickup")}
+                onDropoffSelect={handleLocationSelect("dropoff")}
+                onPickupClear={handleLocationClear("pickup")}
+                onDropoffClear={handleLocationClear("dropoff")}
                 onNoteChange={(v) => update("note", v)}
               />
 
@@ -1023,6 +1074,7 @@ export function PassengerSearchForm({
       <TodayRidesCarousel
         rides={todayRides}
         fallbackFrom={filters.from}
+        seats={filters.seats}
         hint={
           hasLocations
             ? "Rides update automatically — swipe for more."

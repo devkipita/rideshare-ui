@@ -18,6 +18,14 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   const setRole = useAuthStore((s) => s.setRole);
   const toggle = useAuthStore((s) => s.toggleRole);
 
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const pendingRole = window.localStorage.getItem("kipita_active_role");
+    if (pendingRole !== "passenger" && pendingRole !== "driver") return;
+    if (pendingRole !== role) setRole(pendingRole);
+    window.localStorage.removeItem("kipita_active_role");
+  }, [role, setRole]);
+
   const value = React.useMemo<RoleContextValue>(
     () => ({
       activeRole: role as ActiveRole,

@@ -8,7 +8,7 @@ import React, {
   type HTMLAttributes,
 } from "react";
 import type { LucideIcon } from "lucide-react";
-import { BadgeCheck, Check, MapPin, X } from "lucide-react";
+import { BadgeCheck, Check, MapPin, Minus, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { initials } from "@/lib/format";
 import { createPortal } from "react-dom";
@@ -316,6 +316,7 @@ export function LocationInput({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const popRef = useRef<HTMLDivElement | null>(null);
+  const committedValueRef = useRef("");
 
   const q = (value ?? "").trim();
   const canQuery = q.length >= minChars;
@@ -352,8 +353,11 @@ export function LocationInput({
   };
 
   const commitSelect = (town: string) => {
+    committedValueRef.current = town.trim();
+    onChange(town);
     onSelect(town);
     setOpen(false);
+    setMounted(false);
     setActiveIndex(-1);
 
     requestAnimationFrame(() => {
@@ -367,6 +371,11 @@ export function LocationInput({
 
   useEffect(() => {
     if (!q) {
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+    if (q === committedValueRef.current) {
       setOpen(false);
       setActiveIndex(-1);
       return;
@@ -466,6 +475,7 @@ export function LocationInput({
             value={value ?? ""}
             placeholder={placeholder}
             onChange={(e) => {
+              committedValueRef.current = "";
               onChange(e.target.value);
               setActiveIndex(-1);
             }}
@@ -526,18 +536,30 @@ export function LocationInput({
                   pos.place === "top" ? "translateY(-100%)" : undefined,
                 zIndex: 9999,
               }}
-              className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl"
+              className={cn(
+                "overflow-hidden rounded-3xl border",
+                "border-white/35 dark:border-white/10",
+                "bg-background/72 dark:bg-card/78",
+                "supports-[backdrop-filter]:backdrop-blur-2xl",
+                "shadow-[0_24px_70px_-34px_rgba(4,37,29,0.52)]",
+                "ring-1 ring-primary/10",
+              )}
             >
               <div className="max-h-[264px] overflow-y-auto p-2">
                 {items.map((town, idx) => (
                   <button
+                    type="button"
                     key={town + idx}
                     onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => commitSelect(town)}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      commitSelect(town);
+                    }}
                     className={cn(
-                      "w-full text-left px-4 py-3 rounded-full",
+                      "w-full rounded-2xl px-4 py-3 text-left text-[14px] font-semibold",
+                      "text-foreground/90 transition-all duration-200",
                       idx === activeIndex
-                        ? "bg-primary/15"
+                        ? "bg-primary/16 text-primary"
                         : "hover:bg-primary/10",
                     )}
                   >
@@ -1002,13 +1024,22 @@ export function EmptyState({
   icon: Icon,
   title,
   desc,
+  action,
+  className,
 }: {
   icon: React.ElementType;
   title: string;
   desc: string;
+  action?: { label: string; onClick: () => void };
+  className?: string;
 }) {
   return (
-    <div className="rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--muted)_70%,var(--card)_30%)] px-4 py-4">
+    <div
+      className={cn(
+        "rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--muted)_70%,var(--card)_30%)] px-4 py-4",
+        className,
+      )}
+    >
       <div className="flex items-start gap-3">
         <span className="mt-0.5 grid h-11 w-11 place-items-center rounded-2xl border border-border/70 bg-card/70">
           <Icon className="h-5 w-5 text-muted-foreground" />
@@ -1016,8 +1047,109 @@ export function EmptyState({
         <div className="min-w-0">
           <p className="text-[14px] font-extrabold tracking-tight">{title}</p>
           <p className="mt-1 text-[12px] text-muted-foreground">{desc}</p>
+          {action ? (
+            <button
+              type="button"
+              onClick={action.onClick}
+              className="mt-3 h-10 rounded-full bg-primary px-4 text-[12px] font-extrabold text-primary-foreground active:scale-[0.98] transition"
+            >
+              {action.label}
+            </button>
+          ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function clampSeatValue(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+export function SeatStepper({
+  value,
+  onChange,
+  min = 1,
+  max = 14,
+  label = "Seats",
+  className,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  label?: string;
+  className?: string;
+}) {
+  const safeValue = clampSeatValue(value, min, max);
+  const canDecrease = safeValue > min;
+  const canIncrease = safeValue < max;
+
+  const setValue = (next: number) => onChange(clampSeatValue(next, min, max));
+
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border/70",
+        "bg-[color-mix(in_oklch,var(--card)_88%,white_10%)]",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]",
+        "grid grid-cols-[52px_1fr_52px] items-stretch",
+        className,
+      )}
+      role="group"
+      aria-label={`${label}, ${safeValue} selected`}
+    >
+      <button
+        type="button"
+        onClick={() => setValue(safeValue - 1)}
+        disabled={!canDecrease}
+        aria-label={`Decrease ${label.toLowerCase()}`}
+        className={cn(
+          "h-12 grid place-items-center",
+          "border-r border-border/60",
+          "transition-all duration-300",
+          EASE,
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+          "focus-visible:ring-inset",
+          canDecrease
+            ? "text-foreground hover:bg-primary/10 active:bg-primary/14"
+            : "text-muted-foreground/35 cursor-not-allowed",
+        )}
+      >
+        <Minus className="h-[18px] w-[18px]" strokeWidth={3.4} />
+      </button>
+
+      <div className="h-12 grid place-items-center px-3">
+        <div className="flex items-baseline justify-center gap-1.5 leading-none">
+          <span className="text-[18px] font-extrabold tracking-tight">
+            {safeValue}
+          </span>
+          <span className="text-[11px] font-semibold text-muted-foreground">
+            seat{safeValue === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setValue(safeValue + 1)}
+        disabled={!canIncrease}
+        aria-label={`Increase ${label.toLowerCase()}`}
+        className={cn(
+          "h-12 grid place-items-center",
+          "border-l border-border/60",
+          "transition-all duration-300",
+          EASE,
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+          "focus-visible:ring-inset",
+          canIncrease
+            ? "text-primary hover:bg-primary/10 active:bg-primary/14"
+            : "text-muted-foreground/35 cursor-not-allowed",
+        )}
+      >
+        <Plus className="h-[18px] w-[18px]" strokeWidth={3.4} />
+      </button>
     </div>
   );
 }

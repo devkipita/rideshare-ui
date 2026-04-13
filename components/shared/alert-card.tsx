@@ -71,7 +71,19 @@ export function AlertCard({
   const unread = !read;
 
   return (
-    <button type="button" onClick={onTap} className="w-full text-left">
+    <div
+      onClick={onTap}
+      onKeyDown={(event) => {
+        if (!onTap) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onTap();
+        }
+      }}
+      role={onTap ? "button" : undefined}
+      tabIndex={onTap ? 0 : undefined}
+      className="w-full text-left"
+    >
       <Surface tone="panel" elevated interactive className="p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -139,6 +151,6 @@ export function AlertCard({
           )}
         </div>
       </Surface>
-    </button>
+    </div>
   );
 }

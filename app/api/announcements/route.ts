@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { classifyRoadUpdate } from "@/lib/notification-priority";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -16,13 +17,12 @@ export async function POST(req: Request) {
   if (!body)
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
 
-  const { message, location, route_from, route_to, severity = "info" } = body;
+  const { message, location, route_from, route_to } = body;
 
   if (!message || typeof message !== "string" || !message.trim())
     return NextResponse.json({ error: "message is required" }, { status: 400 });
 
-  const validSeverities = ["info", "warning", "critical"];
-  const sev = validSeverities.includes(severity) ? severity : "info";
+  const sev = classifyRoadUpdate(message);
 
   const { data, error } = await supabaseAdmin
     .from("announcements")

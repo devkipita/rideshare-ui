@@ -35,6 +35,7 @@ import {
   UserAvatar,
 } from "@/components/ui-parts";
 import { Button } from "@/components/ui/button";
+import { PaymentDrawer } from "@/components/shared/payment-drawer";
 import {
   useChat,
   type Driver as ChatDriver,
@@ -75,6 +76,9 @@ type RequestedRide = {
   status: RideStatus;
   driver?: Driver;
   tripState?: TripState;
+  matchedRideId?: string;
+  pricePerSeat?: number;
+  departureTime?: string;
 };
 
 type PastRide = {
@@ -340,9 +344,13 @@ function DriverSummaryCard({
 function RequestedRideDetails({
   ride,
   onMessage,
+  onPay,
+  paid,
 }: {
   ride: RequestedRide;
   onMessage: () => void;
+  onPay?: () => void;
+  paid?: boolean;
 }) {
   const statusLabel =
     ride.status === "active"
@@ -450,8 +458,35 @@ function RequestedRideDetails({
                 ? "Trip completed"
                 : ride.tripState === "cancelled"
                   ? "Trip cancelled"
-                  : "Not started"}
+                  : paid
+                    ? "Paid and confirmed"
+                    : "Awaiting payment"}
           </p>
+        </Surface>
+      ) : null}
+
+      {ride.status === "matched" && ride.matchedRideId && ride.pricePerSeat ? (
+        <Surface tone="panel" className="p-4">
+          <p className="text-[11px] font-extrabold tracking-[0.2em] text-muted-foreground">
+            PAYMENT
+          </p>
+          <p className="mt-1 text-sm font-extrabold text-foreground/90">
+            KES {(ride.pricePerSeat * ride.seatsNeeded).toLocaleString()} total
+          </p>
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            {paid
+              ? "Receipt and trip confirmation have been sent."
+              : "Pay to lock your seats and receive the confirmation email."}
+          </p>
+          {!paid ? (
+            <Button
+              type="button"
+              onClick={onPay}
+              className="mt-3 h-11 w-full rounded-2xl bg-primary font-extrabold text-primary-foreground"
+            >
+              Pay and confirm
+            </Button>
+          ) : null}
         </Surface>
       ) : null}
     </div>
@@ -879,6 +914,20 @@ function SkeletonList({ count = 5 }: { count?: number }) {
   );
 }
 
+function formatPreferredTime(value: unknown) {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)/.exec(
+    typeof value === "string" ? value : "",
+  );
+  if (!match) return "Any time";
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const dt = new Date(2026, 0, 1, hours, minutes);
+  return dt.toLocaleTimeString("en-KE", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function toHaystackRequested(r: RequestedRide) {
   return [
     r.from,
@@ -1125,6 +1174,8 @@ function RideDetailsSheet({
   onBookSeat,
   booked,
   booking,
+  onPayRequest,
+  requestPaid,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -1137,6 +1188,8 @@ function RideDetailsSheet({
   onBookSeat?: () => void;
   booked?: boolean;
   booking?: boolean;
+  onPayRequest?: () => void;
+  requestPaid?: boolean;
 }) {
   const title =
     selected?.kind === "requested"
@@ -1165,7 +1218,12 @@ function RideDetailsSheet({
     >
       {selected ? (
         selected.kind === "requested" ? (
-          <RequestedRideDetails ride={selected.ride} onMessage={onMessage} />
+          <RequestedRideDetails
+            ride={selected.ride}
+            onMessage={onMessage}
+            onPay={onPayRequest}
+            paid={requestPaid}
+          />
         ) : selected.kind === "search" ? (
           <SearchRideDetails
             ride={selected.ride}
@@ -1197,6 +1255,7 @@ function toChatDriver(d: Driver): ChatDriver {
     avatarUrl: d.avatarUrl,
     car: d.car,
     verified: d.verified,
+    role: "driver",
   } as ChatDriver;
 }
 
@@ -1245,6 +1304,10 @@ export function MyRides() {
   >(null);
 
   const [ridesRequested, setRidesRequested] = React.useState<RequestedRide[]>([]);
+  const [payingRequest, setPayingRequest] = React.useState<RequestedRide | null>(null);
+  const [paidRequestIds, setPaidRequestIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -1260,7 +1323,7 @@ export function MyRides() {
             to: r.destination as string,
             timing: "scheduled" as RideTiming,
             dateLabel: r.preferred_date as string,
-            timeLabel: "—",
+            timeLabel: formatPreferredTime(r.preferred_time),
             seatsNeeded: (r.seats_needed as number) ?? 1,
             luggage: (r.allows_packages as boolean) ?? false,
             pets: (r.allows_pets as boolean) ?? false,
@@ -1269,6 +1332,42 @@ export function MyRides() {
             note: (r.note as string) ?? undefined,
             status: (r.status as RideStatus) ?? "active",
             tripState: "not_started" as TripState,
+            matchedRideId:
+              (r.matched_ride_id as string) ??
+              ((r.matched_ride as Record<string, unknown> | null)?.id as string) ??
+              undefined,
+            pricePerSeat:
+              Number(
+                r.match_price_per_seat ??
+                  (r.matched_ride as Record<string, unknown> | null)
+                    ?.price_per_seat,
+              ) || undefined,
+            departureTime:
+              (r.match_departure_time as string) ??
+              ((r.matched_ride as Record<string, unknown> | null)
+                ?.departure_time as string) ??
+              undefined,
+            driver: r.matched_driver
+              ? {
+                  id:
+                    ((r.matched_driver as Record<string, unknown>).id as string) ??
+                    "driver",
+                  name:
+                    ((r.matched_driver as Record<string, unknown>).name as string) ??
+                    "Driver",
+                  rating: 4.7,
+                  trips: 0,
+                  avatarUrl:
+                    ((r.matched_driver as Record<string, unknown>).image as string) ??
+                    undefined,
+                  verified: true,
+                  car: {
+                    makeModel: "Car details pending",
+                    color: "TBC",
+                    plate: "TBC",
+                  },
+                }
+              : undefined,
           }),
         );
         setRidesRequested(mapped);
@@ -1324,9 +1423,15 @@ export function MyRides() {
     });
   }, [selected, openChat]);
 
+  const onPaySelected = React.useCallback(() => {
+    const ride = selected?.kind === "requested" ? selected.ride : null;
+    if (!ride?.matchedRideId || !ride.pricePerSeat) return;
+    setPayingRequest(ride);
+  }, [selected]);
+
   return (
     <div className="w-full space-y-4 pb-4">
-      <p className="text-sm font-semibold text-center m-0 py-1 text-foreground">
+      <p className="m-0 py-1 text-center text-sm font-semibold text-white dark:text-foreground">
         My Rides
       </p>
 
@@ -1449,6 +1554,43 @@ export function MyRides() {
         }}
         selected={selected}
         onMessage={onMessageSelected}
+        onPayRequest={onPaySelected}
+        requestPaid={
+          selected?.kind === "requested"
+            ? paidRequestIds.has(selected.ride.id)
+            : false
+        }
+      />
+
+      <PaymentDrawer
+        open={!!payingRequest}
+        onOpenChange={(v) => {
+          if (!v) setPayingRequest(null);
+        }}
+        rideId={payingRequest?.matchedRideId ?? ""}
+        amount={
+          (payingRequest?.pricePerSeat ?? 0) *
+          Math.max(1, payingRequest?.seatsNeeded ?? 1)
+        }
+        seats={payingRequest?.seatsNeeded ?? 1}
+        routeLabel={
+          payingRequest ? `${payingRequest.from} -> ${payingRequest.to}` : undefined
+        }
+        onSuccess={() => {
+          if (!payingRequest) return;
+          setPaidRequestIds((prev) => {
+            const next = new Set(prev);
+            next.add(payingRequest.id);
+            return next;
+          });
+          setRidesRequested((prev) =>
+            prev.map((r) =>
+              r.id === payingRequest.id
+                ? { ...r, tripState: "not_started" as TripState }
+                : r,
+            ),
+          );
+        }}
       />
     </div>
   );

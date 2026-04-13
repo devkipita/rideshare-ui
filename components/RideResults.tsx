@@ -13,6 +13,7 @@ import {
   type SearchRide,
 } from "./my-rides";
 import { formatTime } from "@/lib/format";
+import { PaymentDrawer } from "./shared/payment-drawer";
 
 /* re-export so passenger-search.tsx keeps working */
 export type Driver = SearchRide;
@@ -97,10 +98,16 @@ export function RideResults({
   status,
   results,
   onPostRequest,
+  requestPosted,
+  postingRequest,
+  seats = 1,
 }: {
   status: "idle" | "loading" | "ready";
   results: Driver[];
   onPostRequest?: () => void;
+  requestPosted?: boolean;
+  postingRequest?: boolean;
+  seats?: number;
 }) {
   const chat = useChat();
   const { openAuthDrawer, isSignedIn } = useAuthDrawer();
@@ -108,6 +115,7 @@ export function RideResults({
   const [selectedRide, setSelectedRide] = useState<Driver | null>(null);
   const [booked, setBooked] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [payingRide, setPayingRide] = useState<Driver | null>(null);
 
   // Reset booking state when ride changes
   useEffect(() => {
@@ -131,41 +139,20 @@ export function RideResults({
         rating: selectedRide.rating,
         trips: selectedRide.trips,
         avatarUrl: selectedRide.avatarUrl,
+        role: "driver",
       },
     });
     setSelectedRide(null);
   };
 
-  const handleBookSeat = async () => {
+  const handleBookSeat = () => {
     if (!selectedRide) return;
     if (!isSignedIn) {
       openAuthDrawer({ selectedRole: "passenger" });
       return;
     }
-    if (booking) return;
-    setBooking(true);
-    try {
-      const res = await fetch("/api/ride-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          origin: selectedRide.from ?? "",
-          destination: selectedRide.to ?? "",
-          preferred_date: selectedRide.departureTime
-            ? selectedRide.departureTime.split("T")[0]
-            : new Date().toISOString().split("T")[0],
-          seats_needed: 1,
-          note: `Requesting seat on ride ${selectedRide.id ?? ""}`.trim(),
-        }),
-      });
-      if (res.ok) {
-        setBooked(true);
-      }
-    } catch {
-      // silently fail — user can retry
-    } finally {
-      setBooking(false);
-    }
+    // Open payment drawer; details sheet stays behind it
+    setPayingRide(selectedRide);
   };
 
   if (status === "loading") {
@@ -182,15 +169,18 @@ export function RideResults({
     return (
       <Surface tone="panel" className="p-4">
         <p className="text-sm font-semibold text-foreground/85">
-          No rides found
+          {requestPosted ? "Request posted" : "No rides found"}
         </p>
         <p className="text-[12px] mt-1 text-muted-foreground">
-          Try different towns or dates, or post a request so drivers can find
-          you.
+          {requestPosted
+            ? "Drivers on this route have been notified. You can check your requests while they match or message you."
+            : "Try different towns or dates. If nothing is available, we can post a request so drivers can find you."}
         </p>
-        {onPostRequest && (
+        {requestPosted ? (
           <Button
-            onClick={onPostRequest}
+            onClick={() => {
+              window.location.href = "/trips";
+            }}
             className={cn(
               "mt-3 h-10 w-full rounded-2xl font-semibold tracking-tight text-[13px]",
               "bg-primary text-primary-foreground",
@@ -198,9 +188,22 @@ export function RideResults({
             )}
           >
             <SendHorizonal className="h-4 w-4 mr-2" />
-            Post a Ride Request
+            Check ride requests
           </Button>
-        )}
+        ) : onPostRequest ? (
+          <Button
+            onClick={onPostRequest}
+            disabled={postingRequest}
+            className={cn(
+              "mt-3 h-10 w-full rounded-2xl font-semibold tracking-tight text-[13px]",
+              "bg-primary text-primary-foreground",
+              "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.99]",
+            )}
+          >
+            <SendHorizonal className="h-4 w-4 mr-2" />
+            {postingRequest ? "Posting request..." : "Post a ride request"}
+          </Button>
+        ) : null}
       </Surface>
     );
   }
@@ -229,6 +232,25 @@ export function RideResults({
         onBookSeat={handleBookSeat}
         booked={booked}
         booking={booking}
+      />
+
+      <PaymentDrawer
+        open={!!payingRide}
+        onOpenChange={(v) => {
+          if (!v) setPayingRide(null);
+        }}
+        rideId={payingRide?.id ?? ""}
+        amount={(payingRide?.price ?? 0) * Math.max(1, seats)}
+        seats={seats}
+        routeLabel={
+          payingRide?.from && payingRide?.to
+            ? `${payingRide.from} -> ${payingRide.to}`
+            : undefined
+        }
+        onSuccess={() => {
+          setBooked(true);
+          setSelectedRide(null);
+        }}
       />
     </>
   );

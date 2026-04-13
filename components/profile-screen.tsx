@@ -31,6 +31,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { StateFeedback } from "@/components/state-feedback";
 import { useAuthDrawer } from "@/components/auth-drawer-provider";
+import { useAppPreferences } from "@/hooks/use-app-preferences";
 
 interface ProfileScreenProps {
   userMode: "passenger" | "driver";
@@ -276,23 +277,12 @@ function ActionButton({
 }
 
 function SettingsThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggle = () => {
-    const next = !isDark;
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-    setIsDark(next);
-  };
+  const { isDark, toggleTheme } = useAppPreferences();
 
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={toggleTheme}
       className="w-full h-14 rounded-2xl px-5 flex items-center justify-between text-foreground hover:bg-accent/40 active:scale-[0.985] transition-all duration-300"
     >
       <div className="flex items-center gap-3">
@@ -307,38 +297,28 @@ function SettingsThemeToggle() {
 }
 
 function SettingsLanguageToggle() {
-  const [lang, setLang] = useState("en");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("kipita-lang");
-    if (saved === "sw" || saved === "en") setLang(saved);
-  }, []);
-
-  const selectLang = (next: "en" | "sw") => {
-    setLang(next);
-    localStorage.setItem("kipita-lang", next);
-    document.documentElement.lang = next;
-    window.dispatchEvent(new StorageEvent("storage", { key: "kipita-lang", newValue: next }));
-  };
+  const { language, setLanguage } = useAppPreferences();
 
   return (
     <div className="w-full h-14 rounded-2xl px-5 flex items-center justify-between text-foreground">
       <div className="flex items-center gap-3">
         <Languages className="h-5 w-5" />
-        <span className="text-sm font-semibold">{lang === "en" ? "English" : "Kiswahili"}</span>
+        <span className="text-sm font-semibold">
+          {language === "en" ? "English" : "Kiswahili"}
+        </span>
       </div>
       <div className="flex items-center gap-1">
         <button
           type="button"
-          onClick={() => selectLang("en")}
-          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 active:scale-[0.95] ${lang === "en" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent/40"}`}
+          onClick={() => setLanguage("en")}
+          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 active:scale-[0.95] ${language === "en" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent/40"}`}
         >
           EN
         </button>
         <button
           type="button"
-          onClick={() => selectLang("sw")}
-          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 active:scale-[0.95] ${lang === "sw" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent/40"}`}
+          onClick={() => setLanguage("sw")}
+          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 active:scale-[0.95] ${language === "sw" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent/40"}`}
         >
           SW
         </button>
@@ -952,7 +932,7 @@ export function ProfileScreen({ userMode }: ProfileScreenProps) {
     return (
       <div className="min-h-[100dvh] overflow-y-auto overscroll-contain">
         <div className="px-4 pb-24 space-y-4">
-          <p className="text-sm font-medium text-foreground text-center m-0 py-1">
+          <p className="m-0 py-1 text-center text-sm font-medium text-white dark:text-foreground">
             Welcome to Your Account
           </p>
           <GlassCard className="p-6 text-center">

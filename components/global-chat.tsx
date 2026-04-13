@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { BottomSheet, Surface } from "@/components/ui-parts";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { createPortal } from "react-dom";
 
 export type TripState = "not_started" | "started" | "completed" | "cancelled";
 
@@ -20,6 +22,7 @@ export type Driver = {
   rating: number;
   trips: number;
   avatarUrl?: string;
+  role?: "driver" | "passenger";
   car?: {
     makeModel: string;
     color: string;
@@ -81,40 +84,31 @@ function countUnreadThread(messages: ChatMessage[], ctx: ChatContext | null) {
   return n;
 }
 
-function ChatSheet({
-  open,
-  onOpenChange,
+function ChatBody({
   driver,
   messages,
+  text,
+  setText,
   onSend,
-  onMarkRead,
+  onClose,
 }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
   driver: Driver | null;
   messages: ChatMessage[];
+  text: string;
+  setText: (v: string) => void;
   onSend: (text: string) => void;
-  onMarkRead: () => void;
+  onClose: () => void;
 }) {
-  const [text, setText] = React.useState("");
-
-  React.useEffect(() => {
-    if (open) onMarkRead();
-  }, [open, onMarkRead]);
-
-  React.useEffect(() => {
-    if (!open) setText("");
-  }, [open]);
+  const participantLabel = driver?.role === "passenger" ? "passenger" : "driver";
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} title="Messages" zIndex={{ backdrop: 60, sheet: 70 }}>
-      <div className="space-y-3">
+    <div className="space-y-3">
         {driver ? (
           <Surface tone="panel" className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-extrabold tracking-[0.2em] text-muted-foreground">
-                  CHATTING WITH
+                  CHATTING WITH {participantLabel.toUpperCase()}
                 </p>
                 <p className="mt-1 text-base font-extrabold text-foreground">
                   {driver.name}
@@ -137,7 +131,7 @@ function ChatSheet({
 
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={onClose}
                 className="grid h-10 w-10 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
                 aria-label="Close chat"
               >
@@ -148,7 +142,7 @@ function ChatSheet({
         ) : (
           <Surface tone="panel" className="p-4 text-center">
             <p className="text-sm font-semibold text-muted-foreground">
-              No driver selected
+              No conversation selected
             </p>
           </Surface>
         )}
@@ -182,7 +176,7 @@ function ChatSheet({
             ) : (
               <div className="py-8 text-center">
                 <p className="text-sm font-semibold text-muted-foreground">
-                  Say hi to your driver.
+                  Say hi to your {participantLabel}.
                 </p>
               </div>
             )}
@@ -210,7 +204,105 @@ function ChatSheet({
           </div>
         </Surface>
       </div>
-    </BottomSheet>
+  );
+}
+
+function ChatSheet({
+  open,
+  onOpenChange,
+  driver,
+  messages,
+  onSend,
+  onMarkRead,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  driver: Driver | null;
+  messages: ChatMessage[];
+  onSend: (text: string) => void;
+  onMarkRead: () => void;
+}) {
+  const [text, setText] = React.useState("");
+  const [mounted, setMounted] = React.useState(false);
+  const isMobile = useIsMobile();
+
+  React.useEffect(() => setMounted(true), []);
+
+  React.useEffect(() => {
+    if (open) onMarkRead();
+  }, [open, onMarkRead]);
+
+  React.useEffect(() => {
+    if (!open) setText("");
+  }, [open]);
+
+  // Mobile: bottom sheet (existing behavior)
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Messages"
+        zIndex={{ backdrop: 60, sheet: 70 }}
+      >
+        <ChatBody
+          driver={driver}
+          messages={messages}
+          text={text}
+          setText={setText}
+          onSend={onSend}
+          onClose={() => onOpenChange(false)}
+        />
+      </BottomSheet>
+    );
+  }
+
+  // Desktop: floating bottom-right panel, portaled to document body
+  if (!mounted || !open) return null;
+
+  return createPortal(
+    <div
+      className="fixed bottom-6 right-6 z-[70] w-[380px] max-w-[calc(100vw-32px)]"
+      role="dialog"
+      aria-label="Chat"
+    >
+      <div
+        className={[
+          "overflow-hidden rounded-3xl border border-border/70",
+          "bg-background/95 supports-[backdrop-filter]:backdrop-blur-xl",
+          "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]",
+          "animate-in fade-in slide-in-from-bottom-4 duration-300",
+        ].join(" ")}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <MessageCircle className="h-4 w-4" />
+            </div>
+            <p className="text-sm font-extrabold tracking-tight">Messages</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="grid h-9 w-9 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
+            aria-label="Close chat"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[min(560px,calc(100vh-120px))] overflow-y-auto p-3">
+          <ChatBody
+            driver={driver}
+            messages={messages}
+            text={text}
+            setText={setText}
+            onSend={onSend}
+            onClose={() => onOpenChange(false)}
+          />
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -223,14 +315,16 @@ function FloatingChatButton({
   unreadCount: number;
   onClick: () => void;
 }) {
-  if (!visible) return null;
-  return (
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (!visible || !mounted) return null;
+  return createPortal(
     <button
       type="button"
       onClick={onClick}
       className={[
-        "fixed z-[80] right-4 bottom-[88px]",
-        "grid h-14 w-14 place-items-center rounded-2xl",
+        "fixed z-[80] md:right-6 md:bottom-6 right-4 bottom-[88px]",
+        "grid h-14 w-14 place-items-center rounded-2xl md:rounded-full",
         "bg-primary text-primary-foreground shadow-xl shadow-primary/20",
         "active:scale-[0.98] transition-transform",
       ].join(" ")}
@@ -242,7 +336,8 @@ function FloatingChatButton({
           {unreadCount > 99 ? "99+" : unreadCount}
         </div>
       ) : null}
-    </button>
+    </button>,
+    document.body,
   );
 }
 
@@ -351,6 +446,10 @@ export function ChatProvider({
       setMessages((prev) => [...prev, mine]);
 
       window.setTimeout(() => {
+        const reply =
+          active.driver.role === "passenger"
+            ? "Thanks. I will confirm pickup details here."
+            : "Noted. I am on the way.";
         setMessages((prev) => [
           ...prev,
           {
@@ -358,7 +457,7 @@ export function ChatProvider({
             rideId: active.rideId,
             driverId: active.driver.id,
             sender: "driver",
-            text: "Noted — I’m on the way.",
+            text: reply,
             createdAt: Date.now(),
             readByUser: false,
           },

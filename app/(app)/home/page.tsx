@@ -1,17 +1,17 @@
 "use client";
 
-import { useRole } from "@/app/context";
 import { PassengerSearch } from "@/components/passenger-search";
 import { DriverOfferRide } from "@/components/driver-offer-ride";
+import { useRoleConfig } from "@/hooks/use-role-config";
 
 export default function HomePage() {
-  const { activeRole } = useRole();
-  const isPassenger = activeRole === "passenger";
+  const { role, config } = useRoleConfig();
+  const isPassenger = role === "passenger";
 
   return (
     <>
-      <p className="text-center text-sm font-semibold text-foreground py-1">
-        {isPassenger ? "Find Your Ride Today" : "Offer a Ride Today"}
+      <p className="py-1 text-center text-sm font-semibold text-white dark:text-foreground">
+        {config.homeTitle}
       </p>
       {isPassenger ? <PassengerSearch /> : <DriverOfferRide />}
     </>

@@ -3,20 +3,10 @@
 import { useOptionalRole } from "@/app/context";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Moon, Sun, ArrowLeftRight } from "lucide-react";
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-
-function readInitialTheme() {
-  const saved =
-    typeof window !== "undefined" ? localStorage.getItem("theme") : null;
-  if (saved === "dark") return true;
-  if (saved === "light") return false;
-  return typeof document !== "undefined"
-    ? document.documentElement.classList.contains("dark")
-    : false;
-}
+import { useBackNavigation } from "@/hooks/use-back-navigation";
+import { useAppPreferences } from "@/hooks/use-app-preferences";
 
 function AppLogo() {
   return (
@@ -65,29 +55,15 @@ export function TopNavbar({
   onBack?: () => void;
   className?: string;
 }) {
-  const router = useRouter();
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => setIsDark(readInitialTheme()), []);
-
-  const toggleTheme = () => {
-    const html = document.documentElement;
-    const next = !html.classList.contains("dark");
-    html.classList.toggle("dark", next);
-    setIsDark(next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
+  const { goBack } = useBackNavigation();
+  const { isDark, toggleTheme } = useAppPreferences();
 
   const handleBack = () => {
     if (onBack) {
       onBack();
       return;
     }
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/home");
-    }
+    goBack();
   };
 
   return (

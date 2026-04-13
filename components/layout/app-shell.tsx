@@ -1,11 +1,20 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { recordRoute } from "@/hooks/use-back-navigation";
 import { BottomNavbar } from "./bottom-navbar";
 import { PageContainer } from "./page-container";
 import { TopNavbar } from "./top-navbar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    recordRoute(pathname);
+  }, [pathname]);
+
   return (
     <div
       className={cn(

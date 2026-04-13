@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Megaphone, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Surface } from "./ui-parts";
 import { useRouter } from "next/navigation";
 
 export type Announcement = {
@@ -90,32 +89,36 @@ export function AnnouncementsStrip({
     );
 
   return (
-    <Surface elevated className="p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold tracking-tight">Road updates</p>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 px-1">
+        <p className="text-[12px] font-extrabold tracking-[0.16em] uppercase text-primary/90">
+          Road updates
+        </p>
         <button
           type="button"
           onClick={navigate}
-          className="text-[11px] font-bold text-primary flex items-center gap-0.5 active:opacity-70"
+          className="flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-extrabold text-primary active:opacity-70"
         >
           View all <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="mt-2 space-y-1.5">
+      <div className="space-y-2">
         {display.map((a) => (
           <button
             key={a.id}
             type="button"
             onClick={navigate}
             className={cn(
-              "w-full text-left rounded-2xl border px-2.5 py-2",
+              "w-full text-left rounded-3xl border px-3 py-2.5",
+              "supports-[backdrop-filter]:backdrop-blur-xl",
+              "shadow-[0_12px_30px_-34px_color-mix(in_oklch,var(--primary)_18%,transparent)]",
               "transition-all duration-200 active:scale-[0.99]",
               a.severity === "critical"
-                ? "border-destructive/20 bg-destructive/5"
+                ? "border-destructive/25 bg-destructive/8"
                 : a.severity === "warning"
-                  ? "border-amber-500/20 bg-amber-500/5"
-                  : "border-border/70 bg-card/60",
+                  ? "border-amber-500/25 bg-amber-500/8"
+                  : "border-border/70 bg-card/88",
             )}
           >
             <div className="flex items-start gap-2">
@@ -133,6 +136,6 @@ export function AnnouncementsStrip({
           </button>
         ))}
       </div>
-    </Surface>
+    </div>
   );
 }

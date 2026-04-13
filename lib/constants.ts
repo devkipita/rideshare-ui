@@ -6,7 +6,7 @@ export const TIMEZONE = "Africa/Nairobi";
 export const CURRENCY = "KES";
 
 export const LIMITS = {
-  maxSeats: 6,
+  maxSeats: 14,
   minSeats: 1,
   maxPricePerSeat: 50_000,
   minPricePerSeat: 50,

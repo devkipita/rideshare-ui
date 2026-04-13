@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  BottomSheet,
   Surface,
   FormDivider,
   PillButton,
@@ -27,11 +28,14 @@ import {
   ArrowRight,
   Dot,
   Inbox,
+  Banknote,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, timeAgo } from "@/lib/format";
 import { useAuthDrawer } from "./auth-drawer-provider";
 import { useChat } from "./global-chat";
+import { toast } from "sonner";
 
 /* ── types ─────────────────────────────────────────── */
 
@@ -44,6 +48,7 @@ type RideRequest = {
   origin: string;
   destination: string;
   preferredDate: string;
+  preferredTime: string;
   seatsNeeded: number;
   allowsPets: boolean;
   allowsPackages: boolean;
@@ -51,10 +56,40 @@ type RideRequest = {
   dropoffStation?: string;
   note?: string;
   status: RequestStatus;
+  matchedRideId?: string;
+  pricePerSeat?: number;
+  departureTime?: string;
   createdAt: string;
 };
 
 const SELECTED_REQUEST_KEY = "kipita_selected_request";
+
+function normalizeTimeInput(value?: string) {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)/.exec(value ?? "");
+  return match ? `${match[1]}:${match[2]}` : "";
+}
+
+function timeInputFromIso(value?: string) {
+  if (!value) return "";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "";
+  return dt.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatTimeLabel(value?: string) {
+  const time = normalizeTimeInput(value);
+  if (!time) return "Any time";
+  const [hours, minutes] = time.split(":").map(Number);
+  const dt = new Date(2026, 0, 1, hours, minutes);
+  return dt.toLocaleTimeString("en-KE", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 /* ── data fetching ─────────────────────────────────── */
 
@@ -70,6 +105,14 @@ function useRideRequests() {
         const mapped: RideRequest[] = json.ride_requests.map(
           (r: Record<string, unknown>) => {
             const passenger = r.passenger as Record<string, unknown> | null;
+            const matchedRide = r.matched_ride as Record<string, unknown> | null;
+            const apiStatus = String(r.status ?? "active");
+            const status: RequestStatus =
+              apiStatus === "matched"
+                ? "accepted"
+                : apiStatus === "cancelled"
+                  ? "rejected"
+                  : "pending";
             return {
               id: r.id as string,
               passengerName: (passenger?.name as string) ?? "Passenger",
@@ -77,13 +120,25 @@ function useRideRequests() {
               origin: r.origin as string,
               destination: r.destination as string,
               preferredDate: (r.preferred_date as string) ?? "",
+              preferredTime: normalizeTimeInput(r.preferred_time as string),
               seatsNeeded: (r.seats_needed as number) ?? 1,
               allowsPets: Boolean(r.allows_pets),
               allowsPackages: Boolean(r.allows_packages),
               pickupStation: (r.pickup_station as string) ?? undefined,
               dropoffStation: (r.dropoff_station as string) ?? undefined,
               note: (r.note as string) ?? undefined,
-              status: "pending" as RequestStatus,
+              status,
+              matchedRideId:
+                (r.matched_ride_id as string) ??
+                (matchedRide?.id as string) ??
+                undefined,
+              pricePerSeat:
+                Number(r.match_price_per_seat ?? matchedRide?.price_per_seat) ||
+                undefined,
+              departureTime:
+                (r.match_departure_time as string) ??
+                (matchedRide?.departure_time as string) ??
+                undefined,
               createdAt: (r.created_at as string) ?? new Date().toISOString(),
             };
           },
@@ -114,6 +169,11 @@ export function DriverRequests({
   const [view, setView] = useState<RequestStatus>("pending");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const highlightRef = useRef<HTMLDivElement | null>(null);
+  const [acceptingRequest, setAcceptingRequest] = useState<RideRequest | null>(null);
+  const [matchPrice, setMatchPrice] = useState("1200");
+  const [matchTime, setMatchTime] = useState("08:00");
+  const [matching, setMatching] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
 
   // Pick up selected request from carousel navigation
   useEffect(() => {
@@ -136,6 +196,17 @@ export function DriverRequests({
     }
   }, [highlightId, requests]);
 
+  useEffect(() => {
+    if (!acceptingRequest) return;
+    setMatchPrice(String(acceptingRequest.pricePerSeat ?? 1200));
+    setMatchTime(
+      timeInputFromIso(acceptingRequest.departureTime) ||
+        acceptingRequest.preferredTime ||
+        "08:00",
+    );
+    setMatchError(null);
+  }, [acceptingRequest]);
+
   const pending = useMemo(
     () => requests.filter((r) => r.status === "pending"),
     [requests],
@@ -149,19 +220,108 @@ export function DriverRequests({
     [requests],
   );
 
-  const accept = useCallback((id: string) => {
-    if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "accepted" as RequestStatus } : r)),
-    );
-  }, [setRequests, isSignedIn, openAuthDrawer]);
+  const patchRequest = useCallback(
+    async (
+      id: string,
+      status: "accepted" | "rejected",
+      details?: { pricePerSeat?: number; departTime?: string },
+    ) => {
+      if (!isSignedIn) {
+        openAuthDrawer({ selectedRole: "driver" });
+        return false;
+      }
+      // Optimistic update
+      setRequests((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status } : r)),
+      );
+      try {
+        const res = await fetch("/api/ride-requests", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id,
+            status,
+            price_per_seat: details?.pricePerSeat,
+            depart_time: details?.departTime,
+          }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(json?.error || "Failed");
+        const updated = json?.ride_request as Record<string, unknown> | undefined;
+        const matchedRide = updated?.matched_ride as Record<string, unknown> | null;
+        setRequests((prev) =>
+          prev.map((r) =>
+            r.id === id
+              ? {
+                  ...r,
+                  status,
+                  matchedRideId:
+                    (updated?.matched_ride_id as string) ??
+                    (matchedRide?.id as string) ??
+                    r.matchedRideId,
+                  pricePerSeat:
+                    Number(updated?.match_price_per_seat ?? matchedRide?.price_per_seat) ||
+                    r.pricePerSeat,
+                  departureTime:
+                    (updated?.match_departure_time as string) ??
+                    (matchedRide?.departure_time as string) ??
+                    r.departureTime,
+                }
+              : r,
+          ),
+        );
+        toast.success(
+          status === "accepted" ? "Ride matched" : "Request declined",
+          {
+            description:
+              status === "accepted"
+                ? "Passenger can now pay and confirm the trip."
+                : "The passenger will be notified.",
+          },
+        );
+        return true;
+      } catch (error) {
+        // Roll back on failure
+        setRequests((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: "pending" } : r)),
+        );
+        toast.error("Couldn't update request", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
+        return false;
+      }
+    },
+    [setRequests, isSignedIn, openAuthDrawer],
+  );
 
-  const decline = useCallback((id: string) => {
-    if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "rejected" as RequestStatus } : r)),
-    );
-  }, [setRequests, isSignedIn, openAuthDrawer]);
+  const accept = useCallback(
+    (req: RideRequest) => setAcceptingRequest(req),
+    [],
+  );
+  const decline = useCallback((id: string) => patchRequest(id, "rejected"), [patchRequest]);
+
+  const confirmMatch = useCallback(async () => {
+    if (!acceptingRequest || matching) return;
+    const price = Number(matchPrice);
+    if (!Number.isFinite(price) || price <= 0) {
+      setMatchError("Enter a valid price per seat.");
+      return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(matchTime)) {
+      setMatchError("Choose a valid departure time.");
+      return;
+    }
+
+    setMatching(true);
+    setMatchError(null);
+    const ok = await patchRequest(acceptingRequest.id, "accepted", {
+      pricePerSeat: price,
+      departTime: matchTime,
+    });
+    setMatching(false);
+    if (ok) setAcceptingRequest(null);
+  }, [acceptingRequest, matching, matchPrice, matchTime, patchRequest]);
 
   const openChat = useCallback(
     (req: RideRequest) => {
@@ -176,6 +336,7 @@ export function DriverRequests({
           rating: 0,
           trips: 0,
           avatarUrl: req.passengerImage,
+          role: "passenger",
         },
       });
     },
@@ -187,7 +348,7 @@ export function DriverRequests({
 
   return (
     <div className="w-full">
-      <p className="text-sm font-semibold text-center text-foreground py-1">
+      <p className="py-1 text-center text-sm font-semibold text-white dark:text-foreground">
         Manage ride requests
       </p>
 
@@ -271,7 +432,7 @@ export function DriverRequests({
                       highlighted={req.id === highlightId}
                       showDecision={view === "pending"}
                       onChat={() => openChat(req)}
-                      onAccept={() => accept(req.id)}
+                      onAccept={() => accept(req)}
                       onDecline={() => decline(req.id)}
                     />
                   </div>
@@ -304,6 +465,91 @@ export function DriverRequests({
             )}
           </div>
         </Surface>
+
+        <BottomSheet
+          open={!!acceptingRequest}
+          onOpenChange={(open) => {
+            if (!open && !matching) setAcceptingRequest(null);
+          }}
+          title="Match request"
+        >
+          <div className="space-y-3">
+            <Surface tone="panel" className="p-4">
+              <p className="text-[11px] font-extrabold tracking-[0.15em] text-muted-foreground">
+                PASSENGER REQUEST
+              </p>
+              <p className="mt-1 text-base font-extrabold">
+                {acceptingRequest
+                  ? `${acceptingRequest.origin} -> ${acceptingRequest.destination}`
+                  : "Route"}
+              </p>
+              <p className="mt-1 text-[12px] font-semibold text-muted-foreground">
+                Add the trip terms before matching so the passenger can pay and
+                confirm immediately.
+              </p>
+              {acceptingRequest ? (
+                <p className="mt-2 text-[12px] font-semibold text-primary">
+                  Requested {formatDate(acceptingRequest.preferredDate)} at{" "}
+                  {formatTimeLabel(acceptingRequest.preferredTime)}
+                </p>
+              ) : null}
+            </Surface>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Surface tone="panel" className="p-3">
+                <div className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4 text-primary" />
+                  <p className="text-[11px] font-extrabold tracking-[0.15em] text-muted-foreground">
+                    PRICE / SEAT
+                  </p>
+                </div>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={matchPrice}
+                  onChange={(e) => setMatchPrice(e.target.value)}
+                  className="mt-2 h-10 w-full rounded-2xl border border-border/70 bg-card/70 px-3 text-sm font-extrabold outline-none focus:ring-2 focus:ring-primary/40"
+                  placeholder="1200"
+                />
+              </Surface>
+
+              <Surface tone="panel" className="p-3">
+                <div className="flex items-center gap-2">
+                  <Clock3 className="h-4 w-4 text-primary" />
+                  <p className="text-[11px] font-extrabold tracking-[0.15em] text-muted-foreground">
+                    DEPARTURE
+                  </p>
+                </div>
+                <input
+                  type="time"
+                  value={matchTime}
+                  onChange={(e) => setMatchTime(e.target.value)}
+                  className="mt-2 h-10 w-full rounded-2xl border border-border/70 bg-card/70 px-3 text-sm font-extrabold outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </Surface>
+            </div>
+
+            {matchError ? (
+              <p className="text-center text-[12px] font-semibold text-destructive">
+                {matchError}
+              </p>
+            ) : null}
+
+            <Button
+              type="button"
+              onClick={confirmMatch}
+              disabled={matching}
+              className="h-12 w-full rounded-2xl bg-primary text-sm font-extrabold text-primary-foreground"
+            >
+              {matching ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
+              {matching ? "Matching..." : "Match and request payment"}
+            </Button>
+          </div>
+        </BottomSheet>
 
         <TrustReminder />
       </div>
@@ -367,6 +613,7 @@ function RequestCard({
               {/* meta chips */}
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <Chip icon={CalendarDays}>{formatDate(req.preferredDate)}</Chip>
+                <Chip icon={Clock3}>{formatTimeLabel(req.preferredTime)}</Chip>
                 <Chip icon={Users2} tone="primary">
                   {req.seatsNeeded} seat{req.seatsNeeded === 1 ? "" : "s"}
                 </Chip>

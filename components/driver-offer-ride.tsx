@@ -22,17 +22,18 @@ import {
   MessageCircle,
   BadgeCheck,
   Footprints,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn, clamp, todayISO, hashString, avatarColors } from "@/lib/utils";
-import { filterTowns } from "@/lib/kenyan-towns";
+import { cn, todayISO, hashString, avatarColors } from "@/lib/utils";
 import { useAutoCarousel } from "@/hooks/use-auto-carousel";
+import { useTownSuggestions } from "@/hooks/use-town-suggestions";
 import {
   BottomSheet,
   ChipToggle,
   LocationInput,
-  PillButton,
+  SeatStepper,
   Surface,
 } from "./ui-parts";
 import { useChat } from "./global-chat";
@@ -42,6 +43,8 @@ import {
   useAnnouncements,
 } from "./announcements-strip";
 import { useAuthDrawer } from "./auth-drawer-provider";
+import { LIMITS } from "@/lib/constants";
+import useSWR from "swr";
 
 /* ── types ─────────────────────────────────────────── */
 
@@ -69,6 +72,7 @@ type PassengerRequest = {
   from: string;
   to: string;
   date: string;
+  time: string;
   seats: number;
   avatarUrl?: string;
 };
@@ -79,6 +83,18 @@ type PassengerRequest = {
 const MIN_TOWN_CHARS = 2;
 const HIDE_SCROLLBAR =
   "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
+const DRIVER_OFFER_DRAFT_KEY = "kipita-driver-offer-draft";
+
+const DEFAULT_OFFER_FORM: OfferRideForm = {
+  from: "",
+  to: "",
+  date: "",
+  departTime: "",
+  seats: 4,
+  pricePerSeat: 1200,
+  pets: false,
+  luggage: false,
+};
 
 /* ── utilities (imported from @/lib/utils) ──────── */
 
@@ -88,12 +104,28 @@ function formatDateDMY(iso: string) {
   return `${d}/${m}/${y}`;
 }
 
+function normalizeTimeInput(value?: string) {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)/.exec(value ?? "");
+  return match ? `${match[1]}:${match[2]}` : "";
+}
+
+function formatTimeLabel(value?: string) {
+  const time = normalizeTimeInput(value);
+  if (!time) return "Any time";
+  const [hours, minutes] = time.split(":").map(Number);
+  const dt = new Date(2026, 0, 1, hours, minutes);
+  return dt.toLocaleTimeString("en-KE", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 
 /* ── hooks ─────────────────────────────────────────── */
 
 const FALLBACK_REQUESTS: PassengerRequest[] = [
-  { id: "fr1", name: "Sarah M.", from: "Nairobi", to: "Nakuru", date: todayISO(), seats: 2 },
-  { id: "fr2", name: "Brian O.", from: "Mombasa", to: "Nairobi", date: todayISO(), seats: 1 },
+  { id: "fr1", name: "Sarah M.", from: "Nairobi", to: "Nakuru", date: todayISO(), time: "08:00", seats: 2 },
+  { id: "fr2", name: "Brian O.", from: "Mombasa", to: "Nairobi", date: todayISO(), time: "09:30", seats: 1 },
 ];
 
 function usePassengerRequests(): { requests: PassengerRequest[]; loading: boolean } {
@@ -120,6 +152,7 @@ function usePassengerRequests(): { requests: PassengerRequest[]; loading: boolea
               from: r.origin as string,
               to: r.destination as string,
               date: (r.preferred_date as string) ?? todayISO(),
+              time: normalizeTimeInput(r.preferred_time as string),
               seats: (r.seats_needed as number) ?? 1,
               avatarUrl: (passenger?.image as string) ?? undefined,
             };
@@ -136,6 +169,41 @@ function usePassengerRequests(): { requests: PassengerRequest[]; loading: boolea
   }, []);
 
   return { requests, loading };
+}
+
+function useLivePassengerRequests(): {
+  requests: PassengerRequest[];
+  loading: boolean;
+} {
+  const { data, isLoading } = useSWR<{ ride_requests?: Record<string, unknown>[] }>(
+    "/api/ride-requests",
+    {
+      refreshInterval: LIMITS.pollIntervalMs,
+    },
+  );
+
+  const requests = useMemo(() => {
+    if (!data?.ride_requests?.length) return FALLBACK_REQUESTS;
+
+    const mapped: PassengerRequest[] = data.ride_requests.map((r) => {
+      const passenger = r.passenger as Record<string, unknown> | null;
+      return {
+        id: r.id as string,
+        passengerId: (passenger?.id as string) ?? undefined,
+        name: (passenger?.name as string) ?? "Passenger",
+        from: r.origin as string,
+        to: r.destination as string,
+        date: (r.preferred_date as string) ?? todayISO(),
+        time: normalizeTimeInput(r.preferred_time as string),
+        seats: (r.seats_needed as number) ?? 1,
+        avatarUrl: (passenger?.image as string) ?? undefined,
+      };
+    });
+
+    return mapped.length ? mapped : FALLBACK_REQUESTS;
+  }, [data?.ride_requests]);
+
+  return { requests, loading: isLoading };
 }
 
 
@@ -227,6 +295,10 @@ const RequestCard = React.memo(function RequestCard({
           <CalendarDays className="h-3 w-3" />
           {formatDateDMY(req.date)}
         </span>
+        <span className="inline-flex items-center gap-1">
+          <Clock3 className="h-3 w-3" />
+          {formatTimeLabel(req.time)}
+        </span>
         <span className="inline-flex items-center gap-1 font-semibold text-foreground">
           <Users className="h-3 w-3 text-primary" />
           {req.seats} seat{req.seats !== 1 ? "s" : ""}
@@ -293,9 +365,21 @@ function RequestDetailSheet({
   const chat = useChat();
   const { openAuthDrawer, isSignedIn } = useAuthDrawer();
   const [matched, setMatched] = useState(false);
+  const [showMatchForm, setShowMatchForm] = useState(false);
+  const [matchPrice, setMatchPrice] = useState("1200");
+  const [matchTime, setMatchTime] = useState("08:00");
+  const [matching, setMatching] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
 
   // Reset matched state when request changes
-  useEffect(() => { setMatched(false); }, [request?.id]);
+  useEffect(() => {
+    setMatched(false);
+    setShowMatchForm(false);
+    setMatchPrice("1200");
+    setMatchTime(normalizeTimeInput(request?.time) || "08:00");
+    setMatching(false);
+    setMatchError(null);
+  }, [request?.id, request?.time]);
 
   if (!request) return null;
 
@@ -310,14 +394,51 @@ function RequestDetailSheet({
         rating: 0,
         trips: 0,
         avatarUrl: request.avatarUrl,
+        role: "passenger",
       },
     });
     onClose();
   };
 
-  const handleMatch = () => {
+  const handleMatch = async () => {
     if (!isSignedIn) { openAuthDrawer({ selectedRole: "driver" }); return; }
-    setMatched(true);
+    if (!showMatchForm) {
+      setShowMatchForm(true);
+      return;
+    }
+
+    const price = Number(matchPrice);
+    if (!Number.isFinite(price) || price <= 0) {
+      setMatchError("Enter a valid price per seat.");
+      return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(matchTime)) {
+      setMatchError("Choose a valid departure time.");
+      return;
+    }
+
+    setMatching(true);
+    setMatchError(null);
+    try {
+      const res = await fetch("/api/ride-requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: request.id,
+          status: "accepted",
+          price_per_seat: price,
+          depart_time: matchTime,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || "Failed to match request");
+      setMatched(true);
+      setShowMatchForm(false);
+    } catch (error) {
+      setMatchError(error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setMatching(false);
+    }
   };
 
   return (
@@ -369,8 +490,9 @@ function RequestDetailSheet({
           </div>
 
           {/* Metric pills */}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <MetricPill icon={CalendarDays} label="Date" value={formatDateDMY(request.date)} />
+            <MetricPill icon={Clock3} label="Time" value={formatTimeLabel(request.time)} />
             <MetricPill icon={Footprints} label="Seats" value={`${request.seats} seat${request.seats !== 1 ? "s" : ""}`} />
           </div>
         </Surface>
@@ -426,6 +548,70 @@ function RequestDetailSheet({
               <MessageCircle className="h-4 w-4 mr-2" />
               Message {request.name.split(" ")[0]}
             </Button>
+          </Surface>
+        ) : showMatchForm ? (
+          <Surface tone="panel" elevated className="rounded-[22px] p-4">
+            <p className="text-[13px] font-extrabold tracking-tight">
+              Add match terms
+            </p>
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              The passenger pays after these terms are accepted.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.12em] text-muted-foreground">
+                  <Banknote className="h-3.5 w-3.5 text-primary" />
+                  PRICE
+                </div>
+                <Input
+                  type="number"
+                  value={matchPrice}
+                  onChange={(e) => setMatchPrice(e.target.value)}
+                  className="mt-1 h-8 border-0 bg-transparent p-0 text-[14px] font-extrabold focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.12em] text-muted-foreground">
+                  <Clock3 className="h-3.5 w-3.5 text-primary" />
+                  TIME
+                </div>
+                <Input
+                  type="time"
+                  value={matchTime}
+                  onChange={(e) => setMatchTime(e.target.value)}
+                  className="mt-1 h-8 border-0 bg-transparent p-0 text-[14px] font-extrabold focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+            </div>
+            {matchError ? (
+              <p className="mt-2 text-center text-[12px] font-semibold text-destructive">
+                {matchError}
+              </p>
+            ) : null}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button
+                onClick={handleMatch}
+                disabled={matching}
+                className="h-12 rounded-2xl bg-primary font-extrabold text-primary-foreground"
+              >
+                {matching ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Star className="h-4 w-4 mr-2" />
+                )}
+                {matching ? "Matching..." : "Confirm"}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowMatchForm(false);
+                  setMatchError(null);
+                }}
+                variant="outline"
+                className="h-12 rounded-2xl font-extrabold"
+              >
+                Cancel
+              </Button>
+            </div>
           </Surface>
         ) : (
           <div className="grid grid-cols-2 gap-2">
@@ -620,21 +806,16 @@ function TripDetailsSection({
                   </div>
                   <div>
                     <p className="text-[11px] font-medium text-muted-foreground">Seats</p>
-                    <p className="text-[14px] font-semibold tracking-tight">{form.seats}</p>
+                    <p className="text-[14px] font-semibold tracking-tight">Up to {LIMITS.maxSeats}</p>
                   </div>
                 </div>
-                <div className="mt-1.5 grid grid-cols-4 gap-1">
-                  {[1, 2, 3, 4].map((n) => (
-                    <PillButton
-                      key={n}
-                      active={form.seats === n}
-                      onClick={() => update("seats", n)}
-                      className="h-8 rounded-2xl px-0 text-[12px] font-semibold"
-                    >
-                      {n}
-                    </PillButton>
-                  ))}
-                </div>
+                <SeatStepper
+                  value={form.seats}
+                  min={LIMITS.minSeats}
+                  max={LIMITS.maxSeats}
+                  onChange={(value) => update("seats", value)}
+                  className="mt-1.5"
+                />
               </Surface>
             </div>
           </div>
@@ -710,28 +891,28 @@ function TripDetailsSection({
 
 export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
   const { openAuthDrawer, isSignedIn } = useAuthDrawer();
-  const [form, setForm] = useState<OfferRideForm>({
-    from: "",
-    to: "",
-    date: "",
-    departTime: "",
-    seats: 4,
-    pricePerSeat: 1200,
-    pets: false,
-    luggage: false,
-  });
+  const [form, setForm] = useState<OfferRideForm>(() => {
+    if (typeof window === "undefined") return DEFAULT_OFFER_FORM;
 
-  const [fromSuggestions, setFromSuggestions] = useState<string[]>([]);
-  const [toSuggestions, setToSuggestions] = useState<string[]>([]);
+    try {
+      const draft = window.sessionStorage.getItem(DRIVER_OFFER_DRAFT_KEY);
+      if (!draft) return DEFAULT_OFFER_FORM;
+      return { ...DEFAULT_OFFER_FORM, ...JSON.parse(draft) };
+    } catch {
+      return DEFAULT_OFFER_FORM;
+    }
+  });
   const [dateOpen, setDateOpen] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
 
-  const { requests } = usePassengerRequests();
+  const { requests } = useLivePassengerRequests();
   const announcements = useAnnouncements();
 
   const minDate = useMemo(() => todayISO(), []);
+  const fromSuggestions = useTownSuggestions(form.from, MIN_TOWN_CHARS);
+  const toSuggestions = useTownSuggestions(form.to, MIN_TOWN_CHARS);
 
   const hasLocations = useMemo(
     () => Boolean(form.from.trim() && form.to.trim()),
@@ -744,7 +925,8 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
       form.to.trim() &&
       form.date &&
       form.departTime &&
-      form.seats > 0 &&
+      form.seats >= LIMITS.minSeats &&
+      form.seats <= LIMITS.maxSeats &&
       Number.isFinite(form.pricePerSeat) &&
       form.pricePerSeat > 0,
     );
@@ -756,31 +938,32 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
     [],
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(
+      DRIVER_OFFER_DRAFT_KEY,
+      JSON.stringify(form),
+    );
+  }, [form]);
+
   const handleLocationChange = useCallback(
-    (field: LocationField, v: string, setSug: React.Dispatch<React.SetStateAction<string[]>>) => {
+    (field: LocationField, v: string) => {
       update(field, v);
-      const q = v.trim();
-      if (q.length < MIN_TOWN_CHARS) return setSug([]);
-      setSug(filterTowns(q));
     },
     [update],
   );
 
   const handleLocationSelect = useCallback(
-    (field: LocationField, setSug: React.Dispatch<React.SetStateAction<string[]>>) =>
-      (v: string) => {
-        update(field, v);
-        setSug([]);
-      },
+    (field: LocationField) => (v: string) => {
+      update(field, v);
+    },
     [update],
   );
 
   const handleLocationClear = useCallback(
-    (field: LocationField, setSug: React.Dispatch<React.SetStateAction<string[]>>) =>
-      () => {
-        update(field, "");
-        setSug([]);
-      },
+    (field: LocationField) => () => {
+      update(field, "");
+    },
     [update],
   );
 
@@ -793,18 +976,7 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
     if (!isSubmitted) return;
     const t = window.setTimeout(() => {
       setIsSubmitted(false);
-      setForm({
-        from: "",
-        to: "",
-        date: "",
-        departTime: "",
-        seats: 4,
-        pricePerSeat: 1200,
-        pets: false,
-        luggage: false,
-      });
-      setFromSuggestions([]);
-      setToSuggestions([]);
+      setForm(DEFAULT_OFFER_FORM);
       setDateOpen(false);
     }, 1800);
     return () => window.clearTimeout(t);
@@ -896,9 +1068,9 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
               placeholder="Leaving from"
               suggestions={fromSuggestions}
               minChars={MIN_TOWN_CHARS}
-              onChange={(v) => handleLocationChange("from", v, setFromSuggestions)}
-              onSelect={handleLocationSelect("from", setFromSuggestions)}
-              onClear={handleLocationClear("from", setFromSuggestions)}
+              onChange={(v) => handleLocationChange("from", v)}
+              onSelect={handleLocationSelect("from")}
+              onClear={handleLocationClear("from")}
               compact
               nextFocusId="offer-to"
             />
@@ -914,9 +1086,9 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
               placeholder="Going to"
               suggestions={toSuggestions}
               minChars={MIN_TOWN_CHARS}
-              onChange={(v) => handleLocationChange("to", v, setToSuggestions)}
-              onSelect={handleLocationSelect("to", setToSuggestions)}
-              onClear={handleLocationClear("to", setToSuggestions)}
+              onChange={(v) => handleLocationChange("to", v)}
+              onSelect={handleLocationSelect("to")}
+              onClear={handleLocationClear("to")}
               compact
             />
           </div>

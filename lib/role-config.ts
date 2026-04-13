@@ -19,7 +19,7 @@ interface RoleConfig {
 export const ROLE_CONFIG: Record<AppRole, RoleConfig> = {
   passenger: {
     label: "Rider",
-    homeTitle: "Find a Ride",
+    homeTitle: "Find your ride today",
     searchCTA: "Search Rides",
     searchPlaceholder: { from: "Pickup town", to: "Drop-off town" },
     emptyTrips: "No trips yet. Search for a ride to get started.",
@@ -34,7 +34,7 @@ export const ROLE_CONFIG: Record<AppRole, RoleConfig> = {
   },
   driver: {
     label: "Driver",
-    homeTitle: "Offer a Ride",
+    homeTitle: "Offer a ride today",
     searchCTA: "Search Requests",
     searchPlaceholder: { from: "Departure town", to: "Destination town" },
     emptyTrips: "No rides posted. Offer a ride to get started.",

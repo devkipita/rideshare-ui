@@ -1,6 +1,9 @@
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { sendWelcomeEmail } from "@/lib/email";
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,6 +74,13 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    // Fire-and-forget welcome email — never block signup on email delivery
+    sendWelcomeEmail({
+      to: normalizedEmail,
+      name: normalizedName,
+      role,
+    }).catch((err) => console.error("[signup] welcome email failed", err));
 
     return NextResponse.json(
       { message: "User created successfully", user: newUser },

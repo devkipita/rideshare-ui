@@ -31,8 +31,8 @@ const PASSENGER_TABS: readonly TabDef[] = [
 ];
 
 const DRIVER_TABS: readonly TabDef[] = [
-  { id: "home", label: "My Rides", icon: Car, route: "/home" },
-  { id: "trips", label: "Requests", icon: ClipboardList, route: "/trips" },
+  { id: "home", label: "Home", icon: Car, route: "/home" },
+  { id: "trips", label: "Trips", icon: ClipboardList, route: "/trips" },
   { id: "notifications", label: "Alerts", icon: BellDot, route: "/notifications" },
   { id: "profile", label: "Profile", icon: UserCircle, route: "/profile" },
 ];

@@ -1,39 +1,86 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PassengerSearchForm, type SearchFilters } from "./PassengerSearchForm";
 import { RideResults, type Driver } from "./RideResults";
 import { BottomSheet, Surface } from "./ui-parts";
 import { AnnouncementsStrip, useAnnouncements } from "./announcements-strip";
 import { useAuthDrawer } from "./auth-drawer-provider";
+import { toast } from "sonner";
+import { LIMITS } from "@/lib/constants";
 
 type Status = "idle" | "loading" | "ready";
+
+const PASSENGER_SEARCH_DRAFT_KEY = "kipita-passenger-search-draft";
+
+const DEFAULT_FILTERS: SearchFilters = {
+  from: "",
+  to: "",
+  pickup: "",
+  dropoff: "",
+  note: "",
+  date: "",
+  departTime: "",
+  seats: 2,
+  pets: true,
+  luggage: false,
+};
+
+function clampSeats(value: unknown) {
+  const seats = Math.round(Number(value));
+  if (!Number.isFinite(seats)) return DEFAULT_FILTERS.seats;
+  return Math.min(LIMITS.maxSeats, Math.max(LIMITS.minSeats, seats));
+}
+
+function normalizeDraft(value: unknown): SearchFilters {
+  if (!value || typeof value !== "object") return DEFAULT_FILTERS;
+  const { airport: _airport, ...draft } = value as Partial<SearchFilters> & {
+    airport?: boolean;
+  };
+
+  return {
+    ...DEFAULT_FILTERS,
+    ...draft,
+    departTime:
+      typeof draft.departTime === "string" ? draft.departTime : "",
+    seats: clampSeats(draft.seats),
+  };
+}
 
 export function PassengerSearch({
   onSearch,
 }: {
   onSearch?: (filters: SearchFilters) => void;
 }) {
-  const [filters, setFilters] = useState<SearchFilters>({
-    from: "",
-    to: "",
-    pickup: "",
-    dropoff: "",
-    note: "",
-    date: "",
-    seats: 2,
-    pets: true,
-    luggage: false,
-    airport: false,
-  });
-
+  const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
+  const [draftReady, setDraftReady] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [results, setResults] = useState<Driver[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [requestPosted, setRequestPosted] = useState(false);
+  const [requestPostedFor, setRequestPostedFor] = useState<string | null>(null);
   const [postingRequest, setPostingRequest] = useState(false);
   const { openAuthDrawer, isSignedIn } = useAuthDrawer();
   const announcements = useAnnouncements();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const draft = window.sessionStorage.getItem(PASSENGER_SEARCH_DRAFT_KEY);
+      if (draft) setFilters(normalizeDraft(JSON.parse(draft)));
+    } catch {
+      setFilters(DEFAULT_FILTERS);
+    } finally {
+      setDraftReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady || typeof window === "undefined") return;
+    window.sessionStorage.setItem(
+      PASSENGER_SEARCH_DRAFT_KEY,
+      JSON.stringify(filters),
+    );
+  }, [draftReady, filters]);
 
   const canSearch = useMemo(
     () =>
@@ -42,10 +89,34 @@ export function PassengerSearch({
         filters.to.trim() &&
         filters.pickup.trim() &&
         filters.dropoff.trim() &&
-        filters.date,
+        filters.date &&
+        filters.departTime,
       ),
-    [filters.from, filters.to, filters.pickup, filters.dropoff, filters.date],
+    [
+      filters.from,
+      filters.to,
+      filters.pickup,
+      filters.dropoff,
+      filters.date,
+      filters.departTime,
+    ],
   );
+
+  const requestKey = useMemo(
+    () =>
+      [
+        filters.from.trim().toLowerCase(),
+        filters.to.trim().toLowerCase(),
+        filters.date,
+        filters.departTime,
+        filters.seats,
+        filters.pickup.trim().toLowerCase(),
+        filters.dropoff.trim().toLowerCase(),
+      ].join("|"),
+    [filters],
+  );
+
+  const requestPosted = requestPostedFor === requestKey;
 
   const postRideRequest = async () => {
     if (postingRequest || requestPosted) return;
@@ -59,6 +130,7 @@ export function PassengerSearch({
           origin: filters.from.trim(),
           destination: filters.to.trim(),
           preferred_date: filters.date,
+          preferred_time: filters.departTime,
           seats_needed: filters.seats,
           allows_pets: filters.pets,
           allows_packages: filters.luggage,
@@ -68,9 +140,15 @@ export function PassengerSearch({
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      setRequestPosted(true);
+      setRequestPostedFor(requestKey);
+      toast.success("Request posted", {
+        description:
+          "Drivers on this route have been notified. You will see matches in My Rides.",
+      });
     } catch {
-      // silently fail
+      toast.error("Couldn't post request", {
+        description: "Please check your connection and try again.",
+      });
     } finally {
       setPostingRequest(false);
     }
@@ -88,6 +166,7 @@ export function PassengerSearch({
       if (filters.from) params.set("from", filters.from.trim());
       if (filters.to) params.set("to", filters.to.trim());
       if (filters.date) params.set("date", filters.date);
+      if (filters.departTime) params.set("time", filters.departTime);
       if (filters.seats) params.set("seats", String(filters.seats));
       if (filters.pets) params.set("pets", "true");
       if (filters.luggage) params.set("luggage", "true");
@@ -114,6 +193,9 @@ export function PassengerSearch({
       });
 
       setResults(rides);
+      if (!rides.length) {
+        void postRideRequest();
+      }
     } catch {
       setResults([]);
     } finally {
@@ -144,6 +226,9 @@ export function PassengerSearch({
           status={status}
           results={results}
           onPostRequest={postRideRequest}
+          requestPosted={requestPosted}
+          postingRequest={postingRequest}
+          seats={filters.seats}
         />
       </BottomSheet>
     </div>
