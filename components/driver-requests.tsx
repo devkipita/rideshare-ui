@@ -581,13 +581,13 @@ function RequestCard({
       className={cn(
         "rounded-3xl border overflow-hidden",
         "supports-[backdrop-filter]:backdrop-blur-xl",
-        "shadow-[0_10px_28px_-22px_oklch(var(--brand-primary)/0.18)]",
+        "shadow-[0_10px_28px_-22px_color-mix(in_srgb,var(--primary)_18%,transparent)]",
         "transition-all duration-500",
         highlighted
-          ? "border-primary/40 bg-[color-mix(in_oklch,var(--surface-low)_82%,var(--primary)_18%)] ring-2 ring-primary/30"
+          ? "border-primary/40 bg-[color-mix(in_srgb,var(--card)_82%,var(--primary)_18%)] ring-2 ring-primary/30"
           : isAccepted
-            ? "border-border/70 bg-[color-mix(in_oklch,var(--surface-low)_90%,var(--ring)_10%)]"
-            : "border-border/70 bg-[color-mix(in_oklch,var(--surface-low)_88%,var(--primary)_12%)]",
+            ? "border-border/70 bg-[color-mix(in_srgb,var(--card)_90%,var(--ring)_10%)]"
+            : "border-border/70 bg-[color-mix(in_srgb,var(--card)_88%,var(--primary)_12%)]",
       )}
     >
       <div className="px-3.5 pt-3.5 pb-3">
@@ -732,7 +732,7 @@ function ActionIconBtn({
         "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
         "hover:bg-primary/8 hover:border-primary/20",
         "active:scale-[0.99]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(var(--ring)/0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--ring)_55%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       )}
     >
       <Icon className="h-4.5 w-4.5 text-primary" strokeWidth={2.3} />

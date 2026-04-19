@@ -11,7 +11,10 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
-    return NextResponse.json({ error: "Sign in to post announcements" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Sign in to post announcements" },
+      { status: 401 },
+    );
 
   const body = await req.json().catch(() => null);
   if (!body)
@@ -48,7 +51,6 @@ export async function POST(req: Request) {
 
 /** GET /api/announcements — fetch recent announcements (public) */
 export async function GET() {
-
   const { data, error } = await supabaseAdmin
     .from("announcements")
     .select("*, poster:users!user_id(id,name,image)")

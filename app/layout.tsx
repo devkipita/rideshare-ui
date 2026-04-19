@@ -11,8 +11,8 @@ import './globals.css'
 const APP_NAME = 'Kipita'
 const APP_DESCRIPTION = 'Share the road. Split the cost.'
 const FAVICON_PATH = '/favicon_io'
-const THEME_COLOR_LIGHT = '#f5f7f4'
-const THEME_COLOR_DARK = '#0f1613'
+const THEME_COLOR_LIGHT = '#f7faf8'
+const THEME_COLOR_DARK = '#1a1f1c'
 
 function resolveMetadataBase() {
   const fallback = 'http://localhost:3000'
@@ -136,7 +136,10 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={`font-lexend antialiased min-h-screen bg-background text-foreground`}>
+      <body
+        className="antialiased min-h-screen bg-background text-foreground"
+        style={{ fontFamily: 'var(--font-lexend)' }}
+      >
         <AuthProvider session={session}>
           <div className="flex flex-col h-screen w-full max-w-md mx-auto relative">
             {children}

@@ -7,12 +7,88 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const REQUEST_SELECT = [
-  "*",
-  "passenger:users!passenger_id(id,name,image,email)",
-  "matched_driver:users!matched_driver_id(id,name,image,email)",
-  "matched_ride:rides!matched_ride_id(*)",
-].join(",");
+type RideRequestRow = Record<string, unknown>;
+
+function collectIds(rows: RideRequestRow[], key: string) {
+  const ids = new Set<string>();
+
+  for (const row of rows) {
+    const value = row[key];
+    if (typeof value === "string" && value.trim()) {
+      ids.add(value);
+    }
+  }
+
+  return [...ids];
+}
+
+async function loadUsersByIds(ids: string[]) {
+  if (!ids.length) {
+    return new Map<string, RideRequestRow>();
+  }
+
+  const { data } = await supabaseAdmin
+    .from("users")
+    .select("id,name,image,email")
+    .in("id", ids);
+
+  return new Map(
+    (data ?? []).map((user) => [String(user.id), user as RideRequestRow]),
+  );
+}
+
+async function loadRidesByIds(ids: string[]) {
+  if (!ids.length) {
+    return new Map<string, RideRequestRow>();
+  }
+
+  const { data } = await supabaseAdmin.from("rides").select("*").in("id", ids);
+
+  return new Map(
+    (data ?? []).map((ride) => [String(ride.id), ride as RideRequestRow]),
+  );
+}
+
+async function hydrateRideRequests(rows: RideRequestRow[]) {
+  if (!rows.length) {
+    return rows;
+  }
+
+  const passengerIds = collectIds(rows, "passenger_id");
+  const matchedDriverIds = collectIds(rows, "matched_driver_id");
+  const matchedRideIds = collectIds(rows, "matched_ride_id");
+
+  const [passengersById, driversById, ridesById] = await Promise.all([
+    loadUsersByIds(passengerIds),
+    loadUsersByIds(matchedDriverIds),
+    loadRidesByIds(matchedRideIds),
+  ]);
+
+  return rows.map((row) => ({
+    ...row,
+    passenger:
+      typeof row.passenger_id === "string"
+        ? (passengersById.get(row.passenger_id) ?? null)
+        : null,
+    matched_driver:
+      typeof row.matched_driver_id === "string"
+        ? (driversById.get(row.matched_driver_id) ?? null)
+        : null,
+    matched_ride:
+      typeof row.matched_ride_id === "string"
+        ? (ridesById.get(row.matched_ride_id) ?? null)
+        : null,
+  }));
+}
+
+async function hydrateRideRequest(row: RideRequestRow | null) {
+  if (!row) {
+    return null;
+  }
+
+  const [hydrated] = await hydrateRideRequests([row]);
+  return hydrated ?? row;
+}
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -65,14 +141,17 @@ export async function POST(req: Request) {
 
   if (!origin || !destination || !preferredDate || !preferredTime) {
     return NextResponse.json(
-      { error: "origin, destination, preferred_date, and preferred_time are required" },
+      {
+        error:
+          "origin, destination, preferred_date, and preferred_time are required",
+      },
       { status: 400 },
     );
   }
 
   const duplicate = await supabaseAdmin
     .from("ride_requests")
-    .select(REQUEST_SELECT)
+    .select("*")
     .eq("passenger_id", String(session.user.id))
     .eq("origin", origin)
     .eq("destination", destination)
@@ -83,14 +162,20 @@ export async function POST(req: Request) {
 
   if (duplicate.error) {
     return NextResponse.json(
-      { error: "Failed to check existing ride request", details: duplicate.error.message },
+      {
+        error: "Failed to check existing ride request",
+        details: duplicate.error.message,
+      },
       { status: 500 },
     );
   }
 
   if (duplicate.data) {
+    const rideRequest = await hydrateRideRequest(
+      duplicate.data as RideRequestRow,
+    );
     return NextResponse.json(
-      { ride_request: duplicate.data, duplicate: true, notified: true },
+      { ride_request: rideRequest, duplicate: true, notified: true },
       { status: 200 },
     );
   }
@@ -111,7 +196,7 @@ export async function POST(req: Request) {
       note: clean(body.note) || null,
       status: "active",
     })
-    .select(REQUEST_SELECT)
+    .select("*")
     .single();
 
   if (error) {
@@ -121,8 +206,10 @@ export async function POST(req: Request) {
     );
   }
 
+  const rideRequest = await hydrateRideRequest(data as RideRequestRow);
+
   return NextResponse.json(
-    { ride_request: data, notified: true },
+    { ride_request: rideRequest, notified: true },
     { status: 201 },
   );
 }
@@ -134,7 +221,7 @@ export async function GET() {
 
   let query = supabaseAdmin
     .from("ride_requests")
-    .select(REQUEST_SELECT)
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (session?.user?.id && role === "passenger") {
@@ -156,7 +243,11 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ ride_requests: data ?? [] }, { status: 200 });
+  const rideRequests = await hydrateRideRequests(
+    (data ?? []) as RideRequestRow[],
+  );
+
+  return NextResponse.json({ ride_requests: rideRequests }, { status: 200 });
 }
 
 /** PATCH /api/ride-requests - driver matches or declines a request */
@@ -207,7 +298,7 @@ export async function PATCH(req: Request) {
       .from("ride_requests")
       .update({ status: "cancelled" })
       .eq("id", String(body.id))
-      .select(REQUEST_SELECT)
+      .select("*")
       .single();
 
     if (error) {
@@ -217,7 +308,9 @@ export async function PATCH(req: Request) {
       );
     }
 
-    return NextResponse.json({ ride_request: data }, { status: 200 });
+    const rideRequest = await hydrateRideRequest(data as RideRequestRow);
+
+    return NextResponse.json({ ride_request: rideRequest }, { status: 200 });
   }
 
   const pricePerSeat = Number(body.price_per_seat);
@@ -242,7 +335,10 @@ export async function PATCH(req: Request) {
     );
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Invalid departure time" },
+      {
+        error:
+          error instanceof Error ? error.message : "Invalid departure time",
+      },
       { status: 400 },
     );
   }
@@ -289,7 +385,7 @@ export async function PATCH(req: Request) {
       match_departure_time: departureTime,
     })
     .eq("id", String(body.id))
-    .select(REQUEST_SELECT)
+    .select("*")
     .single();
 
   if (error) {
@@ -299,5 +395,7 @@ export async function PATCH(req: Request) {
     );
   }
 
-  return NextResponse.json({ ride_request: data }, { status: 200 });
+  const rideRequest = await hydrateRideRequest(data as RideRequestRow);
+
+  return NextResponse.json({ ride_request: rideRequest }, { status: 200 });
 }

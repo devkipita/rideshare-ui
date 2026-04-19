@@ -2,7 +2,6 @@
 
 import React, {
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -21,7 +20,7 @@ import {
   StickyNote,
 } from "lucide-react";
 
-import { cn, todayISO, hashString, avatarColors } from "@/lib/utils";
+import { cn, todayISO, avatarColors } from "@/lib/utils";
 import { useAutoCarousel } from "@/hooks/use-auto-carousel";
 import { usePlaceSuggestions } from "@/hooks/use-place-suggestions";
 import { useTownSuggestions } from "@/hooks/use-town-suggestions";
@@ -113,49 +112,6 @@ const FALLBACK_RIDES: TodayRide[] = [
   },
 ];
 
-function useTodayRides(): TodayRide[] {
-  const [rides, setRides] = useState<TodayRide[]>(FALLBACK_RIDES);
-
-  useEffect(() => {
-    let cancelled = false;
-    const today = todayISO();
-
-    fetch(`/api/rides?date=${today}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        if (cancelled || !json?.rides?.length) return;
-        const mapped: TodayRide[] = json.rides.map(
-          (r: Record<string, unknown>) => {
-            const driver = r.driver as Record<string, unknown> | null;
-            const dt = r.departure_time ? new Date(r.departure_time as string) : null;
-            return {
-              id: r.id as string,
-              driverId: (driver?.id as string) ?? undefined,
-              name: (driver?.name as string) ?? "Driver",
-              from: r.origin as string,
-              to: r.destination as string,
-              price: r.price_per_seat as number,
-              rating: 4.5,
-              avatarUrl: (driver?.image as string) ?? undefined,
-              dateISO: today,
-              time: dt
-                ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`
-                : "—",
-            };
-          },
-        );
-        setRides(mapped.length ? mapped : FALLBACK_RIDES);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return rides;
-}
-
 function useLiveTodayRides(): TodayRide[] {
   const today = useMemo(() => todayISO(), []);
   const { data } = useSWR<{ rides?: Record<string, unknown>[] }>(
@@ -227,8 +183,6 @@ const Avatar = React.memo(function Avatar({
   );
 });
 
-/* useAutoCarousel imported from @/hooks/use-auto-carousel */
-
 function RoutePill({
   from,
   to,
@@ -242,7 +196,7 @@ function RoutePill({
 }) {
   return (
     <div className="mt-2 flex flex-col gap-1.5">
-      <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+      <div className="flex items-center gap-2 text-[12px] text-foreground/90 dark:text-foreground/85">
         <span className="inline-flex items-center gap-1.5 min-w-0">
           <Dot className="h-4 w-4 text-primary" />
           <span className="truncate">{from}</span>
@@ -256,7 +210,7 @@ function RoutePill({
         </span>
       </div>
 
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+      <div className="flex items-center gap-2 text-[11px] text-foreground/70 dark:text-foreground/65">
         <span className="inline-flex items-center gap-1.5">
           <CalendarDays className="h-3.5 w-3.5" />
           <span>{formatISOToDDMMYYYY(dateISO)}</span>
@@ -287,10 +241,14 @@ const RideCard = React.memo(function RideCard({
       type="button"
       onClick={() => onTap(ride)}
       className={cn(
-        "snap-start shrink-0 text-left",
+        "snap-start shrink-0 text-left text-foreground",
         "w-[78vw] min-w-[240px] max-w-[340px]",
-        "rounded-3xl border border-border/70 bg-card/60",
-        "p-3.5 transition-transform duration-200",
+        "rounded-3xl border border-border/70",
+        "bg-card/80 dark:bg-card/90",
+        "supports-[backdrop-filter]:backdrop-blur-[24px]",
+        "p-3.5 transition-all duration-200",
+        "shadow-[0_12px_30px_-20px_color-mix(in_oklch,var(--primary)_16%,transparent)]",
+        "dark:shadow-[0_14px_36px_-24px_rgba(0,0,0,0.7)]",
         "active:scale-[0.99]",
         "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
       )}
@@ -300,7 +258,7 @@ const RideCard = React.memo(function RideCard({
         <Avatar name={ride.name} url={ride.avatarUrl} />
 
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold tracking-tight truncate">
+          <p className="text-[13px] font-bold tracking-tight truncate text-foreground">
             {ride.name}
           </p>
           <RoutePill
@@ -315,10 +273,10 @@ const RideCard = React.memo(function RideCard({
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Star className="h-4 w-4 text-primary" />
-          <span className="text-[13px] font-semibold">{ride.rating}</span>
+          <span className="text-[13px] font-bold text-foreground">{ride.rating}</span>
         </div>
 
-        <p className="text-[14px] font-extrabold tracking-tight">
+        <p className="text-[14px] font-extrabold tracking-tight text-foreground">
           KES {ride.price.toLocaleString()}
         </p>
       </div>
@@ -372,12 +330,10 @@ function toSearchRide(r: TodayRide): SearchRide {
 
 function TodayRidesCarousel({
   rides,
-  hint,
   fallbackFrom,
   seats = 1,
 }: {
   rides: TodayRide[];
-  hint?: string;
   fallbackFrom?: string;
   seats?: number;
 }) {
@@ -385,14 +341,7 @@ function TodayRidesCarousel({
   const { openAuthDrawer, isSignedIn } = useAuthDrawer();
 
   const [selectedRide, setSelectedRide] = useState<TodayRide | null>(null);
-  const [booked, setBooked] = useState(false);
-  const [booking, setBooking] = useState(false);
   const [payingRide, setPayingRide] = useState<TodayRide | null>(null);
-
-  useEffect(() => {
-    setBooked(false);
-    setBooking(false);
-  }, [selectedRide?.id]);
 
   const searchRide = selectedRide ? toSearchRide(selectedRide) : null;
 
@@ -418,9 +367,8 @@ function TodayRidesCarousel({
   const handleBookSeat = useCallback(() => {
     if (!selectedRide) return;
     if (!isSignedIn) { openAuthDrawer({ selectedRole: "passenger" }); return; }
-    if (booking) return;
     setPayingRide(selectedRide);
-  }, [selectedRide, isSignedIn, openAuthDrawer, booking]);
+  }, [selectedRide, isSignedIn, openAuthDrawer]);
 
   const {
     scrollerRef,
@@ -439,7 +387,7 @@ function TodayRidesCarousel({
   return (
     <>
       <div>
-        <p className="text-[12px] font-semibold tracking-tight text-muted-foreground px-1">
+        <p className="px-1 text-[12px] font-extrabold tracking-[0.16em] uppercase text-foreground/90">
           Available rides
         </p>
 
@@ -476,8 +424,6 @@ function TodayRidesCarousel({
         selected={searchRide ? { kind: "search", ride: searchRide } : null}
         onMessage={handleMessage}
         onBookSeat={handleBookSeat}
-        booked={booked}
-        booking={booking}
       />
 
       <PaymentDrawer
@@ -492,7 +438,6 @@ function TodayRidesCarousel({
           payingRide ? `${payingRide.from} -> ${payingRide.to}` : undefined
         }
         onSuccess={() => {
-          setBooked(true);
           setSelectedRide(null);
         }}
       />
@@ -640,7 +585,7 @@ function PickupDropoffCard({
         )}
       >
         <div className="overflow-hidden">
-          <div className="mt-2 rounded-3xl border border-border/70 bg-card/60 overflow-visible">
+          <div className="mt-2 rounded-3xl border border-border/70 bg-card/56 supports-[backdrop-filter]:backdrop-blur-[24px] overflow-visible">
             <div className="p-3 sm:p-3.5">
               <LocationInput
                 id="pickup"
@@ -708,7 +653,7 @@ function PickupDropoffCard({
                 onChange={(e) => onNoteChange(e.target.value)}
                 placeholder="e.g. Small pet in carrier / I’m at the Shell entrance / I have one suitcase…"
                 className={cn(
-                  "mt-2 w-full min-h-[96px] resize-none rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--card)_88%,white_10%)]",
+                  "mt-2 w-full min-h-[96px] resize-none rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--card)_72%,white_10%)] supports-[backdrop-filter]:backdrop-blur-[24px]",
                   "px-3.5 py-3 text-[13px] font-medium leading-relaxed",
                   "outline-none transition-all duration-200 ease-app",
                   "focus:border-transparent focus:ring-2 focus:ring-primary/55",
@@ -953,52 +898,49 @@ export function PassengerSearchForm({
     [filters, onChange],
   );
 
-  const handleLocationChange = useCallback(
-    (field: LocationField, v: string) => {
-      if (field === "from") {
-        onChange({ ...filters, from: v, pickup: "" });
-        return;
+  const setLocationValue = useCallback(
+    (field: LocationField, value: string) => {
+      switch (field) {
+        case "from":
+          onChange({ ...filters, from: value, pickup: "" });
+          return;
+        case "to":
+          onChange({ ...filters, to: value, dropoff: "" });
+          return;
+        case "pickup":
+          onChange({ ...filters, pickup: value });
+          return;
+        case "dropoff":
+          onChange({ ...filters, dropoff: value });
+          return;
       }
-      if (field === "to") {
-        onChange({ ...filters, to: v, dropoff: "" });
-        return;
-      }
-      update(field, v as any);
     },
-    [filters, onChange, update],
+    [filters, onChange],
+  );
+
+  const handleLocationChange = useCallback(
+    (field: LocationField, value: string) => {
+      setLocationValue(field, value);
+    },
+    [setLocationValue],
   );
 
   const handleLocationSelect = useCallback(
-    (field: LocationField) => (v: string) => {
-      if (field === "from") {
-        onChange({ ...filters, from: v, pickup: "" });
-      } else if (field === "to") {
-        onChange({ ...filters, to: v, dropoff: "" });
-      } else {
-        update(field, v as any);
-      }
+    (field: LocationField) => (value: string) => {
+      setLocationValue(field, value);
       if (field === "from" || field === "to") {
         setDetailsOpen(true);
         setOptionsOpen(true);
       }
     },
-    [filters, onChange, update],
+    [setLocationValue],
   );
 
   const handleLocationClear = useCallback(
     (field: LocationField) => () => {
-      if (field === "from" || field === "to") {
-        onChange({
-          ...filters,
-          [field]: "",
-          pickup: field === "from" ? "" : filters.pickup,
-          dropoff: field === "to" ? "" : filters.dropoff,
-        });
-        return;
-      }
-      update(field, "" as any);
+      setLocationValue(field, "");
     },
-    [filters, onChange, update],
+    [setLocationValue],
   );
 
   const swap = useCallback(
@@ -1075,11 +1017,6 @@ export function PassengerSearchForm({
         rides={todayRides}
         fallbackFrom={filters.from}
         seats={filters.seats}
-        hint={
-          hasLocations
-            ? "Rides update automatically — swipe for more."
-            : "Add your route to unlock pickup, drop-off, date, seats, and preferences."
-        }
       />
     </div>
   );

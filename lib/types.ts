@@ -3,7 +3,7 @@ export type RideStatus = "active" | "matched" | "started" | "completed" | "cance
 export type TripState = "not_started" | "started" | "completed" | "cancelled";
 export type RideTiming = "now" | "scheduled";
 export type RequestStatus = "pending" | "accepted" | "rejected";
-export type NoticeKind = "system" | "ride" | "announcement";
+export type NoticeKind = "system" | "notification" | "alert";
 export type NoticeSeverity = "info" | "warning" | "critical";
 export type PaymentMethod = "mpesa" | "card";
 

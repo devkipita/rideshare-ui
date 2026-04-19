@@ -25,7 +25,7 @@ export const RIDE_STATUSES = [
 ] as const;
 export type RideStatus = (typeof RIDE_STATUSES)[number];
 
-export const NOTICE_KINDS = ["system", "ride", "announcement"] as const;
+export const NOTICE_KINDS = ["system", "notification", "alert"] as const;
 export type NoticeKind = (typeof NOTICE_KINDS)[number];
 
 export const NOTICE_SEVERITIES = ["info", "warning", "critical"] as const;

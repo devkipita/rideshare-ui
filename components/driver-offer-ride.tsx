@@ -269,7 +269,7 @@ const RequestCard = React.memo(function RequestCard({
       className={cn(
         "snap-start shrink-0 text-left",
         "w-[72vw] min-w-[220px] max-w-[300px]",
-        "rounded-3xl border border-border/70 bg-card/60",
+        "rounded-3xl border border-border/70 bg-card/56 supports-[backdrop-filter]:backdrop-blur-[24px]",
         "p-3 transition-all duration-200",
         "active:scale-[0.98] hover:border-primary/30 hover:bg-card/80",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55",
@@ -280,7 +280,7 @@ const RequestCard = React.memo(function RequestCard({
         <Avatar name={req.name} url={req.avatarUrl} />
         <div className="min-w-0 flex-1">
           <p className="text-[12px] font-semibold tracking-tight truncate">{req.name}</p>
-          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-foreground/78">
             <Dot className="h-3.5 w-3.5 text-primary" />
             <span className="truncate">{req.from}</span>
             <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
@@ -290,7 +290,7 @@ const RequestCard = React.memo(function RequestCard({
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+      <div className="mt-2 flex items-center justify-between text-[11px] text-foreground/72">
         <span className="inline-flex items-center gap-1">
           <CalendarDays className="h-3 w-3" />
           {formatDateDMY(req.date)}
@@ -340,15 +340,15 @@ function MetricPill({ icon: Icon, label, value }: { icon: React.ElementType; lab
   return (
     <div className={cn(
       "flex items-center gap-2 rounded-2xl px-3.5 py-2",
-      "bg-background/50 dark:bg-background/20",
-      "border border-border/40 dark:border-border/60",
-      "backdrop-blur-md",
+      "bg-card/58 dark:bg-card/50",
+      "border border-border/60",
+      "supports-[backdrop-filter]:backdrop-blur-[24px]",
     )}>
       <div className="grid h-7 w-7 place-items-center rounded-xl bg-primary/12 border border-primary/15">
         <Icon className="h-3.5 w-3.5 text-primary" />
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold text-muted-foreground leading-tight">{label}</p>
+        <p className="text-[10px] font-semibold leading-tight text-foreground/72">{label}</p>
         <p className="text-[13px] font-extrabold tracking-tight leading-tight">{value}</p>
       </div>
     </div>
@@ -449,7 +449,7 @@ function RequestDetailSheet({
           tone="panel"
           className={cn(
             "relative overflow-hidden rounded-[28px] p-5",
-            "bg-secondary/15 dark:bg-accent",
+            "bg-secondary/25 dark:bg-accent/35",
             "border border-border",
           )}
         >
@@ -477,7 +477,7 @@ function RequestDetailSheet({
               "flex items-center gap-1.5 rounded-full px-3.5 py-2",
               "bg-primary/14 dark:bg-primary/20",
               "border border-primary/22 dark:border-primary/28",
-              "backdrop-blur-md",
+              "supports-[backdrop-filter]:backdrop-blur-[24px]",
             )}>
               <Users className="h-4 w-4 text-primary" />
               <span className="text-lg font-black text-primary tracking-tight">
@@ -500,7 +500,7 @@ function RequestDetailSheet({
         {/* ===== Route card ===== */}
         <Surface tone="panel" elevated className="rounded-[22px] overflow-hidden">
           <div className="px-4 pt-3.5 pb-1">
-            <p className="text-[10px] font-extrabold tracking-[0.15em] uppercase text-muted-foreground">
+            <p className="text-[10px] font-extrabold tracking-[0.15em] uppercase text-foreground/70">
               Route
             </p>
           </div>
@@ -512,11 +512,11 @@ function RequestDetailSheet({
             </div>
             <div className="min-w-0 flex-1 space-y-2.5">
               <div>
-                <p className="text-[10px] font-semibold text-muted-foreground">FROM</p>
+                <p className="text-[10px] font-semibold text-foreground/70">FROM</p>
                 <p className="text-[14px] font-extrabold tracking-tight truncate">{request.from}</p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-muted-foreground">TO</p>
+                <p className="text-[10px] font-semibold text-foreground/70">TO</p>
                 <p className="text-[14px] font-extrabold tracking-tight truncate">{request.to}</p>
               </div>
             </div>
@@ -532,7 +532,7 @@ function RequestDetailSheet({
               </div>
               <div className="min-w-0">
                 <p className="text-[14px] font-extrabold tracking-tight">Matched!</p>
-                <p className="mt-0.5 text-[12px] text-muted-foreground">
+                <p className="mt-0.5 text-[12px] text-foreground/72">
                   Send a message to coordinate pickup details.
                 </p>
               </div>
@@ -554,12 +554,12 @@ function RequestDetailSheet({
             <p className="text-[13px] font-extrabold tracking-tight">
               Add match terms
             </p>
-            <p className="mt-1 text-[12px] text-muted-foreground">
+            <p className="mt-1 text-[12px] text-foreground/72">
               The passenger pays after these terms are accepted.
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.12em] text-muted-foreground">
+              <div className="rounded-2xl border border-border/70 bg-card/62 supports-[backdrop-filter]:backdrop-blur-[24px] px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.12em] text-foreground/70">
                   <Banknote className="h-3.5 w-3.5 text-primary" />
                   PRICE
                 </div>
@@ -570,8 +570,8 @@ function RequestDetailSheet({
                   className="mt-1 h-8 border-0 bg-transparent p-0 text-[14px] font-extrabold focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
-              <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.12em] text-muted-foreground">
+              <div className="rounded-2xl border border-border/70 bg-card/62 supports-[backdrop-filter]:backdrop-blur-[24px] px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.12em] text-foreground/70">
                   <Clock3 className="h-3.5 w-3.5 text-primary" />
                   TIME
                 </div>
@@ -630,12 +630,12 @@ function RequestDetailSheet({
             <Button
               onClick={handleMessage}
               variant="outline"
-              className={cn(
-                "h-12 rounded-2xl font-extrabold tracking-tight",
-                "border-border/70 bg-card/80",
-                "hover:bg-primary/8 hover:border-primary/20",
-                "active:scale-[0.99] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-              )}
+                className={cn(
+                  "h-12 rounded-2xl font-extrabold tracking-tight",
+                  "border-border/70 bg-card/62 supports-[backdrop-filter]:backdrop-blur-[24px]",
+                  "hover:bg-primary/8 hover:border-primary/20",
+                  "active:scale-[0.99] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                )}
             >
               <MessageCircle className="h-4 w-4 mr-2" />
               Message
@@ -656,7 +656,7 @@ function RequestsCarousel({ requests }: { requests: PassengerRequest[] }) {
   return (
     <>
       <div>
-        <p className="text-[12px] font-semibold tracking-tight text-muted-foreground px-1">
+        <p className="px-1 text-[12px] font-semibold tracking-tight text-foreground/84">
           Passenger requests
         </p>
 
@@ -729,7 +729,7 @@ function TripDetailsSection({
       >
         <div className="min-w-0">
           <p className="text-[13px] font-semibold tracking-tight">Trip details</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="mt-0.5 text-[11px] text-foreground/72">
             Date, time, seats, price &amp; preferences
           </p>
         </div>
@@ -787,7 +787,7 @@ function TripDetailsSection({
                     <Clock3 className="h-4 w-4 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium text-muted-foreground">Departure</p>
+                    <p className="text-[11px] font-medium text-foreground/72">Departure</p>
                     <Input
                       type="time"
                       value={form.departTime}
@@ -805,7 +805,7 @@ function TripDetailsSection({
                     <Users className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium text-muted-foreground">Seats</p>
+                    <p className="text-[11px] font-medium text-foreground/72">Seats</p>
                     <p className="text-[14px] font-semibold tracking-tight">Up to {LIMITS.maxSeats}</p>
                   </div>
                 </div>
@@ -823,13 +823,13 @@ function TripDetailsSection({
           {/* price */}
           <div className="mt-2">
             <Surface elevated className="p-2.5">
-              <div className="rounded-2xl border border-border/70 bg-card/70 px-3 py-2">
+              <div className="rounded-2xl border border-border/70 bg-card/62 supports-[backdrop-filter]:backdrop-blur-[24px] px-3 py-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+                  <div className="flex items-center gap-2 text-[11px] font-medium text-foreground/72">
                     <Banknote className="h-3.5 w-3.5 text-primary" />
                     Price per seat
                   </div>
-                  <span className="text-[11px] text-muted-foreground">KES</span>
+                  <span className="text-[11px] text-foreground/72">KES</span>
                 </div>
                 <Input
                   type="number"
@@ -1031,7 +1031,7 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
           </div>
           <div className="min-w-0">
             <p className="text-[15px] font-extrabold tracking-tight">Ride posted</p>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
+            <p className="mt-0.5 text-[12px] text-foreground/72">
               Your ride is live. Requests will appear in your inbox.
             </p>
           </div>

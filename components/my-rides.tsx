@@ -226,7 +226,7 @@ function DriverSummaryCard({
             </div>
 
             {isVerified ? (
-              <div className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-[oklch(var(--secondary)/0.55)] dark:ring-[oklch(var(--secondary)/0.20)]">
+              <div className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-[color-mix(in_srgb,var(--secondary)_55%,transparent)] dark:ring-[color-mix(in_srgb,var(--secondary)_20%,transparent)]">
                 <BadgeCheck className="h-4 w-4" />
               </div>
             ) : null}
@@ -247,9 +247,9 @@ function DriverSummaryCard({
                   className={[
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1",
                     "text-[11px] font-extrabold",
-                    "bg-[oklch(var(--primary)/0.14)] dark:bg-[oklch(var(--primary)/0.20)]",
+                    "bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] dark:bg-[color-mix(in_srgb,var(--primary)_20%,transparent)]",
                     "text-primary",
-                    "border border-[oklch(var(--primary)/0.22)] dark:border-[oklch(var(--primary)/0.26)]",
+                    "border border-[color-mix(in_srgb,var(--primary)_22%,transparent)] dark:border-[color-mix(in_srgb,var(--primary)_26%,transparent)]",
                     "whitespace-nowrap",
                   ].join(" ")}
                 >
@@ -268,7 +268,7 @@ function DriverSummaryCard({
             "h-11 rounded-[18px] px-5",
             "text-sm font-extrabold",
             "bg-primary text-primary-foreground",
-            "shadow-[0_10px_26px_-18px_oklch(var(--primary)/0.75)]",
+            "shadow-[0_10px_26px_-18px_color-mix(in_srgb,var(--primary)_75%,transparent)]",
             "hover:brightness-[1.03] active:scale-[0.98]",
             "transition",
           ].join(" ")}
@@ -1114,7 +1114,7 @@ function SearchRideDetails({
               "mt-4 h-12 w-full rounded-[18px] px-5",
               "text-sm font-extrabold",
               "bg-primary text-primary-foreground",
-              "shadow-[0_10px_26px_-18px_oklch(var(--primary)/0.75)]",
+              "shadow-[0_10px_26px_-18px_color-mix(in_srgb,var(--primary)_75%,transparent)]",
               "hover:brightness-[1.03] active:scale-[0.98]",
               "transition",
             ].join(" ")}
@@ -1134,7 +1134,7 @@ function SearchRideDetails({
               "inline-flex items-center justify-center gap-2",
               "text-sm font-extrabold",
               "bg-primary text-primary-foreground",
-              "shadow-[0_10px_26px_-18px_oklch(var(--primary)/0.75)]",
+              "shadow-[0_10px_26px_-18px_color-mix(in_srgb,var(--primary)_75%,transparent)]",
               "hover:brightness-[1.03] active:scale-[0.98]",
               "transition",
               booking ? "opacity-70 cursor-not-allowed" : "",

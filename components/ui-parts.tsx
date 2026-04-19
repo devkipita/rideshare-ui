@@ -14,6 +14,7 @@ import { initials } from "@/lib/format";
 import { createPortal } from "react-dom";
 
 const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
+const GLASS = "bg-clip-padding supports-[backdrop-filter]:backdrop-blur-[24px]";
 
 export function AppBackdrop({
   children,
@@ -53,12 +54,12 @@ export function Surface({
 }: SurfaceProps) {
   const toneClass =
     tone === "sheet"
-      ? "bg-card/92 border-border/70"
+      ? "bg-card/80 border-border/70"
       : tone === "panel"
-        ? "bg-card/88 border-border/70"
+        ? "bg-card/74 border-border/70"
         : tone === "raised"
-          ? "bg-card/86 border-border/70"
-          : "bg-card/82 border-border/70";
+          ? "bg-card/70 border-border/70"
+          : "bg-card/66 border-border/70";
 
   const shadowClass = elevated
     ? "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_28%,transparent)] dark:shadow-[0_18px_54px_-40px_rgba(0,0,0,0.85)]"
@@ -69,7 +70,7 @@ export function Surface({
       {...divProps}
       className={cn(
         "relative rounded-3xl border",
-        "supports-[backdrop-filter]:backdrop-blur-xl",
+        GLASS,
         toneClass,
         shadowClass,
         "transition-all duration-300",
@@ -137,6 +138,7 @@ export function PillButton({
         "inline-flex items-center justify-center gap-2",
         "text-[13px] font-semibold tracking-tight",
         "border transition-all duration-300",
+        GLASS,
         EASE,
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
         "active:scale-[0.99]",
@@ -146,7 +148,7 @@ export function PillButton({
               "shadow-[0_18px_44px_-34px_color-mix(in_oklch,var(--primary)_40%,transparent)]",
             )
           : cn(
-              "bg-card/70 border-border/70 text-foreground/85",
+              "bg-card/62 border-border/70 text-foreground/85",
               "hover:bg-primary/10 hover:border-primary/20",
             ),
         className,
@@ -184,18 +186,19 @@ export function ChipToggle({
         isSm ? "h-10 pr-3" : "h-[44px] pr-3.5",
         "inline-flex w-auto items-center gap-2",
         "rounded-full border",
+        GLASS,
         "transition-all duration-300",
         EASE,
         "active:scale-[0.99]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(var(--ring)/0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--ring)_55%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
           ? cn(
-              "border-[oklch(var(--ring)/0.30)]",
-              "bg-[oklch(var(--ring)/0.14)] dark:bg-[oklch(var(--ring)/0.18)]",
-              "shadow-[0_14px_32px_-26px_oklch(var(--ring)/0.45)]",
+              "border-[color-mix(in_srgb,var(--ring)_30%,transparent)]",
+              "bg-[color-mix(in_srgb,var(--ring)_14%,transparent)] dark:bg-[color-mix(in_srgb,var(--ring)_18%,transparent)]",
+              "shadow-[0_14px_32px_-26px_color-mix(in_srgb,var(--ring)_45%,transparent)]",
             )
           : cn(
-              "border-border/70 bg-card/75 text-foreground",
+              "border-border/70 bg-card/62 text-foreground",
               "hover:bg-primary/8 hover:border-primary/20",
               "hover:shadow-[0_14px_32px_-28px_color-mix(in_oklch,var(--primary)_18%,transparent)]",
             ),
@@ -210,7 +213,7 @@ export function ChipToggle({
           "transition-all duration-300",
           EASE,
           active
-            ? "bg-[oklch(var(--ring)/0.16)] border-[oklch(var(--ring)/0.28)]"
+            ? "bg-[color-mix(in_srgb,var(--ring)_16%,transparent)] border-[color-mix(in_srgb,var(--ring)_28%,transparent)]"
             : "bg-primary/10 border-primary/15",
         )}
       >
@@ -219,7 +222,7 @@ export function ChipToggle({
             isSm ? "h-[18px] w-[18px]" : "h-5 w-5",
             "transition-transform duration-300",
             EASE,
-            active ? "text-[oklch(var(--ring))]" : "text-primary",
+            active ? "text-[var(--ring)]" : "text-primary",
           )}
           strokeWidth={2.2}
         />
@@ -230,7 +233,7 @@ export function ChipToggle({
           isSm ? "text-[13px]" : "text-[14px]",
           "font-semibold tracking-tight leading-none",
           "whitespace-nowrap",
-          active ? "text-[oklch(var(--ring))]" : "text-foreground/85",
+          active ? "text-[var(--ring)]" : "text-foreground/85",
         )}
       >
         {label}
@@ -238,10 +241,7 @@ export function ChipToggle({
 
       {active ? (
         <span className="ml-1 inline-flex items-center">
-          <Check
-            className="h-4 w-4 text-[oklch(var(--ring))]"
-            strokeWidth={2.6}
-          />
+          <Check className="h-4 w-4 text-[var(--ring)]" strokeWidth={2.6} />
         </span>
       ) : null}
     </button>
@@ -325,8 +325,8 @@ export function LocationInput({
     q && canQuery && suggestions.length > 0
       ? suggestions
       : q
-      ? fallbackSuggestions
-      : [];
+        ? fallbackSuggestions
+        : [];
 
   const hasItems = items.length > 0;
   const listId = useMemo(() => `${id}-list`, [id]);
@@ -344,7 +344,9 @@ export function LocationInput({
   const focusNext = () => {
     if (!nextFocusId) return;
     requestAnimationFrame(() => {
-      const el = document.getElementById(nextFocusId) as HTMLInputElement | null;
+      const el = document.getElementById(
+        nextFocusId,
+      ) as HTMLInputElement | null;
       if (!el) return;
       el.focus();
       const end = el.value.length;
@@ -439,10 +441,7 @@ export function LocationInput({
     if (!mounted) return;
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (
-        !wrapRef.current?.contains(t) &&
-        !popRef.current?.contains(t)
-      ) {
+      if (!wrapRef.current?.contains(t) && !popRef.current?.contains(t)) {
         setOpen(false);
       }
     };
@@ -466,7 +465,7 @@ export function LocationInput({
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-medium text-muted-foreground">
+          <p className="text-[11px] font-semibold text-foreground/70">
             {label}
           </p>
 
@@ -503,7 +502,7 @@ export function LocationInput({
               compact ? "h-7" : "h-8",
               "w-full bg-transparent outline-none",
               "text-[15px] font-semibold tracking-tight",
-              "placeholder:text-muted-foreground/80",
+              "placeholder:text-foreground/55",
             )}
           />
         </div>
@@ -516,7 +515,7 @@ export function LocationInput({
               onClear();
               requestAnimationFrame(() => inputRef.current?.focus());
             }}
-            className="text-muted-foreground px-1"
+            className="px-1 text-foreground/65"
           >
             ×
           </button>
@@ -539,8 +538,8 @@ export function LocationInput({
               className={cn(
                 "overflow-hidden rounded-3xl border",
                 "border-white/35 dark:border-white/10",
-                "bg-background/72 dark:bg-card/78",
-                "supports-[backdrop-filter]:backdrop-blur-2xl",
+                GLASS,
+                "bg-background/62 dark:bg-card/66",
                 "shadow-[0_24px_70px_-34px_rgba(4,37,29,0.52)]",
                 "ring-1 ring-primary/10",
               )}
@@ -657,7 +656,11 @@ export function BottomSheet({
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   };
 
-  const pendingDrag = useRef<{ pointerId: number; y: number; target: HTMLElement } | null>(null);
+  const pendingDrag = useRef<{
+    pointerId: number;
+    y: number;
+    target: HTMLElement;
+  } | null>(null);
   const DRAG_THRESHOLD = 6; // px before we commit to a drag
 
   const onPointerDownSheet = (e: React.PointerEvent) => {
@@ -673,10 +676,16 @@ export function BottomSheet({
 
     // Don't capture immediately — wait for movement past threshold
     // so clicks on buttons/links still fire
-    const interactive = target?.closest?.("button, a, input, textarea, select, [role=button], [data-no-drag]");
+    const interactive = target?.closest?.(
+      "button, a, input, textarea, select, [role=button], [data-no-drag]",
+    );
     if (interactive) {
       // Store pending drag info — only start drag if user moves enough
-      pendingDrag.current = { pointerId: e.pointerId, y: e.clientY, target: e.currentTarget as HTMLElement };
+      pendingDrag.current = {
+        pointerId: e.pointerId,
+        y: e.clientY,
+        target: e.currentTarget as HTMLElement,
+      };
       return;
     }
 
@@ -822,7 +831,10 @@ export function BottomSheet({
                       type="button"
                       onClick={() => onOpenChange(false)}
                       aria-label="Close"
-                      className="grid h-9 w-9 place-items-center rounded-2xl border border-border/70 bg-card/70 text-foreground/80 active:scale-[0.99]"
+                      className={cn(
+                        "grid h-9 w-9 place-items-center rounded-2xl border border-border/70 bg-card/62 text-foreground/80 active:scale-[0.99]",
+                        GLASS,
+                      )}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -956,10 +968,10 @@ export function Tag({
     <div
       className={cn(
         "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border",
-        "supports-[backdrop-filter]:backdrop-blur-xl",
+        GLASS,
         tone === "primary"
           ? "bg-primary/14 border-primary/20 text-primary"
-          : "bg-card/70 border-border/70 text-foreground/80",
+          : "bg-card/62 border-border/70 text-foreground/80",
       )}
     >
       <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
@@ -978,7 +990,12 @@ export function MetricPill({
   label: string;
 }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/75 px-3 py-2 text-xs font-semibold text-foreground/85">
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/62 px-3 py-2 text-xs font-semibold text-foreground/85",
+        GLASS,
+      )}
+    >
       <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 border border-primary/15 text-primary">
         {icon}
       </span>
@@ -1003,13 +1020,14 @@ export function Chip({
       ? "border-primary/15 bg-primary/10 text-primary"
       : tone === "soft"
         ? "border-border/70 bg-muted/60 text-foreground/80"
-        : "border-border/70 bg-card/70 text-foreground/85";
+        : "border-border/70 bg-card/62 text-foreground/85";
 
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-3 py-1",
         "border text-[12px] font-semibold tracking-tight",
+        GLASS,
         toneClass,
         className,
       )}
@@ -1036,12 +1054,18 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--muted)_70%,var(--card)_30%)] px-4 py-4",
+        "rounded-3xl border border-border/70 bg-card/60 px-4 py-4",
+        GLASS,
         className,
       )}
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 grid h-11 w-11 place-items-center rounded-2xl border border-border/70 bg-card/70">
+        <span
+          className={cn(
+            "mt-0.5 grid h-11 w-11 place-items-center rounded-2xl border border-border/70 bg-card/62",
+            GLASS,
+          )}
+        >
           <Icon className="h-5 w-5 text-muted-foreground" />
         </span>
         <div className="min-w-0">
@@ -1092,7 +1116,8 @@ export function SeatStepper({
     <div
       className={cn(
         "overflow-hidden rounded-2xl border border-border/70",
-        "bg-[color-mix(in_oklch,var(--card)_88%,white_10%)]",
+        GLASS,
+        "bg-[color-mix(in_oklch,var(--card)_72%,white_10%)]",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]",
         "grid grid-cols-[52px_1fr_52px] items-stretch",
         className,
@@ -1117,7 +1142,7 @@ export function SeatStepper({
             : "text-muted-foreground/35 cursor-not-allowed",
         )}
       >
-        <Minus className="h-[18px] w-[18px]" strokeWidth={3.4} />
+        <Minus className="h-6 w-6" strokeWidth={3.2} />
       </button>
 
       <div className="h-12 grid place-items-center px-3">
@@ -1148,7 +1173,7 @@ export function SeatStepper({
             : "text-muted-foreground/35 cursor-not-allowed",
         )}
       >
-        <Plus className="h-[18px] w-[18px]" strokeWidth={3.4} />
+        <Plus className="h-6 w-6" strokeWidth={3.2} />
       </button>
     </div>
   );

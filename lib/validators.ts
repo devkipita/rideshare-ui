@@ -6,10 +6,7 @@ export const rideFormSchema = z.object({
   to: z.string().min(2, "Destination required"),
   date: z.string().min(1, "Date required"),
   departTime: z.string().min(1, "Departure time required"),
-  seats: z
-    .number()
-    .min(LIMITS.minSeats)
-    .max(LIMITS.maxSeats),
+  seats: z.number().min(LIMITS.minSeats).max(LIMITS.maxSeats),
   pricePerSeat: z
     .number()
     .min(LIMITS.minPricePerSeat)

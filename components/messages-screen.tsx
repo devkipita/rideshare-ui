@@ -13,11 +13,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
 } from "lucide-react";
-import {
-  EASE,
-  ShimmerCard,
-  Surface,
-} from "@/components/ui-parts";
+import { EASE, ShimmerCard, Surface } from "@/components/ui-parts";
 import { formatDay } from "@/lib/format";
 import { LIMITS } from "@/lib/constants";
 import {
@@ -28,8 +24,8 @@ import {
 import useSWR from "swr";
 
 type Role = "driver" | "passenger";
-type NoticeKind = "system" | "ride" | "announcement";
-type NoticeTab = "all" | "rides" | "alerts" | "system";
+type NoticeKind = "system" | "notification" | "alert";
+type NoticeTab = "notifications" | "alerts" | "system";
 
 type Notice = {
   id: string;
@@ -43,13 +39,32 @@ type Notice = {
   read?: boolean;
 };
 
+type NotificationsResponse = {
+  notifications?: Array<
+    Omit<Notice, "kind"> & {
+      kind: "system" | "notification" | "ride" | "announcement";
+    }
+  >;
+};
+
+type AnnouncementsResponse = {
+  announcements?: Record<string, unknown>[];
+};
+
+type NotificationFeedItem = NonNullable<
+  NotificationsResponse["notifications"]
+>[number];
+
 const TAB_META: Record<
   NoticeTab,
-  { label: string; kind?: NoticeKind; icon: React.ElementType }
+  { label: string; kind: NoticeKind; icon: React.ElementType }
 > = {
-  all: { label: "All", icon: Bell },
-  rides: { label: "Rides", kind: "ride", icon: CarFront },
-  alerts: { label: "Alerts", kind: "announcement", icon: Megaphone },
+  notifications: {
+    label: "Notifications",
+    kind: "notification",
+    icon: CarFront,
+  },
+  alerts: { label: "Alerts", kind: "alert", icon: Megaphone },
   system: { label: "System", kind: "system", icon: ShieldAlert },
 };
 
@@ -62,23 +77,61 @@ function groupByDay(items: Notice[]) {
   return Array.from(groups.entries());
 }
 
+function dedupeById(items: Notice[]) {
+  const map = new Map<string, Notice>();
+  for (const item of items) {
+    if (!map.has(item.id)) map.set(item.id, item);
+  }
+  return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
+}
+
+function normalizeNotification(item: NotificationFeedItem): Notice {
+  return {
+    ...item,
+    kind: item.kind === "system" ? "system" : "notification",
+  };
+}
+
+function mapAnnouncement(announcement: Record<string, unknown>): Notice {
+  const poster = announcement.poster as Record<string, unknown> | null;
+  const severity =
+    (announcement.severity as NoticeSeverity | undefined) ?? "info";
+
+  return {
+    id: `ann-${String(announcement.id)}`,
+    kind: "alert",
+    severity,
+    title: `${roadUpdateTitle(severity)} from ${
+      (poster?.name as string) ?? "Someone"
+    }`,
+    body: String(announcement.message ?? ""),
+    location: (announcement.location as string | undefined) ?? undefined,
+    route:
+      announcement.route_from && announcement.route_to
+        ? {
+            from: String(announcement.route_from),
+            to: String(announcement.route_to),
+          }
+        : undefined,
+    timestamp: announcement.created_at
+      ? new Date(String(announcement.created_at)).getTime()
+      : Date.now(),
+  };
+}
+
 function TabButton({
   tab,
   active,
   count,
-  unreadCount,
   onClick,
 }: {
   tab: NoticeTab;
   active: boolean;
   count: number;
-  unreadCount?: number;
   onClick: () => void;
 }) {
   const meta = TAB_META[tab];
   const Icon = meta.icon;
-  const countLabel =
-    tab === "all" && unreadCount ? `${unreadCount} unread` : String(count);
 
   return (
     <button
@@ -98,7 +151,7 @@ function TabButton({
       <Icon className="h-4 w-4 shrink-0" />
       <span className="truncate">{meta.label}</span>
       <span className="grid h-5 min-w-5 place-items-center rounded-full bg-background/70 px-1.5 text-[10px]">
-        {countLabel}
+        {count}
       </span>
     </button>
   );
@@ -172,79 +225,104 @@ function Composer({
 export function NotificationsScreen(_props: { role?: Role }) {
   const { isSignedIn, openAuthDrawer } = useAuthDrawer();
   const [query, setQuery] = React.useState("");
-  const [activeTab, setActiveTab] = React.useState<NoticeTab>("all");
-  const [filtersOpen, setFiltersOpen] = React.useState(false);
-  const [items, setItems] = React.useState<Notice[]>([]);
+  const [activeTab, setActiveTab] = React.useState<NoticeTab>("notifications");
+  const [filtersOpen, setFiltersOpen] = React.useState(true);
+  const [readIds, setReadIds] = React.useState<string[]>([]);
+  const [optimisticAlerts, setOptimisticAlerts] = React.useState<Notice[]>([]);
   const [postText, setPostText] = React.useState("");
   const [posting, setPosting] = React.useState(false);
   const [postError, setPostError] = React.useState<string | null>(null);
 
-  const { data, isLoading, mutate } = useSWR<{ notifications?: Notice[] }>(
-    "/api/notifications",
-    { refreshInterval: LIMITS.pollIntervalMs },
+  const { data: notificationsData, isLoading: notificationsLoading } =
+    useSWR<NotificationsResponse>("/api/notifications", {
+      refreshInterval: LIMITS.pollIntervalMs,
+    });
+
+  const {
+    data: announcementsData,
+    isLoading: announcementsLoading,
+    mutate: mutateAnnouncements,
+  } = useSWR<AnnouncementsResponse>("/api/announcements", {
+    refreshInterval: LIMITS.pollIntervalMs,
+  });
+
+  const readIdSet = React.useMemo(() => new Set(readIds), [readIds]);
+
+  const notifications = React.useMemo(
+    () => (notificationsData?.notifications ?? []).map(normalizeNotification),
+    [notificationsData?.notifications],
   );
 
-  React.useEffect(() => {
-    if (!data?.notifications) return;
-    const notifications = data.notifications;
-    setItems((prev) => {
-      const readIds = new Set(prev.filter((n) => n.read).map((n) => n.id));
-      return notifications
-        .map((notice) => ({
-          ...notice,
-          read: readIds.has(notice.id) ? true : notice.read ?? false,
-        }))
-        .sort((a, b) => b.timestamp - a.timestamp);
-    });
-  }, [data?.notifications]);
+  const alerts = React.useMemo(() => {
+    const mapped = (announcementsData?.announcements ?? []).map(
+      mapAnnouncement,
+    );
+    return dedupeById([...optimisticAlerts, ...mapped]);
+  }, [announcementsData?.announcements, optimisticAlerts]);
 
-  const tabCounts = React.useMemo(() => {
-    return {
-      all: items.length,
-      rides: items.filter((n) => n.kind === "ride").length,
-      alerts: items.filter((n) => n.kind === "announcement").length,
-      system: items.filter((n) => n.kind === "system").length,
-    } satisfies Record<NoticeTab, number>;
-  }, [items]);
+  const items = React.useMemo(
+    () =>
+      dedupeById([...notifications, ...alerts]).map((item) => ({
+        ...item,
+        read: readIdSet.has(item.id),
+      })),
+    [alerts, notifications, readIdSet],
+  );
+
+  const tabCounts = React.useMemo(
+    () =>
+      ({
+        notifications: items.filter((item) => item.kind === "notification")
+          .length,
+        alerts: items.filter((item) => item.kind === "alert").length,
+        system: items.filter((item) => item.kind === "system").length,
+      }) satisfies Record<NoticeTab, number>,
+    [items],
+  );
 
   const filtered = React.useMemo(() => {
-    const tabKind = TAB_META[activeTab].kind;
-    const q = query.trim().toLowerCase();
+    const kind = TAB_META[activeTab].kind;
+    const value = query.trim().toLowerCase();
 
     return items
-      .filter((notice) => (tabKind ? notice.kind === tabKind : true))
-      .filter((notice) => {
-        if (!q) return true;
+      .filter((item) => item.kind === kind)
+      .filter((item) => {
+        if (!value) return true;
         return [
-          notice.title,
-          notice.body,
-          notice.location ?? "",
-          notice.route?.from ?? "",
-          notice.route?.to ?? "",
+          item.title,
+          item.body,
+          item.location ?? "",
+          item.route?.from ?? "",
+          item.route?.to ?? "",
         ]
           .join(" ")
           .toLowerCase()
-          .includes(q);
+          .includes(value);
       })
       .sort((a, b) => b.timestamp - a.timestamp);
   }, [activeTab, items, query]);
 
   const grouped = React.useMemo(() => groupByDay(filtered), [filtered]);
   const unreadCount = React.useMemo(
-    () => items.filter((notice) => !notice.read).length,
+    () => items.filter((item) => !item.read).length,
     [items],
   );
+  const activeUnreadCount = React.useMemo(
+    () => filtered.filter((item) => !item.read).length,
+    [filtered],
+  );
+  const isLoading = notificationsLoading || announcementsLoading;
 
   const toggleRead = (id: string) => {
-    setItems((prev) =>
-      prev.map((notice) =>
-        notice.id === id ? { ...notice, read: !notice.read } : notice,
-      ),
+    setReadIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id],
     );
   };
 
   const markAllRead = () => {
-    setItems((prev) => prev.map((notice) => ({ ...notice, read: true })));
+    setReadIds((prev) =>
+      Array.from(new Set([...prev, ...filtered.map((item) => item.id)])),
+    );
   };
 
   const postUpdate = async () => {
@@ -262,23 +340,27 @@ export function NotificationsScreen(_props: { role?: Role }) {
 
     setPosting(true);
     setPostError(null);
+
     try {
-      const res = await fetch("/api/announcements", {
+      const response = await fetch("/api/announcements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: body }),
       });
 
-      if (!res.ok) {
-        if (res.status === 401) {
+      if (!response.ok) {
+        if (response.status === 401) {
           openAuthDrawer({ selectedRole: "passenger" });
           return;
         }
-        const err = await res.json().catch(() => ({ error: "Failed to post" }));
-        throw new Error(err.error || "Failed to post road update");
+
+        const error = await response
+          .json()
+          .catch(() => ({ error: "Failed to post road update" }));
+        throw new Error(error.error || "Failed to post road update");
       }
 
-      const json = await res.json();
+      const json = await response.json();
       const announcement = json.announcement as
         | Record<string, unknown>
         | undefined;
@@ -286,26 +368,34 @@ export function NotificationsScreen(_props: { role?: Role }) {
         (announcement?.severity as NoticeSeverity | undefined) ??
         classifyRoadUpdate(body);
 
-      const notice: Notice = {
+      const optimisticNotice: Notice = {
         id: `ann-${announcement?.id ?? Date.now()}`,
-        kind: "announcement",
+        kind: "alert",
         severity,
         title: `${roadUpdateTitle(severity)} posted`,
         body,
+        location: (announcement?.location as string | undefined) ?? undefined,
+        route:
+          announcement?.route_from && announcement?.route_to
+            ? {
+                from: String(announcement.route_from),
+                to: String(announcement.route_to),
+              }
+            : undefined,
         timestamp: announcement?.created_at
-          ? new Date(announcement.created_at as string).getTime()
+          ? new Date(String(announcement.created_at)).getTime()
           : Date.now(),
         read: false,
       };
 
-      setItems((prev) => [notice, ...prev]);
+      setOptimisticAlerts((prev) => dedupeById([optimisticNotice, ...prev]));
       setPostText("");
       setActiveTab("alerts");
-      window.setTimeout(() => {
-        void mutate();
-      }, 750);
+      void mutateAnnouncements();
     } catch (error) {
-      setPostError(error instanceof Error ? error.message : "Something went wrong");
+      setPostError(
+        error instanceof Error ? error.message : "Something went wrong",
+      );
     } finally {
       setPosting(false);
     }
@@ -316,9 +406,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
       ? "No system alerts"
       : activeTab === "alerts"
         ? "No road alerts"
-        : activeTab === "rides"
-          ? "No ride updates"
-          : "No notifications";
+        : "No notifications";
 
   return (
     <div className="flex-1 w-full overflow-y-auto overflow-x-hidden pb-24">
@@ -328,7 +416,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
             Notifications
           </p>
           <p className="mt-1 text-[12px] font-extrabold text-white/78 dark:text-muted-foreground">
-            Ride and road updates, right when they matter.
+            System, trip, and road updates in one place.
           </p>
         </div>
 
@@ -346,7 +434,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search notifications"
+              placeholder="Search updates"
               className="h-8 w-full bg-transparent text-[13px] font-semibold outline-none placeholder:text-muted-foreground/80"
             />
           </div>
@@ -358,7 +446,7 @@ export function NotificationsScreen(_props: { role?: Role }) {
             className={[
               "grid h-12 w-12 shrink-0 place-items-center rounded-2xl border",
               "transition-all duration-300 active:scale-[0.99]",
-              filtersOpen || activeTab !== "all"
+              filtersOpen
                 ? "border-primary/30 bg-primary/14 text-primary"
                 : "border-border/70 bg-card/70 text-foreground/80",
             ].join(" ")}
@@ -368,15 +456,14 @@ export function NotificationsScreen(_props: { role?: Role }) {
         </div>
 
         {filtersOpen ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(["all", "rides", "alerts", "system"] as NoticeTab[]).map(
+          <div className="grid grid-cols-3 gap-2">
+            {(["notifications", "alerts", "system"] as NoticeTab[]).map(
               (tab) => (
                 <TabButton
                   key={tab}
                   tab={tab}
                   active={activeTab === tab}
                   count={tabCounts[tab]}
-                  unreadCount={unreadCount}
                   onClick={() => {
                     setActiveTab(tab);
                     setFiltersOpen(false);
@@ -394,18 +481,18 @@ export function NotificationsScreen(_props: { role?: Role }) {
           <span className="rounded-full bg-primary/12 px-2 py-0.5 text-[11px] font-extrabold text-primary">
             {isLoading
               ? "..."
-              : activeTab === "all" && unreadCount > 0
-                ? `${unreadCount} unread`
+              : activeUnreadCount > 0
+                ? `${activeUnreadCount} unread`
                 : filtered.length}
           </span>
           <div className="h-px flex-1 bg-border/70" />
-          {unreadCount > 0 ? (
+          {activeUnreadCount > 0 ? (
             <button
               type="button"
               onClick={markAllRead}
               className="h-8 shrink-0 rounded-full border border-primary/20 bg-primary/10 px-3 text-[11px] font-extrabold text-primary active:scale-[0.99]"
             >
-              Mark all read
+              Mark tab read
             </button>
           ) : null}
         </div>

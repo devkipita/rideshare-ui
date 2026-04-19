@@ -95,7 +95,7 @@ export function PersonSheet({
           <button
             type="button"
             onClick={onMessage}
-            className="h-12 w-full rounded-[18px] bg-primary text-primary-foreground text-sm font-extrabold shadow-[0_10px_26px_-18px_oklch(var(--primary)/0.75)] hover:brightness-[1.03] active:scale-[0.98] transition inline-flex items-center justify-center gap-2"
+            className="h-12 w-full rounded-[18px] bg-primary text-primary-foreground text-sm font-extrabold shadow-[0_10px_26px_-18px_color-mix(in_srgb,var(--primary)_75%,transparent)] hover:brightness-[1.03] active:scale-[0.98] transition inline-flex items-center justify-center gap-2"
           >
             <MessageCircle className="h-4 w-4" />
             Message

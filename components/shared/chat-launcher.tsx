@@ -18,7 +18,7 @@ export function ChatLauncher({ onOpen, unreadCount = 0 }: ChatLauncherProps) {
         "fixed bottom-24 right-4 z-30",
         "grid h-14 w-14 place-items-center rounded-full",
         "bg-primary text-primary-foreground",
-        "shadow-[0_18px_44px_-20px_oklch(var(--primary)/0.65)]",
+        "shadow-[0_18px_44px_-20px_color-mix(in_srgb,var(--primary)_65%,transparent)]",
         "hover:brightness-[1.05] active:scale-[0.95]",
         "transition-all duration-300",
       )}

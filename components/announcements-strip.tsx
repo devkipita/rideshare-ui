@@ -111,23 +111,23 @@ export function AnnouncementsStrip({
             onClick={navigate}
             className={cn(
               "w-full text-left rounded-3xl border px-3 py-2.5",
-              "supports-[backdrop-filter]:backdrop-blur-xl",
+              "supports-[backdrop-filter]:backdrop-blur-[24px]",
               "shadow-[0_12px_30px_-34px_color-mix(in_oklch,var(--primary)_18%,transparent)]",
               "transition-all duration-200 active:scale-[0.99]",
               a.severity === "critical"
-                ? "border-destructive/25 bg-destructive/8"
+                ? "border-destructive/25 bg-destructive/10"
                 : a.severity === "warning"
-                  ? "border-amber-500/25 bg-amber-500/8"
-                  : "border-border/70 bg-card/88",
+                  ? "border-amber-500/25 bg-amber-500/10"
+                  : "border-border/70 bg-card/68",
             )}
           >
             <div className="flex items-start gap-2">
               <div className="mt-0.5 shrink-0">{severityIcon(a.severity)}</div>
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-semibold leading-tight line-clamp-2">
+                <p className="text-[12px] font-bold leading-tight line-clamp-2 text-foreground">
                   {a.message}
                 </p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                <p className="mt-0.5 text-[10px] text-foreground/65 dark:text-foreground/60">
                   {a.posterName} · {timeAgo(a.createdAt)}
                   {a.location ? ` · ${a.location}` : ""}
                 </p>

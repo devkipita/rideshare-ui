@@ -3,208 +3,196 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* -----------------------------
-   ✅ Brand seeds (dynamic knobs)
-   ----------------------------- */
 :root {
-  --brand-primary: 0.378 0.073 169; /* #064e3b */
-  --brand-secondary: 0.786 0.064 148; /* #9ec5a2 */
-  --brand-accent: 0.601 0.132 162; /* ~#009867 from your lab() */
-  --shell-top: 11 90 70;
-  --shell-canvas: 215 227 221;
-  --shell-bar: 223 233 227;
-  --shell-nav: 243 247 244;
-
-  /* -----------------------------
-     ✅ M3-ish surfaces (light)
-     ----------------------------- */
-  --background: 0.985 0.01 155;
-  --foreground: 0.18 0.02 170;
-
-  --card: 0.992 0.008 155;
-  --card-foreground: var(--foreground);
-
-  --popover: 0.992 0.008 155;
-  --popover-foreground: var(--foreground);
-
-  /* Roles */
-  --primary: var(--brand-primary);
-  --primary-foreground: 0.985 0.004 155;
-
-  /* Use your brand secondary as actual “secondary” role */
-  --secondary: var(--brand-secondary);
-  --secondary-foreground: 0.18 0.02 170;
-
-  /* Accent in shadcn is usually “hover/selection surface”.
-     Keep it soft; use brand-accent separately for glows/rings. */
-  --accent: 0.94 0.018 155;
-  --accent-foreground: 0.18 0.02 170;
-
-  --muted: 0.965 0.012 155;
-  --muted-foreground: 0.5 0.02 170;
-
-  --destructive: 0.577 0.245 27.325;
-  --destructive-foreground: 0.985 0.004 155;
-
-  --border: 0.93 0.01 155;
-  --input: 0.965 0.012 155;
-
-  /* Focus ring: use your vivid accent so it reads like M3 */
-  --ring: var(--brand-accent);
-
-  /* Forest-green surface hierarchy — soft green tones, never plain white */
-  --canvas: 0.945 0.025 155;        /* Soft forest green page body */
-  --surface-low: 0.965 0.018 155;
-  --surface: 0.955 0.022 155;
-  --surface-high: 0.935 0.028 155;
-
-  /* Charts (based on your brand family) */
-  --chart-1: var(--brand-primary);
-  --chart-2: var(--brand-accent);
-  --chart-3: 0.7 0.07 165;
-  --chart-4: 0.62 0.08 150;
-  --chart-5: 0.52 0.09 170;
-
-  --radius: 0.9rem;
-
-  --sidebar: var(--background);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
+  --font-size: 16px;
+  
+  /* Kipita Light Mode - Soft forest green base */
+  --background: #f7faf8;
+  --foreground: #1a2e1f;
+  --card: #ffffff;
+  --card-foreground: #1a2e1f;
+  --popover: #ffffff;
+  --popover-foreground: #1a2e1f;
+  
+  /* Primary green */
+  --primary: #2f6c4f;
+  --primary-foreground: #ffffff;
+  --primary-light: #9ec5a2;
+  
+  /* Secondary */
+  --secondary: #e8f3ed;
+  --secondary-foreground: #2f6c4f;
+  
+  --muted: #e8f3ed;
+  --muted-foreground: #5a7365;
+  --accent: #9ec5a2;
+  --accent-foreground: #1a2e1f;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(47, 108, 79, 0.15);
+  --input: transparent;
+  --input-background: #f3f6f4;
+  --switch-background: #9ec5a2;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #9ec5a2;
+  
+  --radius: 0.75rem;
+  
+  /* Kipita specific */
+  --kipita-green-dark: #2f6c4f;
+  --kipita-green-light: #9ec5a2;
+  --kipita-green-bg: #f7faf8;
 }
 
 .dark {
-  /* Dark charcoal base with accent green highlights */
-  --background: 0.15 0.005 0;           /* #1a1a1a charcoal */
-  --foreground: 0.95 0.005 0;           /* near-white text */
-  --shell-top: 7 47 38;
-  --shell-canvas: 16 24 21;
-  --shell-bar: 24 36 31;
-  --shell-nav: 18 28 24;
-
-  --card: 0.19 0.005 0;                 /* #252525 raised charcoal */
-  --card-foreground: var(--foreground);
-
-  --popover: 0.19 0.005 0;
-  --popover-foreground: var(--foreground);
-
-  /* Primary = accent green (bright, punchy) */
-  --primary: 0.72 0.14 155;             /* vivid accent green */
-  --primary-foreground: 0.15 0.005 0;   /* charcoal on green */
-
-  --secondary: 0.55 0.08 155;
-  --secondary-foreground: 0.15 0.005 0;
-
-  --accent: 0.22 0.005 0;               /* #2a2a2a subtle lift */
-  --accent-foreground: var(--foreground);
-
-  --muted: 0.22 0.005 0;
-  --muted-foreground: 0.65 0.005 0;     /* gray-400 equivalent */
-
-  --destructive: 0.55 0.2 27.325;
-  --destructive-foreground: var(--foreground);
-
-  --border: 0.28 0.005 0;               /* #3a3a3a charcoal border */
-  --input: 0.22 0.005 0;
-
-  --ring: 0.72 0.14 155;                /* accent green ring */
-
-  --canvas: 0.13 0.005 0;               /* #1c1c1c deep charcoal canvas */
-  --surface-low: 0.17 0.005 0;
-  --surface: 0.15 0.005 0;
-  --surface-high: 0.22 0.005 0;
-
-  --chart-1: var(--primary);
-  --chart-2: 0.72 0.12 155;
-  --chart-3: 0.60 0.08 155;
-  --chart-4: 0.50 0.06 155;
-  --chart-5: 0.45 0.05 155;
-
-  --sidebar: 0.17 0.005 0;
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
+  /* Kipita Dark Mode - Clean charcoal with vivid green accents */
+  --background: #1a1f1c;
+  --foreground: #f0f5f2;
+  --card: #242a26;
+  --card-foreground: #f0f5f2;
+  --popover: #242a26;
+  --popover-foreground: #f0f5f2;
+  
+  /* Primary green - more vivid in dark mode */
+  --primary: #4eca80;
+  --primary-foreground: #1a1f1c;
+  --primary-light: #9ec5a2;
+  
+  /* Secondary */
+  --secondary: #2d3830;
+  --secondary-foreground: #f0f5f2;
+  
+  --muted: #2d3830;
+  --muted-foreground: #a8b5ad;
+  --accent: #3d4f42;
+  --accent-foreground: #4eca80;
+  --destructive: #ff4d6d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(78, 202, 128, 0.2);
+  --input: #2d3830;
+  --ring: #4eca80;
+  
+  /* Kipita specific dark */
+  --kipita-green-dark: #4eca80;
+  --kipita-green-light: #9ec5a2;
+  --kipita-green-bg: #1a1f1c;
 }
 
-/* Tailwind v4 theme mapping */
 @theme inline {
-  --font-sans: "Poppins", system-ui, sans-serif;
-  --font-poppins: "Poppins", system-ui, sans-serif;
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
-  --font-lexend: "Lexend", "Poppins", system-ui, sans-serif;
-
-  --color-background: oklch(var(--background));
-  --color-foreground: oklch(var(--foreground));
-  --color-canvas: oklch(var(--canvas));
-
-  --color-card: oklch(var(--card));
-  --color-card-foreground: oklch(var(--card-foreground));
-
-  --color-popover: oklch(var(--popover));
-  --color-popover-foreground: oklch(var(--popover-foreground));
-
-  --color-primary: oklch(var(--primary));
-  --color-primary-foreground: oklch(var(--primary-foreground));
-
-  --color-secondary: oklch(var(--secondary));
-  --color-secondary-foreground: oklch(var(--secondary-foreground));
-
-  --color-muted: oklch(var(--muted));
-  --color-muted-foreground: oklch(var(--muted-foreground));
-
-  --color-accent: oklch(var(--accent));
-  --color-accent-foreground: oklch(var(--accent-foreground));
-
-  --color-destructive: oklch(var(--destructive));
-  --color-destructive-foreground: oklch(var(--destructive-foreground));
-
-  --color-border: oklch(var(--border));
-  --color-input: oklch(var(--input));
-  --color-ring: oklch(var(--ring));
-
-  --color-chart-1: oklch(var(--chart-1));
-  --color-chart-2: oklch(var(--chart-2));
-  --color-chart-3: oklch(var(--chart-3));
-  --color-chart-4: oklch(var(--chart-4));
-  --color-chart-5: oklch(var(--chart-5));
-
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: calc(var(--radius) - 3px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 6px);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  --color-kipita-green-dark: var(--kipita-green-dark);
+  --color-kipita-green-light: var(--kipita-green-light);
+  --color-kipita-green-bg: var(--kipita-green-bg);
+}
 
-  --color-sidebar: oklch(var(--sidebar));
-  --color-sidebar-foreground: oklch(var(--sidebar-foreground));
-  --color-sidebar-primary: oklch(var(--sidebar-primary));
-  --color-sidebar-primary-foreground: oklch(var(--sidebar-primary-foreground));
-  --color-sidebar-accent: oklch(var(--sidebar-accent));
-  --color-sidebar-accent-foreground: oklch(var(--sidebar-accent-foreground));
-  --color-sidebar-border: oklch(var(--sidebar-border));
-  --color-sidebar-ring: oklch(var(--sidebar-ring));
+@theme inline {
+  --color-sidebar: var(--card);
+  --color-sidebar-foreground: var(--card-foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-accent: var(--accent);
+  --color-sidebar-accent-foreground: var(--accent-foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--ring);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  html,
-  body {
-    height: 100%;
-  }
+
   body {
     @apply bg-background text-foreground;
   }
 
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+  }
+
+  label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+  
+  /* Mobile-first safe area */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
   button:not(:disabled),
-  [role='button'] {
+  [role="button"] {
     cursor: pointer;
   }
 
@@ -216,6 +204,7 @@
     width: 0;
     height: 0;
   }
+
   .overflow-y-auto {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -224,64 +213,35 @@
   input[type="date"] {
     color-scheme: light;
   }
+
   .dark input[type="date"] {
     color-scheme: dark;
   }
+
   input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(0);
   }
+
   .dark input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
   }
 }
 
 @layer utilities {
-  /* ✅ No more hard-coded Tailwind greens */
-  .app-backdrop {
-    background:
-      radial-gradient(
-        620px 520px at 50% -10%,
-        oklch(var(--brand-accent) / 0.18),
-        transparent 55%
-      ),
-      radial-gradient(
-        680px 560px at 50% 110%,
-        oklch(var(--brand-primary) / 0.16),
-        transparent 60%
-      ),
-      oklch(var(--background));
-  }
-
   .glass {
-    background-color: color-mix(
-      in oklch,
-      oklch(var(--card)) 88%,
-      oklch(var(--brand-accent) / 0.1)
-    );
-    backdrop-filter: blur(14px);
-    border: 1px solid
-      color-mix(
-        in oklch,
-        oklch(var(--border)) 70%,
-        oklch(var(--brand-accent) / 0.2)
-      );
+    background-color: color-mix(in srgb, var(--card) 90%, transparent);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border: 1px solid color-mix(in srgb, var(--border) 100%, transparent);
   }
 
   .glass-card {
-    background-color: color-mix(
-      in oklch,
-      oklch(var(--card)) 92%,
-      oklch(var(--brand-accent) / 0.09)
-    );
-    backdrop-filter: blur(14px);
-    border: 1px solid
-      color-mix(
-        in oklch,
-        oklch(var(--border)) 70%,
-        oklch(var(--brand-accent) / 0.18)
-      );
+    background-color: color-mix(in srgb, var(--card) 94%, transparent);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border: 1px solid color-mix(in srgb, var(--border) 100%, transparent);
     border-radius: 1.25rem;
-    box-shadow: 0 18px 44px -34px oklch(var(--brand-primary) / 0.28);
+    box-shadow: 0 18px 44px -34px color-mix(in srgb, var(--primary) 28%, transparent);
   }
 
   .dark .glass-card {
@@ -289,22 +249,23 @@
   }
 
   .soft-shadow {
-    box-shadow: 0 10px 28px -22px oklch(var(--brand-primary) / 0.18);
+    box-shadow: 0 10px 28px -22px color-mix(in srgb, var(--primary) 18%, transparent);
     transition: all 300ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+
   .soft-shadow:hover {
-    box-shadow: 0 14px 36px -26px oklch(var(--brand-primary) / 0.26);
+    box-shadow: 0 14px 36px -26px color-mix(in srgb, var(--primary) 26%, transparent);
   }
 
   .touch-target {
     min-height: 3rem;
     min-width: 3rem;
   }
+
   .smooth-transition {
     transition: all 300ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
-
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

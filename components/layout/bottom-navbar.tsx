@@ -60,10 +60,9 @@ export const BottomNavbar = memo(function BottomNavbar() {
     <nav
       className={cn(
         "absolute inset-x-0 bottom-0 z-40",
-        "border-t border-black/6",
-        "bg-[rgb(var(--shell-nav)/0.98)]",
-        "supports-[backdrop-filter]:backdrop-blur-xl",
-        "dark:border-white/10 dark:bg-[rgb(var(--shell-nav)/0.94)]",
+        "border-t border-border/60",
+        "bg-[color-mix(in_srgb,var(--card)_84%,transparent)]",
+        "supports-[backdrop-filter]:backdrop-blur-[24px]",
         "supports-[padding:env(safe-area-inset-bottom)]:pb-[env(safe-area-inset-bottom)]",
       )}
       aria-label={

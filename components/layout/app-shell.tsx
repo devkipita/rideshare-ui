@@ -23,18 +23,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[rgb(var(--shell-canvas))]"
+        className="pointer-events-none absolute inset-0 bg-background"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[230px] rounded-b-[40px] bg-[rgb(var(--shell-top))] shadow-[0_28px_56px_-44px_rgba(4,37,29,0.82)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[230px] rounded-b-[40px] bg-[color-mix(in_srgb,var(--primary)_14%,var(--background))] bg-cover bg-center bg-no-repeat shadow-[0_28px_56px_-44px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
+        style={{ backgroundImage: "url('/bgOne.svg')" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[230px] rounded-b-[40px] bg-[linear-gradient(to_bottom,color-mix(in_srgb,var(--background)_34%,transparent),color-mix(in_srgb,var(--background)_12%,transparent))]"
       />
       <div
         aria-hidden
         className={cn(
           "pointer-events-none absolute inset-x-0 top-[204px] h-16",
-          "bg-[linear-gradient(to_bottom,rgba(11,90,70,0.10),transparent)]",
-          "dark:bg-[linear-gradient(to_bottom,rgba(7,47,38,0.28),transparent)]",
+          "bg-[linear-gradient(to_bottom,color-mix(in_srgb,var(--primary)_10%,transparent),transparent)]",
+          "dark:bg-[linear-gradient(to_bottom,color-mix(in_srgb,var(--primary)_18%,transparent),transparent)]",
         )}
       />
 

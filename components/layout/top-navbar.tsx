@@ -1,8 +1,7 @@
 "use client";
 
-import { useOptionalRole } from "@/app/context";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Moon, Sun, ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useBackNavigation } from "@/hooks/use-back-navigation";
@@ -10,8 +9,8 @@ import { useAppPreferences } from "@/hooks/use-app-preferences";
 
 function AppLogo() {
   return (
-    <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div className="relative h-8 w-[150px]">
+    <div className="pointer-events-none ml-0.5 flex min-w-0 items-center">
+      <div className="relative h-8 w-[24px]">
         <Image
           src="/Kipita Logo v3-08.svg"
           alt="Kipita"
@@ -21,30 +20,6 @@ function AppLogo() {
         />
       </div>
     </div>
-  );
-}
-
-function RoleChip() {
-  const role = useOptionalRole();
-  if (!role) return null;
-
-  return (
-    <button
-      type="button"
-      onClick={role.toggleRole}
-      className={cn(
-        "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
-        "text-[10px] font-bold uppercase tracking-wider",
-        "border transition-all duration-200 active:scale-[0.97]",
-        role.activeRole === "passenger"
-          ? "bg-primary/10 border-primary/30 text-primary"
-          : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400",
-      )}
-      aria-label={`Switch to ${role.activeRole === "passenger" ? "driver" : "passenger"} mode`}
-    >
-      <ArrowLeftRight className="h-3 w-3" />
-      <span>{role.activeRole === "passenger" ? "Rider" : "Driver"}</span>
-    </button>
   );
 }
 
@@ -79,32 +54,27 @@ export function TopNavbar({
           className={cn(
             "relative isolate",
             "h-12 rounded-full px-2",
-            "flex items-center justify-between",
-            "border border-black/8 supports-[backdrop-filter]:backdrop-blur-xl",
-            "bg-[rgb(var(--shell-bar)/0.96)]",
-            "shadow-[0_22px_44px_-34px_rgba(4,37,29,0.34)]",
-            "dark:border-white/10 dark:bg-[rgb(var(--shell-bar)/0.9)]",
+            "flex items-center",
+            "border border-border/70 supports-[backdrop-filter]:backdrop-blur-[24px]",
+            "bg-[color-mix(in_srgb,var(--card)_80%,transparent)]",
+            "shadow-[0_22px_44px_-34px_color-mix(in_srgb,var(--primary)_34%,transparent)]",
             "dark:shadow-[0_22px_52px_-40px_rgba(0,0,0,0.78)]",
           )}
         >
-          {/* Left: back + role chip */}
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="h-10 w-10 rounded-full hover:bg-primary/10 active:scale-[0.98] transition-all duration-300"
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <RoleChip />
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="h-11 w-11 rounded-full hover:bg-primary/10 active:scale-[0.98] transition-all duration-300"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-6 w-6" strokeWidth={2.8} />
+          </Button>
 
-          {/* Center: logo */}
           <AppLogo />
 
-          {/* Right: theme toggle */}
+          <div className="flex-1" />
+
           <Button
             variant="ghost"
             size="icon"

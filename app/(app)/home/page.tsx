@@ -10,7 +10,7 @@ export default function HomePage() {
 
   return (
     <>
-      <p className="py-1 text-center text-sm font-semibold text-white dark:text-foreground">
+      <p className="py-1 text-center text-[15px] font-extrabold tracking-tight text-primary-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.4)] dark:text-foreground dark:[text-shadow:0_2px_14px_rgba(0,0,0,0.7)]">
         {config.homeTitle}
       </p>
       {isPassenger ? <PassengerSearch /> : <DriverOfferRide />}
