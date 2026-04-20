@@ -4,6 +4,7 @@ import { Lexend } from 'next/font/google'
 import { getServerSession } from 'next-auth'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/components/auth-provider'
+import { RouteTracker } from '@/components/route-tracker'
 import { authOptions } from '@/lib/auth'
 import { Toaster } from 'sonner'
 import './globals.css'
@@ -141,6 +142,7 @@ export default async function RootLayout({
         style={{ fontFamily: 'var(--font-lexend)' }}
       >
         <AuthProvider session={session}>
+          <RouteTracker />
           <div className="flex flex-col h-screen w-full max-w-md mx-auto relative">
             {children}
           </div>

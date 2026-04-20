@@ -24,6 +24,7 @@ const DEFAULT_FILTERS: SearchFilters = {
   seats: 2,
   pets: true,
   luggage: false,
+  music: false,
 };
 
 function clampSeats(value: unknown) {
@@ -134,6 +135,7 @@ export function PassengerSearch({
           seats_needed: filters.seats,
           allows_pets: filters.pets,
           allows_packages: filters.luggage,
+          allows_music: filters.music,
           pickup_station: filters.pickup.trim() || null,
           dropoff_station: filters.dropoff.trim() || null,
           note: filters.note.trim() || null,
@@ -170,6 +172,7 @@ export function PassengerSearch({
       if (filters.seats) params.set("seats", String(filters.seats));
       if (filters.pets) params.set("pets", "true");
       if (filters.luggage) params.set("luggage", "true");
+      if (filters.music) params.set("music", "true");
 
       const res = await fetch(`/api/rides?${params.toString()}`);
       const json = await res.json();
@@ -189,6 +192,9 @@ export function PassengerSearch({
           departureTime: r.departure_time as string,
           seatsLeft: r.available_seats as number,
           avatarUrl: (driver?.image as string) ?? undefined,
+          allowsPets: (r.allows_pets as boolean) ?? false,
+          allowsPackages: (r.allows_packages as boolean) ?? false,
+          allowsMusic: (r.allows_music as boolean) ?? false,
         };
       });
 

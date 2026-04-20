@@ -30,6 +30,9 @@ export interface SearchRide {
   seatsLeft?: number;
   avatarUrl?: string;
   verified?: boolean;
+  allowsPets?: boolean;
+  allowsPackages?: boolean;
+  allowsMusic?: boolean;
 }
 
 export interface Trip {
@@ -56,6 +59,7 @@ export interface RideRequest {
   seatsNeeded: number;
   allowsPets: boolean;
   allowsPackages: boolean;
+  allowsMusic: boolean;
   pickupStation?: string;
   dropoffStation?: string;
   note?: string;

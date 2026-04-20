@@ -1,5 +1,5 @@
 import { SplashScreen } from "@/components/KipitaSplash";
 
-export default function LandingPage() {
+export default function SplashPage() {
   return <SplashScreen />;
 }

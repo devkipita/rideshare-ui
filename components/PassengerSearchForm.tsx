@@ -11,6 +11,7 @@ import {
   CalendarDays,
   PawPrint,
   LuggageIcon,
+  Music,
   Star,
   MapPin,
   Dot,
@@ -52,6 +53,7 @@ export interface SearchFilters {
   seats: number;
   pets: boolean;
   luggage: boolean;
+  music: boolean;
 }
 
 type Props = {
@@ -62,7 +64,7 @@ type Props = {
 };
 
 type LocationField = "from" | "to" | "pickup" | "dropoff";
-type Toggleable = "pets" | "luggage";
+type Toggleable = "pets" | "luggage" | "music";
 
 type TodayRide = {
   id: string;
@@ -817,6 +819,13 @@ function TripOptions({
                   label="Luggage"
                   active={filters.luggage}
                   onClick={toggle("luggage")}
+                  size="sm"
+                />
+                <ChipToggle
+                  icon={Music}
+                  label="Music"
+                  active={filters.music}
+                  onClick={toggle("music")}
                   size="sm"
                 />
               </div>

@@ -191,6 +191,7 @@ export async function POST(req: Request) {
       seats_needed: seatsNeeded,
       allows_pets: Boolean(body.allows_pets),
       allows_packages: Boolean(body.allows_packages),
+      allows_music: Boolean(body.allows_music),
       pickup_station: clean(body.pickup_station) || null,
       dropoff_station: clean(body.dropoff_station) || null,
       note: clean(body.note) || null,
@@ -361,6 +362,7 @@ export async function PATCH(req: Request) {
       price_per_seat: pricePerSeat,
       allows_pets: Boolean(request.allows_pets),
       allows_packages: Boolean(request.allows_packages),
+      allows_music: Boolean(request.allows_music),
       notes: `Matched passenger request ${request.id}`,
       status: "open",
     })

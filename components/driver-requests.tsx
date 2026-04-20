@@ -30,6 +30,9 @@ import {
   Inbox,
   Banknote,
   Loader2,
+  PawPrint,
+  Package,
+  Music,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate, timeAgo } from "@/lib/format";
@@ -52,6 +55,7 @@ type RideRequest = {
   seatsNeeded: number;
   allowsPets: boolean;
   allowsPackages: boolean;
+  allowsMusic: boolean;
   pickupStation?: string;
   dropoffStation?: string;
   note?: string;
@@ -124,6 +128,7 @@ function useRideRequests() {
               seatsNeeded: (r.seats_needed as number) ?? 1,
               allowsPets: Boolean(r.allows_pets),
               allowsPackages: Boolean(r.allows_packages),
+              allowsMusic: Boolean(r.allows_music),
               pickupStation: (r.pickup_station as string) ?? undefined,
               dropoffStation: (r.dropoff_station as string) ?? undefined,
               note: (r.note as string) ?? undefined,
@@ -493,6 +498,19 @@ export function DriverRequests({
                   {formatTimeLabel(acceptingRequest.preferredTime)}
                 </p>
               ) : null}
+              {acceptingRequest ? (
+                <div className="mt-3 flex items-center gap-3 text-[12px] font-semibold text-muted-foreground">
+                  <span className={cn("inline-flex items-center gap-1", acceptingRequest.allowsPets ? "text-primary" : "opacity-50 line-through")}>
+                    <PawPrint className="h-3.5 w-3.5" /> Pets
+                  </span>
+                  <span className={cn("inline-flex items-center gap-1", acceptingRequest.allowsPackages ? "text-primary" : "opacity-50 line-through")}>
+                    <Package className="h-3.5 w-3.5" /> Luggage
+                  </span>
+                  <span className={cn("inline-flex items-center gap-1", acceptingRequest.allowsMusic ? "text-primary" : "opacity-50 line-through")}>
+                    <Music className="h-3.5 w-3.5" /> Music
+                  </span>
+                </div>
+              ) : null}
             </Surface>
 
             <div className="grid grid-cols-2 gap-2">
@@ -618,6 +636,12 @@ function RequestCard({
                   {req.seatsNeeded} seat{req.seatsNeeded === 1 ? "" : "s"}
                 </Chip>
                 <span className="text-[10px] text-muted-foreground">{timeAgo(req.createdAt)}</span>
+              </div>
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {req.allowsPets && <Chip icon={PawPrint}>Pets</Chip>}
+                {req.allowsPackages && <Chip icon={Package}>Luggage</Chip>}
+                {req.allowsMusic && <Chip icon={Music}>Music</Chip>}
               </div>
 
               {req.note && (

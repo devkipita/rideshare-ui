@@ -65,6 +65,7 @@ export async function POST(req: Request) {
     price_per_seat,
     allows_pets = false,
     allows_packages = false,
+    allows_music = false,
     notes,
     vehicle_id,
   } = body;
@@ -101,6 +102,7 @@ export async function POST(req: Request) {
       price_per_seat,
       allows_pets: Boolean(allows_pets),
       allows_packages: Boolean(allows_packages),
+      allows_music: Boolean(allows_music),
       notes: notes ? String(notes).trim() : null,
       status: "open",
     })
@@ -126,6 +128,7 @@ export async function GET(req: Request) {
   const seats = url.searchParams.get("seats");
   const pets = url.searchParams.get("pets");
   const luggage = url.searchParams.get("luggage");
+  const music = url.searchParams.get("music");
 
   if (time && !date) {
     return NextResponse.json(
@@ -165,6 +168,7 @@ export async function GET(req: Request) {
 
   if (pets === "true") query = query.eq("allows_pets", true);
   if (luggage === "true") query = query.eq("allows_packages", true);
+  if (music === "true") query = query.eq("allows_music", true);
 
   const { data, error } = await query;
 

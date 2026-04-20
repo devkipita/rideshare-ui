@@ -8,6 +8,7 @@ import {
   Footprints,
   Luggage,
   MapPin,
+  Music,
   PawPrint,
   Search,
   SlidersHorizontal,
@@ -35,6 +36,7 @@ import {
   UserAvatar,
 } from "@/components/ui-parts";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { PaymentDrawer } from "@/components/shared/payment-drawer";
 import {
   useChat,
@@ -70,6 +72,7 @@ type RequestedRide = {
   seatsNeeded: number;
   luggage: boolean;
   pets: boolean;
+  music: boolean;
   pickupStation?: string;
   dropoffStation?: string;
   note?: string;
@@ -91,6 +94,7 @@ type PastRide = {
   totalSeats: number;
   luggage: boolean;
   pets: boolean;
+  music: boolean;
   pickupStation?: string;
   dropoffStation?: string;
   distanceLabel?: string;
@@ -134,6 +138,7 @@ const pastRidesMock: PastRide[] = [
     totalSeats: 6,
     luggage: true,
     pets: false,
+    music: true,
     pickupStation: "Railway Station, Nairobi CBD",
     dropoffStation: "Nanyuki Town Center",
     distanceLabel: "185 km",
@@ -151,6 +156,7 @@ const pastRidesMock: PastRide[] = [
     totalSeats: 4,
     luggage: false,
     pets: false,
+    music: false,
     pickupStation: "Thika Town Center",
     dropoffStation: "Nairobi, Westlands",
     distanceLabel: "42 km",
@@ -413,14 +419,32 @@ function RequestedRideDetails({
             icon={<Users2 className="h-4 w-4" />}
             label={`${ride.seatsNeeded} seat${ride.seatsNeeded > 1 ? "s" : ""}`}
           />
-          <MetricPill
-            icon={<Luggage className="h-4 w-4" />}
-            label={ride.luggage ? "Luggage" : "No luggage"}
-          />
-          <MetricPill
-            icon={<PawPrint className="h-4 w-4" />}
-            label={ride.pets ? "Pets ok" : "No pets"}
-          />
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3">
+          <p className="text-[10px] font-extrabold tracking-[0.2em] text-muted-foreground mb-2.5">
+            TRIP OPTIONS
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <PawPrint className={cn("h-3.5 w-3.5", ride.pets ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn("text-[12px] font-semibold", ride.pets ? "text-foreground/90" : "text-muted-foreground/60 line-through")}>
+                Pets
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Luggage className={cn("h-3.5 w-3.5", ride.luggage ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn("text-[12px] font-semibold", ride.luggage ? "text-foreground/90" : "text-muted-foreground/60 line-through")}>
+                Luggage
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Music className={cn("h-3.5 w-3.5", ride.music ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn("text-[12px] font-semibold", ride.music ? "text-foreground/90" : "text-muted-foreground/60 line-through")}>
+                Music
+              </span>
+            </div>
+          </div>
         </div>
 
         {(ride.pickupStation || ride.dropoffStation) && (
@@ -717,6 +741,17 @@ function RequestedRideCompactCard({
             >
               <PawPrint className="h-4 w-4" />
             </div>
+            <div
+              className={[
+                "grid h-9 w-9 place-items-center rounded-2xl border",
+                ride.music
+                  ? "bg-primary/10 border-primary/15 text-primary"
+                  : "bg-card/70 border-border/70 text-muted-foreground",
+              ].join(" ")}
+              aria-label={ride.music ? "Music ok" : "No music"}
+            >
+              <Music className="h-4 w-4" />
+            </div>
           </div>
         </div>
 
@@ -842,15 +877,19 @@ function FiltersSheet({
   onOpenChange,
   luggage,
   pets,
+  music,
   setLuggage,
   setPets,
+  setMusic,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   luggage: boolean;
   pets: boolean;
+  music: boolean;
   setLuggage: (v: boolean) => void;
   setPets: (v: boolean) => void;
+  setMusic: (v: boolean) => void;
 }) {
   return (
     <BottomSheet
@@ -871,7 +910,7 @@ function FiltersSheet({
       <div className="space-y-3">
         <Surface tone="sheet" className="p-3">
           <p className="text-sm font-extrabold tracking-tight">Preferences</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <ChipToggle
               active={luggage}
               label="Luggage"
@@ -886,6 +925,13 @@ function FiltersSheet({
               onClick={() => setPets(!pets)}
               size="md"
             />
+            <ChipToggle
+              active={music}
+              label="Music ok"
+              icon={Music}
+              onClick={() => setMusic(!music)}
+              size="md"
+            />
           </div>
         </Surface>
 
@@ -895,6 +941,7 @@ function FiltersSheet({
           onClick={() => {
             setLuggage(false);
             setPets(false);
+            setMusic(false);
           }}
         >
           Clear filters
@@ -1091,6 +1138,32 @@ function SearchRideDetails({
             />
           )}
         </div>
+
+        <div className="mt-4 rounded-2xl border border-border/70 bg-card/70 px-4 py-3">
+          <p className="text-[10px] font-extrabold tracking-[0.2em] text-muted-foreground mb-2.5">
+            TRIP OPTIONS
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <PawPrint className={cn("h-3.5 w-3.5", ride.allowsPets ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn("text-[12px] font-semibold", ride.allowsPets ? "text-foreground/90" : "text-muted-foreground/60 line-through")}>
+                Pets
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Luggage className={cn("h-3.5 w-3.5", ride.allowsPackages ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn("text-[12px] font-semibold", ride.allowsPackages ? "text-foreground/90" : "text-muted-foreground/60 line-through")}>
+                Luggage
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Music className={cn("h-3.5 w-3.5", ride.allowsMusic ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn("text-[12px] font-semibold", ride.allowsMusic ? "text-foreground/90" : "text-muted-foreground/60 line-through")}>
+                Music
+              </span>
+            </div>
+          </div>
+        </div>
       </Surface>
 
       {/* ===== Actions ===== */}
@@ -1282,6 +1355,9 @@ export type SearchRide = {
   seatsLeft?: number;
   avatarUrl?: string;
   verified?: boolean;
+  allowsPets?: boolean;
+  allowsPackages?: boolean;
+  allowsMusic?: boolean;
 };
 
 export function MyRides() {
@@ -1292,6 +1368,7 @@ export function MyRides() {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [onlyLuggage, setOnlyLuggage] = React.useState(false);
   const [onlyPets, setOnlyPets] = React.useState(false);
+  const [onlyMusic, setOnlyMusic] = React.useState(false);
 
   const [loadingRequested, setLoadingRequested] = React.useState(true);
   const [loadingPast, setLoadingPast] = React.useState(true);
@@ -1327,6 +1404,7 @@ export function MyRides() {
             seatsNeeded: (r.seats_needed as number) ?? 1,
             luggage: (r.allows_packages as boolean) ?? false,
             pets: (r.allows_pets as boolean) ?? false,
+            music: (r.allows_music as boolean) ?? false,
             pickupStation: (r.pickup_station as string) ?? undefined,
             dropoffStation: (r.dropoff_station as string) ?? undefined,
             note: (r.note as string) ?? undefined,
@@ -1393,9 +1471,10 @@ export function MyRides() {
       .filter((r) => {
         if (onlyLuggage && !r.luggage) return false;
         if (onlyPets && !r.pets) return false;
+        if (onlyMusic && !r.music) return false;
         return true;
       });
-  }, [ridesRequested, query, onlyLuggage, onlyPets]);
+  }, [ridesRequested, query, onlyLuggage, onlyPets, onlyMusic]);
 
   const filteredPast = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1404,9 +1483,10 @@ export function MyRides() {
       .filter((r) => {
         if (onlyLuggage && !r.luggage) return false;
         if (onlyPets && !r.pets) return false;
+        if (onlyMusic && !r.music) return false;
         return true;
       });
-  }, [query, onlyLuggage, onlyPets]);
+  }, [query, onlyLuggage, onlyPets, onlyMusic]);
 
   const filteredCount =
     tab === "requested" ? filteredRequested.length : filteredPast.length;
@@ -1530,6 +1610,7 @@ export function MyRides() {
               setQuery("");
               setOnlyLuggage(false);
               setOnlyPets(false);
+              setOnlyMusic(false);
             }}
           >
             Clear search
@@ -1542,8 +1623,10 @@ export function MyRides() {
         onOpenChange={setFiltersOpen}
         luggage={onlyLuggage}
         pets={onlyPets}
+        music={onlyMusic}
         setLuggage={setOnlyLuggage}
         setPets={setOnlyPets}
+        setMusic={setOnlyMusic}
       />
 
       <RideDetailsSheet

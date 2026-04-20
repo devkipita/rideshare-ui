@@ -15,6 +15,7 @@ import {
   Users,
   PawPrint,
   Package,
+  Music,
   MapPin,
   Dot,
   ArrowRight,
@@ -57,6 +58,7 @@ interface OfferRideForm {
   pricePerSeat: number;
   pets: boolean;
   luggage: boolean;
+  music: boolean;
 }
 
 interface DriverOfferRideProps {
@@ -94,6 +96,7 @@ const DEFAULT_OFFER_FORM: OfferRideForm = {
   pricePerSeat: 1200,
   pets: false,
   luggage: false,
+  music: false,
 };
 
 /* ── utilities (imported from @/lib/utils) ──────── */
@@ -860,6 +863,13 @@ function TripDetailsSection({
                   onClick={() => update("luggage", !form.luggage)}
                   size="sm"
                 />
+                <ChipToggle
+                  icon={Music}
+                  label="Music OK"
+                  active={form.music}
+                  onClick={() => update("music", !form.music)}
+                  size="sm"
+                />
               </div>
 
               {postError && (
@@ -1002,6 +1012,7 @@ export function DriverOfferRide({ onSubmit }: DriverOfferRideProps) {
           price_per_seat: form.pricePerSeat,
           allows_pets: form.pets,
           allows_packages: form.luggage,
+          allows_music: form.music,
         }),
       });
 

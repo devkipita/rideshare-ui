@@ -148,7 +148,6 @@ function SelectionCard({
 
 export function SplashScreen() {
   const router = useRouter();
-  const { status } = useSession();
   const reduceMotion = useReducedMotion();
 
   const REVEAL_DELAY_MS = 1800;

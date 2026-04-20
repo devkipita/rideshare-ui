@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip API routes, static files
+  // Skip API routes and static assets.
   if (
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
@@ -12,15 +12,6 @@ export default function proxy(request: NextRequest) {
     pathname.startsWith("/Kipita")
   ) {
     return NextResponse.next();
-  }
-
-  const token =
-    request.cookies.get("next-auth.session-token")?.value ||
-    request.cookies.get("__Secure-next-auth.session-token")?.value;
-
-  // Authenticated user hitting the landing page → redirect to home
-  if (pathname === "/" && token) {
-    return NextResponse.redirect(new URL("/home", request.url));
   }
 
   return NextResponse.next();
