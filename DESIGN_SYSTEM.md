@@ -2,7 +2,7 @@
 
 Complete design system documentation for the RideShare MVP carpool app.
 
-## 🎨 Design Philosophy
+## Design Philosophy
 
 **Keywords:** Minimal • Calm • Trust-building • Community-driven • Fast to understand
 
