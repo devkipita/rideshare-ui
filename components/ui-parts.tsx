@@ -465,7 +465,7 @@ export function LocationInput({
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-semibold text-foreground/70">
+          <p className="text-[11px] font-semibold text-foreground/72 dark:text-foreground/80">
             {label}
           </p>
 
@@ -501,8 +501,8 @@ export function LocationInput({
             className={cn(
               compact ? "h-7" : "h-8",
               "w-full bg-transparent outline-none",
-              "text-[15px] font-semibold tracking-tight",
-              "placeholder:text-foreground/55",
+              "text-[15px] font-semibold tracking-tight text-foreground",
+              "placeholder:text-foreground/55 dark:placeholder:text-foreground/70",
             )}
           />
         </div>
@@ -515,7 +515,7 @@ export function LocationInput({
               onClear();
               requestAnimationFrame(() => inputRef.current?.focus());
             }}
-            className="px-1 text-foreground/65"
+            className="px-1 text-foreground/65 dark:text-foreground/78"
           >
             ×
           </button>
@@ -556,7 +556,7 @@ export function LocationInput({
                     }}
                     className={cn(
                       "w-full rounded-2xl px-4 py-3 text-left text-[14px] font-semibold",
-                      "text-foreground/90 transition-all duration-200",
+                      "text-foreground/92 transition-all duration-200",
                       idx === activeIndex
                         ? "bg-primary/16 text-primary"
                         : "hover:bg-primary/10",

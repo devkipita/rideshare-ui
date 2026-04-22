@@ -198,7 +198,7 @@ function RoutePill({
 }) {
   return (
     <div className="mt-2 flex flex-col gap-1.5">
-      <div className="flex items-center gap-2 text-[12px] text-foreground/90 dark:text-foreground/85">
+      <div className="flex items-center gap-2 text-[12px] text-foreground/90 dark:text-foreground/94">
         <span className="inline-flex items-center gap-1.5 min-w-0">
           <Dot className="h-4 w-4 text-primary" />
           <span className="truncate">{from}</span>
@@ -212,7 +212,7 @@ function RoutePill({
         </span>
       </div>
 
-      <div className="flex items-center gap-2 text-[11px] text-foreground/70 dark:text-foreground/65">
+      <div className="flex items-center gap-2 text-[11px] text-muted-foreground dark:text-foreground/76">
         <span className="inline-flex items-center gap-1.5">
           <CalendarDays className="h-3.5 w-3.5" />
           <span>{formatISOToDDMMYYYY(dateISO)}</span>
@@ -260,7 +260,7 @@ const RideCard = React.memo(function RideCard({
         <Avatar name={ride.name} url={ride.avatarUrl} />
 
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-bold tracking-tight truncate text-foreground">
+          <p className="text-[13px] font-bold tracking-tight truncate text-foreground dark:text-foreground/96">
             {ride.name}
           </p>
           <RoutePill
@@ -275,10 +275,12 @@ const RideCard = React.memo(function RideCard({
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Star className="h-4 w-4 text-primary" />
-          <span className="text-[13px] font-bold text-foreground">{ride.rating}</span>
+          <span className="text-[13px] font-bold text-foreground dark:text-foreground/94">
+            {ride.rating}
+          </span>
         </div>
 
-        <p className="text-[14px] font-extrabold tracking-tight text-foreground">
+        <p className="text-[14px] font-extrabold tracking-tight text-foreground dark:text-foreground/96">
           KES {ride.price.toLocaleString()}
         </p>
       </div>
@@ -389,7 +391,7 @@ function TodayRidesCarousel({
   return (
     <>
       <div>
-        <p className="px-1 text-[12px] font-extrabold tracking-[0.16em] uppercase text-foreground/90">
+        <p className="px-1 text-[12px] font-extrabold tracking-[0.16em] uppercase text-primary/90 dark:text-[color-mix(in_oklch,var(--primary)_78%,white_22%)]">
           Available rides
         </p>
 
@@ -566,7 +568,7 @@ function PickupDropoffCard({
           <p className="text-[13px] font-semibold tracking-tight">
             Pick up & drop-off
           </p>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">
+          <p className="mt-0.5 text-[12px] text-muted-foreground dark:text-foreground/74">
             Where the driver should meet you
           </p>
         </div>
@@ -641,7 +643,7 @@ function PickupDropoffCard({
                   />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-muted-foreground">
+                  <p className="text-[11px] font-medium text-muted-foreground dark:text-foreground/72">
                     Note
                   </p>
                   <p className="text-[13px] font-semibold tracking-tight">
@@ -656,7 +658,7 @@ function PickupDropoffCard({
                 placeholder="e.g. Small pet in carrier / I’m at the Shell entrance / I have one suitcase…"
                 className={cn(
                   "mt-2 w-full min-h-[96px] resize-none rounded-3xl border border-border/70 bg-[color-mix(in_oklch,var(--card)_72%,white_10%)] supports-[backdrop-filter]:backdrop-blur-[24px]",
-                  "px-3.5 py-3 text-[13px] font-medium leading-relaxed",
+                  "px-3.5 py-3 text-[13px] font-medium leading-relaxed text-foreground placeholder:text-muted-foreground/80 dark:placeholder:text-foreground/58",
                   "outline-none transition-all duration-200 ease-app",
                   "focus:border-transparent focus:ring-2 focus:ring-primary/55",
                 )}
@@ -713,7 +715,7 @@ function TripOptions({
           <p className="text-[13px] font-semibold tracking-tight">
             Trip options
           </p>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">
+          <p className="mt-0.5 text-[12px] text-muted-foreground dark:text-foreground/74">
             Date, time, seats, and preferences
           </p>
         </div>

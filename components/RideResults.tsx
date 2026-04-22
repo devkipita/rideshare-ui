@@ -15,10 +15,7 @@ import {
 import { formatTime } from "@/lib/format";
 import { PaymentDrawer } from "./shared/payment-drawer";
 
-/* re-export so passenger-search.tsx keeps working */
 export type Driver = SearchRide;
-
-/* ── ride result card (list item) ─────────────────────── */
 
 function RideResultCard({
   ride,
@@ -40,22 +37,22 @@ function RideResultCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-extrabold tracking-tight text-foreground/90 truncate">
+              <p className="text-sm font-extrabold tracking-tight text-foreground dark:text-foreground/96 truncate">
                 {ride.name}
               </p>
               <div className="text-right shrink-0">
                 <p className="text-sm font-extrabold text-primary">
                   KES {ride.price.toLocaleString()}
                 </p>
-                <p className="text-[11px] text-muted-foreground -mt-0.5">
+                <p className="text-[11px] text-muted-foreground dark:text-foreground/72 -mt-0.5">
                   per seat
                 </p>
               </div>
             </div>
 
-            <div className="mt-1 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+            <div className="mt-1 flex items-center gap-1.5 text-[12px] text-muted-foreground dark:text-foreground/76">
               <Star className="h-3.5 w-3.5 text-amber-500" />
-              <span className="font-semibold text-foreground/80">
+              <span className="font-semibold text-foreground/88 dark:text-foreground/94">
                 {ride.rating}
               </span>
               <span className="opacity-60">·</span>
@@ -73,11 +70,11 @@ function RideResultCard({
 
             {ride.from && ride.to && (
               <div className="mt-2 rounded-2xl border border-border/70 bg-card/60 px-3 py-2">
-                <p className="text-[13px] font-extrabold tracking-tight truncate">
+                <p className="text-[13px] font-extrabold tracking-tight truncate text-foreground/92 dark:text-foreground/95">
                   <MapPin className="inline h-3.5 w-3.5 mr-1 text-primary" />
-                  {ride.from} → {ride.to}
+                  {ride.from} {"->"} {ride.to}
                   {ride.departureTime && (
-                    <span className="ml-2 text-[11px] font-semibold text-muted-foreground">
+                    <span className="ml-2 text-[11px] font-semibold text-muted-foreground dark:text-foreground/72">
                       <Clock className="inline h-3 w-3 mr-0.5" />
                       {formatTime(ride.departureTime)}
                     </span>
@@ -91,8 +88,6 @@ function RideResultCard({
     </button>
   );
 }
-
-/* ── main component ───────────────────────────────────── */
 
 export function RideResults({
   status,
@@ -117,7 +112,6 @@ export function RideResults({
   const [booking, setBooking] = useState(false);
   const [payingRide, setPayingRide] = useState<Driver | null>(null);
 
-  // Reset booking state when ride changes
   useEffect(() => {
     setBooked(false);
     setBooking(false);
@@ -151,7 +145,6 @@ export function RideResults({
       openAuthDrawer({ selectedRole: "passenger" });
       return;
     }
-    // Open payment drawer; details sheet stays behind it
     setPayingRide(selectedRide);
   };
 
@@ -168,10 +161,10 @@ export function RideResults({
   if (status === "ready" && !results.length) {
     return (
       <Surface tone="panel" className="p-4">
-        <p className="text-sm font-semibold text-foreground/85">
+        <p className="text-sm font-semibold text-foreground/92 dark:text-foreground/96">
           {requestPosted ? "Request posted" : "No rides found"}
         </p>
-        <p className="text-[12px] mt-1 text-muted-foreground">
+        <p className="text-[12px] mt-1 text-muted-foreground dark:text-foreground/74">
           {requestPosted
             ? "Drivers on this route have been notified. You can check your requests while they match or message you."
             : "Try different towns or dates. If nothing is available, we can post a request so drivers can find you."}

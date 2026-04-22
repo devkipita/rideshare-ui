@@ -91,13 +91,13 @@ export function AnnouncementsStrip({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 px-1">
-        <p className="text-[12px] font-extrabold tracking-[0.16em] uppercase text-primary/90">
+        <p className="text-[12px] font-extrabold tracking-[0.16em] uppercase text-primary/90 dark:text-[color-mix(in_oklch,var(--primary)_76%,white_24%)]">
           Road updates
         </p>
         <button
           type="button"
           onClick={navigate}
-          className="flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-extrabold text-primary active:opacity-70"
+          className="flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-extrabold text-primary dark:text-[color-mix(in_oklch,var(--primary)_76%,white_24%)] active:opacity-70"
         >
           View all <ChevronRight className="h-3.5 w-3.5" />
         </button>
@@ -124,10 +124,10 @@ export function AnnouncementsStrip({
             <div className="flex items-start gap-2">
               <div className="mt-0.5 shrink-0">{severityIcon(a.severity)}</div>
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-bold leading-tight line-clamp-2 text-foreground">
+                <p className="text-[12px] font-bold leading-tight line-clamp-2 text-foreground/95">
                   {a.message}
                 </p>
-                <p className="mt-0.5 text-[10px] text-foreground/65 dark:text-foreground/60">
+                <p className="mt-0.5 text-[10px] text-muted-foreground dark:text-foreground/76">
                   {a.posterName} · {timeAgo(a.createdAt)}
                   {a.location ? ` · ${a.location}` : ""}
                 </p>
