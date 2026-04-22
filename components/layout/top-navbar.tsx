@@ -54,7 +54,7 @@ export function TopNavbar({
           className={cn(
             "relative isolate",
             "h-12 rounded-full px-2",
-            "flex items-center",
+            "flex items-center justify-between",
             "border border-border/70 supports-[backdrop-filter]:backdrop-blur-[24px]",
             "bg-[color-mix(in_srgb,var(--card)_80%,transparent)]",
             "shadow-[0_22px_44px_-34px_color-mix(in_srgb,var(--primary)_34%,transparent)]",
@@ -71,9 +71,9 @@ export function TopNavbar({
             <ArrowLeft className="h-6 w-6" strokeWidth={2.8} />
           </Button>
 
-          <AppLogo />
-
-          <div className="flex-1" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <AppLogo />
+          </div>
 
           <Button
             variant="ghost"

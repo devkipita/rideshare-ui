@@ -431,11 +431,18 @@ function KipitaWordmarkSvg() {
       viewBox="0 0 500 120"
       className="w-full h-auto drop-shadow-sm"
       aria-hidden="true"
+      style={
+        {
+          "--kipita-wordmark-fill": "var(--foreground)",
+          "--kipita-wordmark-tagline": "var(--primary)",
+        } as React.CSSProperties
+      }
     >
       <defs>
         <style>{`
-          .cls-1{fill:#2f6c4f;font-family:Inter,sans-serif;font-size:38px;font-weight:600;}
-          .cls-3{fill:#1a2e26;}
+          .cls-1{fill:var(--kipita-wordmark-tagline);font-family:Inter,sans-serif;font-size:38px;font-weight:600;}
+          .cls-2{letter-spacing:-0.02em;}
+          .cls-3{fill:var(--kipita-wordmark-fill);}
         `}</style>
       </defs>
       <g transform="translate(0, -180)">
@@ -486,6 +493,17 @@ function KipitaWordmarkSvg() {
           d="M179.38,199.67c-11.15,11.99-30.13-5.43-18.26-17.34,11.23-11.27,29.52,5.23,18.26,17.34Z"
         />
       </g>
+      <text className="cls-1" transform="translate(277.36 126.32)">
+        <tspan x="0" y="0">
+          Ride. Sha
+        </tspan>
+        <tspan className="cls-2" x="68.4" y="0">
+          r
+        </tspan>
+        <tspan x="73.94" y="0">
+          e. Connect
+        </tspan>
+      </text>
     </svg>
   );
 }

@@ -7,7 +7,7 @@ const nextConfig = {
     unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
-      { protocol: "https", hostname: "**" },
+      { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
 };

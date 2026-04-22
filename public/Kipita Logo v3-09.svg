@@ -2,6 +2,10 @@
 <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
   <defs>
     <style>
+      :root {
+        color-scheme: light dark;
+      }
+
       .cls-1 {
         fill: #2f6c4f;
         font-family: Inter-Regular, Inter;
@@ -14,7 +18,17 @@
       }
 
       .cls-3 {
-        fill: #2e2e2e;
+        fill: #1a2e26;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .cls-1 {
+          fill: #4eca80;
+        }
+
+        .cls-3 {
+          fill: #f0f5f2;
+        }
       }
     </style>
   </defs>
